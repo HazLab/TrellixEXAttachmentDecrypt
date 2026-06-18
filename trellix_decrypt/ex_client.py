@@ -94,17 +94,18 @@ class EXClient:
     async def classify_resubmission(self, queue_id: str, rules: RiskwareRules) -> QuarantineOutcome:
         """After resubmission EX re-quarantines under `<queue_id>_RA` if it failed again.
 
-        Absent      -> NOT_QUARANTINED (delivered/clean)
-        Present with a trigger (failed-decryption) rule -> FAILED_EXTRACTION (wrong password)
-        Present otherwise -> MALICIOUS
+        Absent                                   -> NOT_QUARANTINED (delivered/clean)
+        Present, still the same riskware trigger  -> FAILED_EXTRACTION (wrong password)
+        Present for any other reason              -> MALICIOUS
         """
         ra_id = f"{queue_id}_RA"
         entries = _quarantine_entries(await self.list_quarantine(queue_id=ra_id), ra_id)
         if not entries:
             return QuarantineOutcome.NOT_QUARANTINED
         for entry in entries:
-            if rules.is_trigger(_entry_rule_id(entry)):
-                return QuarantineOutcome.FAILED_EXTRACTION
+            for name, malware_type in _entry_malware(entry):
+                if rules.matches_entry(name, malware_type):
+                    return QuarantineOutcome.FAILED_EXTRACTION
         return QuarantineOutcome.MALICIOUS
 
 
@@ -118,5 +119,12 @@ def _quarantine_entries(data, queue_id: str) -> list[dict]:
     return matched or items  # fall back to all if the listing was already filtered server-side
 
 
-def _entry_rule_id(entry: dict):
-    return entry.get("rule_id") or entry.get("ruleId") or entry.get("riskware_rule_id")
+def _entry_malware(entry: dict) -> list[tuple]:
+    """Extract (name, type) pairs of malware from a quarantine entry."""
+    malware = entry.get("malware")
+    if isinstance(malware, dict):
+        malware = [malware]
+    if isinstance(malware, list):
+        return [(m.get("name") or m.get("malware_name"), m.get("type") or m.get("stype"))
+                for m in malware if isinstance(m, dict)]
+    return [(entry.get("malware_name") or entry.get("name"), entry.get("malware_type") or entry.get("type"))]

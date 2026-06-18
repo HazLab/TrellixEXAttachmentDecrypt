@@ -18,23 +18,28 @@ def test_parse_flat_alert():
 def test_parse_nested_smtp_message():
     event = parse_alert({
         "smtpMessage": {"queueId": "Q9", "rcptTo": "ann@corp.test", "subject": "Hi"},
-        "explanation": {"malwareDetected": {"malware": [{"sid": 65001, "type": "riskware"}]}},
+        "explanation": {"malwareDetected": {"malware": [
+            {"name": "CustomPolicy.MVX.pdf", "sid": 65001, "type": "riskware-object"}
+        ]}},
     })
     assert event.queue_id == "Q9"
     assert event.recipient == "ann@corp.test"
     assert event.rule_id == 65001
-    assert event.malware_type == "riskware"
+    assert event.malware == [{"name": "CustomPolicy.MVX.pdf", "type": "riskware-object"}]
 
 
-def test_parse_extracts_malware_names():
+def test_parse_extracts_malware_entries():
     event = parse_alert({
         "queue_id": "Q", "recipient": "a@b.test",
         "explanation": {"malwareDetected": {"malware": [
-            {"name": "Riskware.Encrypted.Archive", "type": "riskware"},
+            {"name": "CustomPolicy.MVX.zip", "type": "riskware-object"},
             {"name": "Other.Thing"},
         ]}},
     })
-    assert event.malware_names == ["Riskware.Encrypted.Archive", "Other.Thing"]
+    assert event.malware == [
+        {"name": "CustomPolicy.MVX.zip", "type": "riskware-object"},
+        {"name": "Other.Thing", "type": None},
+    ]
 
 
 def test_iter_alerts_wraps_single_and_list():

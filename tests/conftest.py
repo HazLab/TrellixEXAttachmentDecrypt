@@ -14,7 +14,9 @@ def make_settings(**overrides) -> Settings:
         ex_base_url="https://ex.test", ex_username="u", ex_password="p",
         smtp_host="smtp.test", public_base_url="https://decrypt.test",
         secret_key="test-secret", webhook_secret="hook-secret",
-        trigger_rule_ids=[65001, 65030], max_password_attempts=3,
+        trigger_malware_type="riskware-object",
+        trigger_malware_names=["CustomPolicy.MVX.pdf", "CustomPolicy.MVX.zip", "CustomPolicy.MVX.docx"],
+        max_password_attempts=3,
         recheck_delay=0, recheck_interval=0, recheck_max_attempts=3,
         db_url="sqlite://",  # in-memory
     )
@@ -70,6 +72,6 @@ def engine(settings):
     repo = CaseRepository(build_session_factory(settings.db_url))
     ex, mailer, scheduler = FakeEX(), FakeMailer(), FakeScheduler()
     eng = FlowEngine(repo, ex, mailer, TokenService(settings.secret_key, settings.token_ttl),
-                     RiskwareRules(settings.trigger_rule_ids), settings, scheduler)
+                     RiskwareRules(settings.trigger_malware_names, settings.trigger_malware_type), settings, scheduler)
     scheduler.bind(eng)
     return eng

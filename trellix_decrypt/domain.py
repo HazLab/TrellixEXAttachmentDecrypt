@@ -44,44 +44,40 @@ class AlertEvent:
 
     queue_id: str
     recipient: str
-    rule_id: int | None = None
+    rule_id: int | None = None  # parsed for the record; not used for triggering
     sender: str | None = None
     subject: str | None = None
-    malware_type: str | None = None
-    malware_names: list[str] = dataclasses.field(default_factory=list)
+    malware: list[dict] = dataclasses.field(default_factory=list)  # [{"name": ..., "type": ...}]
     raw: dict = dataclasses.field(default_factory=dict)
 
 
 class RiskwareRules:
     """Decides whether an alert should trigger the recovery flow.
 
-    An alert matches if its rule ID is a configured trigger, OR any of its
-    malware names contains one of the configured name keywords (case-insensitive
-    substring), so operators don't have to get the exact malware string perfect.
+    An alert matches when it has a malware entry whose TYPE equals the configured
+    trigger type (e.g. "riskware-object") AND whose NAME exactly equals one of the
+    configured names (case-insensitive, e.g. CustomPolicy.MVX.pdf / .zip / .docx).
+    With no names configured, a type match alone is enough.
     """
 
-    def __init__(self, trigger_rule_ids, trigger_malware_names=()):
-        self._triggers = {int(r) for r in trigger_rule_ids}
-        self._names = [str(n).lower() for n in trigger_malware_names if str(n).strip()]
+    def __init__(self, trigger_malware_names=(), trigger_malware_type="riskware-object"):
+        self._names = {str(n).strip().lower() for n in trigger_malware_names if str(n).strip()}
+        self._type = (trigger_malware_type or "").strip().lower()
 
-    def is_trigger(self, rule_id) -> bool:
-        """Numeric rule-ID match (also used to classify re-quarantine reason)."""
-        if rule_id is None:
-            return False
-        try:
-            return int(rule_id) in self._triggers
-        except (TypeError, ValueError):
-            return False
+    def _type_ok(self, malware_type) -> bool:
+        return not self._type or str(malware_type or "").strip().lower() == self._type
 
-    def is_trigger_malware(self, malware_names) -> bool:
-        for name in malware_names or []:
-            low = str(name).lower()
-            if any(keyword in low for keyword in self._names):
-                return True
-        return False
+    def _name_ok(self, name) -> bool:
+        if not self._names:
+            return True
+        return str(name or "").strip().lower() in self._names
+
+    def matches_entry(self, name, malware_type) -> bool:
+        """Whether a single malware entry (name + type) is a trigger."""
+        return self._type_ok(malware_type) and self._name_ok(name)
 
     def matches(self, event: "AlertEvent") -> bool:
-        return self.is_trigger(event.rule_id) or self.is_trigger_malware(event.malware_names)
+        return any(self.matches_entry(m.get("name"), m.get("type")) for m in event.malware)
 
 
 class TokenService:

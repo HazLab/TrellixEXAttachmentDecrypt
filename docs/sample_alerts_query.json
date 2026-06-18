@@ -1,0 +1,36 @@
+{
+  "alert": [
+    {
+      "explanation": { "malwareDetected": { "malware": [
+        { "md5Sum": "e6963c659f984b95073804ea3dc237c3", "name": "CustomPolicy.MVX.pdf" }
+      ] } },
+      "src": { "smtpMailFrom": "it-support@networkshark.com" },
+      "dst": { "smtpTo": "head.sales@networkshark.com" },
+      "smtpMessage": { "subject": "Action required: encrypted PDF for your review", "queueId": "4gh3zS5pWgzmWwn" },
+      "id": 303, "name": "RISKWARE_OBJECT", "severity": "MINR", "product": "EMAIL_MPS", "malicious": "no"
+    },
+    {
+      "explanation": { "malwareDetected": { "malware": [
+        { "md5Sum": "45598e5361e4fbf0a892f9172579f2e3", "name": "CustomPolicy.MVX.65055.qrCodePresent" }
+      ] } },
+      "src": { "smtpMailFrom": "sales@networkshark.com" },
+      "dst": { "smtpTo": "head.sales@networkshark.com" },
+      "smtpMessage": { "subject": "Limited-Time HeliosGuard Savings", "queueId": "4gh3zJ4CHGzmWwX" },
+      "id": 300, "name": "RISKWARE_OBJECT", "severity": "MINR", "product": "EMAIL_MPS", "malicious": "no"
+    },
+    {
+      "explanation": { "malwareDetected": { "malware": [
+        { "md5Sum": "da1ebfccca6d09dc70be4c67952e83be", "name": "FE_Backdoor_Go_Sandcat_1" }
+      ] } },
+      "src": { "smtpMailFrom": "john.f@heliosguard.com" },
+      "dst": { "smtpTo": "head.sales@networkshark.com" },
+      "action": "notified",
+      "smtpMessage": { "subject": "An Exclusive Offer from HeliosGuard", "queueId": "4gh3zH3PsrzmWw8" },
+      "id": 311, "name": "MALWARE_OBJECT", "severity": "MAJR", "product": "EMAIL_MPS", "malicious": "yes"
+    }
+  ],
+  "appliance": "eMPS",
+  "version": "eMPS (eMPS) 11.0.1.1024269",
+  "msg": "concise",
+  "alertsCount": 3
+}

@@ -14,9 +14,10 @@ Pipeline:
    `smtpMessage.queueId`. The flow triggers only when an alert's top-level
    **name** == `TRIGGER_ALERT_NAME` (e.g. `RISKWARE_OBJECT`) AND one of its
    malware **names** exactly matches one of `TRIGGER_MALWARE_NAMES`. Note: there
-   is no malware-level `type` field; real malware names look like
-   `CustomPolicy.MVX.<ruleId>.<condition>`. `TRIGGER_MALWARE_NAMES` is required —
-   empty means nothing fires (avoids triggering on unrelated riskware objects).
+   is no malware-level `type` field. The encrypted-attachment custom policy emits
+   `CustomPolicy.MVX.pdf` / `.zip` / `.docx` (other CustomPolicy.MVX rules like
+   `...qrCodePresent` are unrelated and must not match — hence exact-name match).
+   Empty `TRIGGER_MALWARE_NAMES` disables triggering.
 2. We look up the recipient and email them a **one-time randomized link**.
 3. The recipient submits the attachment password on that link.
 4. We call the EX **resubmission API** (it accepts one or more passwords) to

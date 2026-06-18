@@ -49,10 +49,10 @@ EX_PASSWORD=...
 EX_VERIFY_TLS=true
 
 # Trigger: alert "name" == TRIGGER_ALERT_NAME AND a malware name exactly equals
-# one of TRIGGER_MALWARE_NAMES (REQUIRED — empty means nothing fires). EX malware
-# names look like CustomPolicy.MVX.<ruleId>.<condition>; see docs/sample_alert.json.
+# one of TRIGGER_MALWARE_NAMES. The encrypted-attachment policy emits
+# CustomPolicy.MVX.<ext>. (Empty TRIGGER_MALWARE_NAMES disables triggering.)
 TRIGGER_ALERT_NAME=RISKWARE_OBJECT
-TRIGGER_MALWARE_NAMES=
+TRIGGER_MALWARE_NAMES=CustomPolicy.MVX.pdf,CustomPolicy.MVX.zip,CustomPolicy.MVX.docx
 
 # Outbound mail
 SMTP_HOST=smtp.example.com

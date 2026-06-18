@@ -46,7 +46,7 @@ def test_full_webhook_to_resubmit(app_engine):
 
         submit = client.post(f"/p/{token}", data={"password": "secret"})
         assert submit.status_code == 200
-        assert engine.ex.rescanned == [("uuid-Q-77", ["secret"])]
+        assert engine.ex.rescanned == [("Q-77", ["secret"])]
 
         # 4. Replaying the link is rejected.
         assert client.post(f"/p/{token}", data={"password": "secret"}).status_code == 400

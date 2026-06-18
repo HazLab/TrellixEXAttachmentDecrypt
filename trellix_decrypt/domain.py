@@ -139,9 +139,10 @@ class FlowEngine:
 
         self.repo.add_attempt(case, hash_password(password))
         self.repo.set_state(case, FlowState.PASSWORD_SUBMITTED, "password submitted")
-        # The rescan endpoint takes the email's UUID; resolve it from quarantine.
-        email_uuid, _ = await self.ex.resolve_email_uuid(case.queue_id)
-        await self.ex.rescan(email_uuid or case.queue_id, [password])
+        # Rescan by the queue id the email is currently quarantined under
+        # (the original, or its re-quarantine suffix on a retry).
+        queue_id = await self.ex.current_queue_id(case.queue_id) or case.queue_id
+        await self.ex.rescan(queue_id, [password])
         self.repo.set_state(case, FlowState.RESUBMITTED, "resubmitted to EX (rescan)")
         self.scheduler.schedule_recheck(case.id)
         return case, "ok"

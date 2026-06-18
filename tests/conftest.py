@@ -32,11 +32,11 @@ class FakeEX:
         self.rescanned = []
         self.outcomes = list(outcomes or [])
 
-    async def resolve_email_uuid(self, queue_id):
-        return f"uuid-{queue_id}", queue_id
+    async def current_queue_id(self, queue_id):
+        return queue_id
 
-    async def rescan(self, email_uuid, passwords):
-        self.rescanned.append((email_uuid, passwords))
+    async def rescan(self, queue_id, passwords):
+        self.rescanned.append((queue_id, passwords))
         return {}
 
     async def classify_resubmission(self, queue_id, recipient, rules):

@@ -1,0 +1,75 @@
+"""Shared fixtures: in-memory repo-backed engine with fake EX/mailer/scheduler."""
+
+from __future__ import annotations
+
+import pytest
+
+from trellix_decrypt.config import Settings
+from trellix_decrypt.domain import FlowEngine, QuarantineOutcome, RiskwareRules, TokenService
+from trellix_decrypt.storage import CaseRepository, build_session_factory
+
+
+def make_settings(**overrides) -> Settings:
+    base = dict(
+        ex_base_url="https://ex.test", ex_username="u", ex_password="p",
+        smtp_host="smtp.test", public_base_url="https://decrypt.test",
+        secret_key="test-secret", webhook_secret="hook-secret",
+        trigger_rule_ids=[65001, 65030], max_password_attempts=3,
+        recheck_delay=0, recheck_interval=0, recheck_max_attempts=3,
+        db_url="sqlite://",  # in-memory
+    )
+    base.update(overrides)
+    return Settings(**base)
+
+
+class FakeEX:
+    def __init__(self, outcomes=None):
+        self.resubmitted = []
+        self.outcomes = list(outcomes or [])
+
+    async def resubmit(self, queue_id, passwords):
+        self.resubmitted.append((queue_id, passwords))
+        return {}
+
+    async def classify_resubmission(self, queue_id, rules):
+        return self.outcomes.pop(0) if self.outcomes else QuarantineOutcome.NOT_QUARANTINED
+
+    async def aclose(self):
+        pass
+
+
+class FakeMailer:
+    def __init__(self):
+        self.sent = []
+
+    async def send_password_request(self, recipient, link, case, retry=False):
+        self.sent.append((recipient, link, retry))
+
+
+class FakeScheduler:
+    def __init__(self):
+        self.scheduled = []
+
+    def bind(self, engine):
+        self.engine = engine
+
+    def schedule_recheck(self, case_id):
+        self.scheduled.append(case_id)
+
+    async def shutdown(self):
+        pass
+
+
+@pytest.fixture
+def settings():
+    return make_settings()
+
+
+@pytest.fixture
+def engine(settings):
+    repo = CaseRepository(build_session_factory(settings.db_url))
+    ex, mailer, scheduler = FakeEX(), FakeMailer(), FakeScheduler()
+    eng = FlowEngine(repo, ex, mailer, TokenService(settings.secret_key, settings.token_ttl),
+                     RiskwareRules(settings.trigger_rule_ids), settings, scheduler)
+    scheduler.bind(eng)
+    return eng

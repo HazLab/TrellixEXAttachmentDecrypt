@@ -26,6 +26,17 @@ def test_parse_nested_smtp_message():
     assert event.malware_type == "riskware"
 
 
+def test_parse_extracts_malware_names():
+    event = parse_alert({
+        "queue_id": "Q", "recipient": "a@b.test",
+        "explanation": {"malwareDetected": {"malware": [
+            {"name": "Riskware.Encrypted.Archive", "type": "riskware"},
+            {"name": "Other.Thing"},
+        ]}},
+    })
+    assert event.malware_names == ["Riskware.Encrypted.Archive", "Other.Thing"]
+
+
 def test_iter_alerts_wraps_single_and_list():
     assert iter_alerts({"alert": [{"a": 1}, {"a": 2}]}) == [{"a": 1}, {"a": 2}]
     assert iter_alerts({"queue_id": "x"}) == [{"queue_id": "x"}]

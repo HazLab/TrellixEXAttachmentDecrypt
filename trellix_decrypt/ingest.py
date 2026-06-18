@@ -58,6 +58,7 @@ def parse_alert(alert: dict) -> AlertEvent:
         alert.get("rule_id"), alert.get("ruleId"), alert.get("riskware_rule_id"),
         _dig(alert, "explanation", "malwareDetected", "malware", 0, "sid"),
     ))
+    malware = _malware_entries(alert)
     return AlertEvent(
         queue_id=str(_first(alert.get("queue_id"), alert.get("queueId"), _dig(alert, "smtpMessage", "queueId")) or ""),
         recipient=str(_first(
@@ -67,9 +68,21 @@ def parse_alert(alert: dict) -> AlertEvent:
         rule_id=rule_id,
         sender=_first(_dig(alert, "smtpMessage", "mailFrom"), _dig(alert, "src", "smtpMailFrom"), alert.get("sender")),
         subject=_first(_dig(alert, "smtpMessage", "subject"), alert.get("subject")),
-        malware_type=_first(_dig(alert, "explanation", "malwareDetected", "malware", 0, "type")),
+        malware_type=_first(*[m.get("type") or m.get("stype") for m in malware]),
+        malware_names=[str(name) for m in malware if (name := m.get("name") or m.get("malware_name")) is not None],
         raw=alert,
     )
+
+
+def _malware_entries(alert: dict) -> list[dict]:
+    """Pull the list of malware objects from an alert (key is typically ``malware``)."""
+    entries = _first(
+        _dig(alert, "explanation", "malwareDetected", "malware"),
+        alert.get("malware"),
+    ) or []
+    if isinstance(entries, dict):
+        entries = [entries]
+    return [e for e in entries if isinstance(e, dict)]
 
 
 def iter_alerts(payload: dict) -> list[dict]:

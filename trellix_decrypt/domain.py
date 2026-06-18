@@ -48,22 +48,40 @@ class AlertEvent:
     sender: str | None = None
     subject: str | None = None
     malware_type: str | None = None
+    malware_names: list[str] = dataclasses.field(default_factory=list)
     raw: dict = dataclasses.field(default_factory=dict)
 
 
 class RiskwareRules:
-    """Decides whether an alert's rule ID should trigger the recovery flow."""
+    """Decides whether an alert should trigger the recovery flow.
 
-    def __init__(self, trigger_rule_ids):
+    An alert matches if its rule ID is a configured trigger, OR any of its
+    malware names contains one of the configured name keywords (case-insensitive
+    substring), so operators don't have to get the exact malware string perfect.
+    """
+
+    def __init__(self, trigger_rule_ids, trigger_malware_names=()):
         self._triggers = {int(r) for r in trigger_rule_ids}
+        self._names = [str(n).lower() for n in trigger_malware_names if str(n).strip()]
 
     def is_trigger(self, rule_id) -> bool:
+        """Numeric rule-ID match (also used to classify re-quarantine reason)."""
         if rule_id is None:
             return False
         try:
             return int(rule_id) in self._triggers
         except (TypeError, ValueError):
             return False
+
+    def is_trigger_malware(self, malware_names) -> bool:
+        for name in malware_names or []:
+            low = str(name).lower()
+            if any(keyword in low for keyword in self._names):
+                return True
+        return False
+
+    def matches(self, event: "AlertEvent") -> bool:
+        return self.is_trigger(event.rule_id) or self.is_trigger_malware(event.malware_names)
 
 
 class TokenService:
@@ -106,7 +124,7 @@ class FlowEngine:
 
     async def handle_alert(self, event: AlertEvent):
         """Entry point for an incoming EX alert. Returns the case, or None if ignored."""
-        if not self.rules.is_trigger(event.rule_id):
+        if not self.rules.matches(event):
             return None
         case = self.repo.get_or_create_case(event)
         if case.state == FlowState.RECEIVED:

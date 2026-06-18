@@ -60,7 +60,7 @@ async def test_password_submission_resubmits(engine):
     result, status = await engine.handle_password(token, "hunter2")
     assert status == "ok"
     assert result.state == FlowState.RESUBMITTED
-    assert engine.ex.rescanned == [("uuid-Q1", ["hunter2"])]  # rescans by resolved email_uuid
+    assert engine.ex.rescanned == [("Q1", ["hunter2"])]  # rescans by current queue id
     assert engine.scheduler.scheduled == [case.id]
 
 

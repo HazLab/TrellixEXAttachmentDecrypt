@@ -100,7 +100,7 @@ pytest
 
 - Endpoints/auth/rescan are based on the Trellix API Reference Release 2025.1
   (PDFs in `docs/`) and centralized in `trellix_decrypt/ex_client.py`. The rescan
-  call is `POST /emailmgmt/quarantine/rescan/<email_uuid>` with
+  call is `POST /emailmgmt/quarantine/rescan/<queue_id>` with
   `{"rescan_properties": {"pwd_list": [...]}}`.
 - Passwords are used immediately and never stored in plaintext.
 

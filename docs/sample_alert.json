@@ -1,0 +1,64 @@
+{
+  "Alerts": [
+    {
+      "ack": "no",
+      "alertUrl": "https://ex.networkshark.com/detection/objects?uuid=e8df2b94-6f81-4bd0-8c09-e452323198d8",
+      "applianceId": "868070FCF5F5",
+      "attackTime": "2026-06-18 15:09:17 +0000",
+      "dst": { "smtpTo": "head.sales@networkshark.com" },
+      "explanation": {
+        "malwareDetected": {
+          "malware": [
+            {
+              "md5Sum": "4c36909567400b4a4448017a1dcdc0be",
+              "name": "Riskware.Parent.DOCX",
+              "sha256": "d6d31e542f9a13cd1674401bdfef7af6faca572154511c51e93a2500e85e0a27"
+            }
+          ]
+        },
+        "osChanges": []
+      },
+      "id": 298,
+      "malicious": "no",
+      "name": "RISKWARE_OBJECT",
+      "occurred": "2026-06-18 15:10:45 +0000",
+      "product": "EMAIL_MPS",
+      "scVersion": "1670.120",
+      "severity": "MINR",
+      "smtpMessage": { "queueId": "4gh3zJ4CHGzmWwX", "subject": "Limited-Time HeliosGuard Savings" },
+      "src": { "smtpMailFrom": "sales@networkshark.com" },
+      "uuid": "e8df2b94-6f81-4bd0-8c09-e452323198d8",
+      "vlan": 0
+    },
+    {
+      "ack": "no",
+      "alertUrl": "https://ex.networkshark.com/detection/objects?uuid=d017c8f0-f37d-4b30-8b52-267549311e38",
+      "applianceId": "868070FCF5F5",
+      "attackTime": "2026-06-18 15:09:17 +0000",
+      "dst": { "smtpTo": "head.sales@networkshark.com" },
+      "explanation": {
+        "malwareDetected": {
+          "malware": [
+            {
+              "md5Sum": "98f317bff0e27ec26ba49f1822c7d574",
+              "name": "CustomPolicy.MVX.65055.qrCodePresent",
+              "sha256": "af7a5e83f00ddf6a20bc2600d64880a21e01e2fc4de2f20d167cf12e58dff086"
+            }
+          ]
+        },
+        "osChanges": []
+      },
+      "id": 299,
+      "malicious": "no",
+      "name": "RISKWARE_OBJECT",
+      "occurred": "2026-06-18 15:10:45 +0000",
+      "product": "EMAIL_MPS",
+      "scVersion": "1670.120",
+      "severity": "MINR",
+      "smtpMessage": { "queueId": "4gh3zJ4CHGzmWwX", "subject": "Limited-Time HeliosGuard Savings" },
+      "src": { "smtpMailFrom": "sales@networkshark.com" },
+      "uuid": "d017c8f0-f37d-4b30-8b52-267549311e38",
+      "vlan": 0
+    }
+  ]
+}

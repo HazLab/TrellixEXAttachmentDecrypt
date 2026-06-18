@@ -9,7 +9,7 @@ from trellix_decrypt.domain import FlowEngine, FlowState, RiskwareRules, TokenSe
 from trellix_decrypt.storage import CaseRepository, build_session_factory
 from trellix_decrypt.web import create_app
 
-from .conftest import FakeEX, FakeMailer, FakeScheduler, make_settings
+from .conftest import TRIGGER_MALWARE_NAME, FakeEX, FakeMailer, FakeScheduler, make_settings
 
 
 @pytest.fixture
@@ -17,7 +17,7 @@ def app_engine():
     settings = make_settings()
     repo = CaseRepository(build_session_factory(settings.db_url))
     engine = FlowEngine(repo, FakeEX(), FakeMailer(), TokenService(settings.secret_key, settings.token_ttl),
-                        RiskwareRules(settings.trigger_malware_names, settings.trigger_malware_type), settings, FakeScheduler())
+                        RiskwareRules(settings.trigger_malware_names, settings.trigger_alert_name), settings, FakeScheduler())
     engine.scheduler.bind(engine)
     return create_app(engine, settings), engine, settings
 
@@ -28,10 +28,14 @@ def test_full_webhook_to_resubmit(app_engine):
         # 1. Bad secret rejected.
         assert client.post("/webhook/ex-alert", json={}).status_code == 401
 
-        # 2. Trigger alert -> email sent, case awaiting.
-        alert = {"queue_id": "Q-77", "recipient": "u@corp.test", "subject": "Invoice",
-                 "malware": [{"name": "CustomPolicy.MVX.pdf", "type": "riskware-object"}]}
-        resp = client.post("/webhook/ex-alert", json=alert, headers={"X-Webhook-Secret": settings.webhook_secret})
+        # 2. Trigger alert (real EX envelope) -> email sent, case awaiting.
+        payload = {"Alerts": [{
+            "name": "RISKWARE_OBJECT", "malicious": "no",
+            "dst": {"smtpTo": "u@corp.test"},
+            "smtpMessage": {"queueId": "Q-77", "subject": "Invoice"},
+            "explanation": {"malwareDetected": {"malware": [{"name": TRIGGER_MALWARE_NAME}]}},
+        }]}
+        resp = client.post("/webhook/ex-alert", json=payload, headers={"X-Webhook-Secret": settings.webhook_secret})
         assert resp.status_code == 200 and resp.json()["handled"] == 1
         assert len(engine.mailer.sent) == 1
 

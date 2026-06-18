@@ -9,11 +9,14 @@ quarantined by **Trellix Email Security (EX)**.
 
 Pipeline:
 
-1. EX posts an alert (HTTP webhook, JSON) when it can't extract an encrypted
-   attachment (encrypted PDF / MS Office doc / archive). The flow triggers only
-   when the alert has a malware entry whose **type** is `TRIGGER_MALWARE_TYPE`
-   (e.g. `riskware-object`) AND whose **name** exactly matches one of
-   `TRIGGER_MALWARE_NAMES` (e.g. `CustomPolicy.MVX.pdf` / `.zip` / `.docx`).
+1. EX posts alerts (HTTP webhook, JSON) under an `Alerts` array (see
+   `docs/sample_alert.json`). One email yields several alert objects sharing one
+   `smtpMessage.queueId`. The flow triggers only when an alert's top-level
+   **name** == `TRIGGER_ALERT_NAME` (e.g. `RISKWARE_OBJECT`) AND one of its
+   malware **names** exactly matches one of `TRIGGER_MALWARE_NAMES`. Note: there
+   is no malware-level `type` field; real malware names look like
+   `CustomPolicy.MVX.<ruleId>.<condition>`. `TRIGGER_MALWARE_NAMES` is required —
+   empty means nothing fires (avoids triggering on unrelated riskware objects).
 2. We look up the recipient and email them a **one-time randomized link**.
 3. The recipient submits the attachment password on that link.
 4. We call the EX **resubmission API** (it accepts one or more passwords) to
@@ -82,7 +85,7 @@ Wrong password loops `RECHECKING → AWAITING_PASSWORD` with `attempt += 1`.
 Read from environment variables (and an optional `.env` the operator creates;
 Claude must not write `.env*`). See `README.md` for the full list. Key groups:
 EX (`EX_BASE_URL`, `EX_USERNAME`, `EX_PASSWORD`, `EX_VERIFY_TLS`),
-`TRIGGER_MALWARE_TYPE` + `TRIGGER_MALWARE_NAMES`, SMTP (`SMTP_*`), web (`PUBLIC_BASE_URL`, `SECRET_KEY`,
+`TRIGGER_ALERT_NAME` + `TRIGGER_MALWARE_NAMES`, SMTP (`SMTP_*`), web (`PUBLIC_BASE_URL`, `SECRET_KEY`,
 `TOKEN_TTL`), webhook (`WEBHOOK_SECRET`, `WEBHOOK_IP_ALLOWLIST`),
 flow (`MAX_PASSWORD_ATTEMPTS`, `RECHECK_DELAY`, `RECHECK_INTERVAL`,
 `RECHECK_MAX_ATTEMPTS`), `DB_URL`.

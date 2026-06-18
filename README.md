@@ -48,10 +48,11 @@ EX_USERNAME=api_analyst
 EX_PASSWORD=...
 EX_VERIFY_TLS=true
 
-# Trigger: alert has a malware entry whose TYPE == TRIGGER_MALWARE_TYPE and whose
-# NAME exactly equals one of TRIGGER_MALWARE_NAMES (case-insensitive).
-TRIGGER_MALWARE_TYPE=riskware-object
-TRIGGER_MALWARE_NAMES=CustomPolicy.MVX.pdf,CustomPolicy.MVX.zip,CustomPolicy.MVX.docx
+# Trigger: alert "name" == TRIGGER_ALERT_NAME AND a malware name exactly equals
+# one of TRIGGER_MALWARE_NAMES (REQUIRED — empty means nothing fires). EX malware
+# names look like CustomPolicy.MVX.<ruleId>.<condition>; see docs/sample_alert.json.
+TRIGGER_ALERT_NAME=RISKWARE_OBJECT
+TRIGGER_MALWARE_NAMES=
 
 # Outbound mail
 SMTP_HOST=smtp.example.com

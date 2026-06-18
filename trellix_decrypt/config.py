@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     ex_username: str
     ex_password: str
     ex_verify_tls: bool = True
+    ex_client_token: str = ""  # optional X-FeClient-Token, provided by Trellix
 
     # An alert triggers the flow only when its top-level "name" equals
     # trigger_alert_name AND one of its malware names exactly equals one of
@@ -21,7 +22,10 @@ class Settings(BaseSettings):
     # policy emits CustomPolicy.MVX.<ext>. An empty list disables triggering
     # (prevents firing on unrelated riskware objects).
     trigger_alert_name: str = "RISKWARE_OBJECT"
-    trigger_malware_names: list[str] = ["CustomPolicy.MVX.pdf", "CustomPolicy.MVX.zip", "CustomPolicy.MVX.docx"]
+    trigger_malware_names: list[str] = [
+        "CustomPolicy.MVX.pdf", "CustomPolicy.MVX.zip", "CustomPolicy.MVX.docx",
+        "CustomPolicy.MVX.65066.PassExtractFailed",
+    ]
 
     # --- Outbound mail ---
     smtp_host: str

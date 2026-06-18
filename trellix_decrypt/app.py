@@ -15,7 +15,8 @@ from .web import create_app
 
 def build_engine(settings: Settings) -> FlowEngine:
     repo = CaseRepository(build_session_factory(settings.db_url))
-    ex = EXClient(settings.ex_base_url, settings.ex_username, settings.ex_password, settings.ex_verify_tls)
+    ex = EXClient(settings.ex_base_url, settings.ex_username, settings.ex_password,
+                  settings.ex_verify_tls, settings.ex_client_token)
     mailer = SMTPMailer(settings)
     tokens = TokenService(settings.secret_key, settings.token_ttl)
     rules = RiskwareRules(settings.trigger_malware_names, settings.trigger_alert_name)

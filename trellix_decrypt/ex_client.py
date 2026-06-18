@@ -20,7 +20,7 @@ EP_ALERTS = f"{_BASE}/alerts"
 EP_QUARANTINE = f"{_BASE}/emailmgmt/quarantine"
 EP_QUARANTINE_RELEASE = f"{_BASE}/emailmgmt/quarantine/release"
 EP_QUARANTINE_DELETE = f"{_BASE}/emailmgmt/quarantine/delete"
-EP_QUARANTINE_RESCAN = f"{_BASE}/emailmgmt/quarantine/rescan"  # + /<email_uuid>
+EP_QUARANTINE_RESCAN = f"{_BASE}/emailmgmt/quarantine/rescan"  # + /<queue_id> (doc mislabels it email_uuid)
 
 TOKEN_HEADER = "X-FeApi-Token"
 CLIENT_TOKEN_HEADER = "X-FeClient-Token"
@@ -84,23 +84,22 @@ class EXClient:
         resp = await self._request("GET", EP_QUARANTINE, params=params)
         return _as_quarantine_list(resp.json())
 
-    async def resolve_email_uuid(self, queue_id: str) -> tuple[str | None, str | None]:
-        """Find the quarantined email for `queue_id`, returning (email_uuid, actual_queue_id).
+    async def current_queue_id(self, queue_id: str) -> str | None:
+        """Return the queue id under which `queue_id`'s email is currently quarantined.
 
-        A resubmitted email that EX re-quarantines keeps `queue_id` with a suffix
-        appended (e.g. `_RA`); we read that back rather than constructing it, so an
-        exact match wins, otherwise a prefix match (the re-quarantine) is used.
+        After a failed resubmission EX re-quarantines it under the original id plus
+        a suffix it appends (e.g. `_RA`); we read that back rather than constructing
+        it — an exact match wins, otherwise the prefixed (re-quarantine) entry.
         """
         entries = await self.list_quarantine()
-        exact = [e for e in entries if _qid(e) == queue_id]
-        prefixed = [e for e in entries if _qid(e) != queue_id and _qid(e).startswith(queue_id)]
-        for entry in exact or prefixed:
-            return entry.get("email_uuid") or entry.get("emailUuid"), _qid(entry)
-        return None, None
+        exact = [_qid(e) for e in entries if _qid(e) == queue_id]
+        prefixed = [_qid(e) for e in entries if _qid(e) != queue_id and _qid(e).startswith(queue_id)]
+        found = exact or prefixed
+        return found[0] if found else None
 
-    async def rescan(self, email_uuid: str, passwords: list[str]) -> dict:
-        """Rescan a quarantined email, supplying decryption password(s)."""
-        url = f"{EP_QUARANTINE_RESCAN}/{email_uuid}"
+    async def rescan(self, queue_id: str, passwords: list[str]) -> dict:
+        """Rescan a quarantined email by queue id, supplying decryption password(s)."""
+        url = f"{EP_QUARANTINE_RESCAN}/{queue_id}"
         payload = {"rescan_properties": {"pwd_list": passwords}}
         resp = await self._request("POST", url, json=payload, headers={"Content-Type": "application/json"})
         return resp.json() if resp.content else {}

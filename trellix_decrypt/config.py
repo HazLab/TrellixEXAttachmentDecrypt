@@ -15,8 +15,10 @@ class Settings(BaseSettings):
     ex_password: str
     ex_verify_tls: bool = True
 
-    # Riskware rule IDs (failed decryption) that trigger the flow.
+    # An alert triggers the flow if its rule ID is in trigger_rule_ids OR any of
+    # its malware names contains one of trigger_malware_names (case-insensitive).
     trigger_rule_ids: list[int] = []
+    trigger_malware_names: list[str] = []
 
     # --- Outbound mail ---
     smtp_host: str
@@ -46,7 +48,7 @@ class Settings(BaseSettings):
     # --- Storage ---
     db_url: str = "sqlite:///trellix_decrypt.sqlite3"
 
-    @field_validator("trigger_rule_ids", "webhook_ip_allowlist", mode="before")
+    @field_validator("trigger_rule_ids", "trigger_malware_names", "webhook_ip_allowlist", mode="before")
     @classmethod
     def _split_csv(cls, v):
         """Accept comma-separated strings from env vars as lists."""

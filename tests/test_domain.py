@@ -19,6 +19,20 @@ def test_rules_trigger_matching():
     assert not rules.is_trigger(None)
 
 
+def test_rules_match_by_malware_name():
+    rules = RiskwareRules([], ["encrypted", "password-protected"])
+    enc = AlertEvent(queue_id="Q", recipient="u@x", rule_id=999, malware_names=["Riskware.Encrypted.Archive"])
+    clean = AlertEvent(queue_id="Q", recipient="u@x", rule_id=999, malware_names=["Trojan.Generic"])
+    assert rules.matches(enc)        # name substring match, even though rule_id isn't a trigger
+    assert not rules.matches(clean)
+
+
+def test_rules_match_by_rule_id_or_name():
+    rules = RiskwareRules([65001], ["encrypted"])
+    assert rules.matches(AlertEvent(queue_id="Q", recipient="u@x", rule_id=65001))  # by rule id
+    assert rules.matches(AlertEvent(queue_id="Q", recipient="u@x", malware_names=["foo-ENCRYPTED-bar"]))  # by name
+
+
 def test_token_roundtrip_and_tamper():
     svc = TokenService("secret", ttl=60)
     token = svc.mint("case-123")

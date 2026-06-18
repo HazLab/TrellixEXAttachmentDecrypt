@@ -33,7 +33,13 @@ pip install -e ".[dev]"
 ## Configure
 
 Configuration is read from environment variables (or a `.env` file you create —
-**not committed**). Minimum required:
+**not committed**). Copy the template and fill it in:
+
+```bash
+cp env.example .env   # then edit .env
+```
+
+Full variable list is in `env.example`. Key ones:
 
 ```bash
 # Trellix EX appliance
@@ -42,8 +48,10 @@ EX_USERNAME=api_analyst
 EX_PASSWORD=...
 EX_VERIFY_TLS=true
 
-# Which riskware rule IDs trigger the flow (comma-separated)
+# What triggers the flow: rule ID in TRIGGER_RULE_IDS OR a malware name
+# containing one of TRIGGER_MALWARE_NAMES (case-insensitive). Set either/both.
 TRIGGER_RULE_IDS=65001,65030
+TRIGGER_MALWARE_NAMES=encrypted,password-protected
 
 # Outbound mail
 SMTP_HOST=smtp.example.com

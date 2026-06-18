@@ -18,7 +18,7 @@ def build_engine(settings: Settings) -> FlowEngine:
     ex = EXClient(settings.ex_base_url, settings.ex_username, settings.ex_password, settings.ex_verify_tls)
     mailer = SMTPMailer(settings)
     tokens = TokenService(settings.secret_key, settings.token_ttl)
-    rules = RiskwareRules(settings.trigger_rule_ids)
+    rules = RiskwareRules(settings.trigger_rule_ids, settings.trigger_malware_names)
     scheduler = RecheckScheduler(settings)
 
     engine = FlowEngine(repo, ex, mailer, tokens, rules, settings, scheduler)

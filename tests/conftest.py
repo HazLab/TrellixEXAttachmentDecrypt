@@ -29,14 +29,17 @@ def make_settings(**overrides) -> Settings:
 
 class FakeEX:
     def __init__(self, outcomes=None):
-        self.resubmitted = []
+        self.rescanned = []
         self.outcomes = list(outcomes or [])
 
-    async def resubmit(self, queue_id, passwords):
-        self.resubmitted.append((queue_id, passwords))
+    async def resolve_email_uuid(self, queue_id):
+        return f"uuid-{queue_id}", queue_id
+
+    async def rescan(self, email_uuid, passwords):
+        self.rescanned.append((email_uuid, passwords))
         return {}
 
-    async def classify_resubmission(self, queue_id, rules):
+    async def classify_resubmission(self, queue_id, recipient, rules):
         return self.outcomes.pop(0) if self.outcomes else QuarantineOutcome.NOT_QUARANTINED
 
     async def aclose(self):

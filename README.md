@@ -44,15 +44,16 @@ Full variable list is in `env.example`. Key ones:
 ```bash
 # Trellix EX appliance
 EX_BASE_URL=https://ex.example.com
-EX_USERNAME=api_analyst
+EX_USERNAME=api_analyst        # account with API Analyst role
 EX_PASSWORD=...
 EX_VERIFY_TLS=true
+EX_CLIENT_TOKEN=               # optional X-FeClient-Token from Trellix
 
 # Trigger: alert "name" == TRIGGER_ALERT_NAME AND a malware name exactly equals
 # one of TRIGGER_MALWARE_NAMES. The encrypted-attachment policy emits
 # CustomPolicy.MVX.<ext>. (Empty TRIGGER_MALWARE_NAMES disables triggering.)
 TRIGGER_ALERT_NAME=RISKWARE_OBJECT
-TRIGGER_MALWARE_NAMES=CustomPolicy.MVX.pdf,CustomPolicy.MVX.zip,CustomPolicy.MVX.docx
+TRIGGER_MALWARE_NAMES=CustomPolicy.MVX.pdf,CustomPolicy.MVX.zip,CustomPolicy.MVX.docx,CustomPolicy.MVX.65066.PassExtractFailed
 
 # Outbound mail
 SMTP_HOST=smtp.example.com
@@ -97,9 +98,10 @@ pytest
 
 ## Notes
 
-- The exact `wsapis/v2.0.0` endpoint paths and resubmit body fields are
-  centralized in `trellix_decrypt/ex_client.py`; confirm them against your live
-  appliance before production use.
+- Endpoints/auth/rescan are based on the Trellix API Reference Release 2025.1
+  (PDFs in `docs/`) and centralized in `trellix_decrypt/ex_client.py`. The rescan
+  call is `POST /emailmgmt/quarantine/rescan/<email_uuid>` with
+  `{"rescan_properties": {"pwd_list": [...]}}`.
 - Passwords are used immediately and never stored in plaintext.
 
 ## License

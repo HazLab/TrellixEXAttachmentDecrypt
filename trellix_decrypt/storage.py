@@ -38,7 +38,8 @@ class AttachmentCase(Base):
     recipient: Mapped[str] = mapped_column(index=True)
     sender: Mapped[str | None] = mapped_column(default=None)
     subject: Mapped[str | None] = mapped_column(default=None)
-    rule_id: Mapped[int | None] = mapped_column(default=None)
+    alert_name: Mapped[str | None] = mapped_column(default=None)
+    malware_name: Mapped[str | None] = mapped_column(default=None)
     state: Mapped[FlowState] = mapped_column(SAEnum(FlowState), default=FlowState.RECEIVED)
     attempts: Mapped[int] = mapped_column(default=0)
     created_at: Mapped[datetime] = mapped_column(default=_now)
@@ -89,7 +90,9 @@ class CaseRepository:
             if case is None:
                 case = AttachmentCase(
                     queue_id=event.queue_id, recipient=event.recipient, sender=event.sender,
-                    subject=event.subject, rule_id=event.rule_id, state=FlowState.RECEIVED,
+                    subject=event.subject, alert_name=event.alert_name,
+                    malware_name=(event.malware_names[0] if event.malware_names else None),
+                    state=FlowState.RECEIVED,
                 )
                 s.add(case)
                 s.flush()

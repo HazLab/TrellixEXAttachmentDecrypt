@@ -103,10 +103,11 @@ class EXClient:
         if not entries:
             return QuarantineOutcome.NOT_QUARANTINED
         for entry in entries:
-            for name, malware_type in _entry_malware(entry):
-                if rules.matches_entry(name, malware_type):
-                    return QuarantineOutcome.FAILED_EXTRACTION
-        return QuarantineOutcome.MALICIOUS
+            if _entry_malicious(entry):
+                return QuarantineOutcome.MALICIOUS
+            if any(rules.name_matches(name) for name in _entry_malware_names(entry)):
+                return QuarantineOutcome.FAILED_EXTRACTION
+        return QuarantineOutcome.MALICIOUS  # re-quarantined for some other reason
 
 
 # --- response parsing helpers (CONFIRM field names against appliance) -------
@@ -119,12 +120,24 @@ def _quarantine_entries(data, queue_id: str) -> list[dict]:
     return matched or items  # fall back to all if the listing was already filtered server-side
 
 
-def _entry_malware(entry: dict) -> list[tuple]:
-    """Extract (name, type) pairs of malware from a quarantine entry."""
-    malware = entry.get("malware")
+def _entry_malware_names(entry: dict) -> list:
+    """Extract malware names from a quarantine entry (mirrors the alert shape)."""
+    malware = _dig(entry, "explanation", "malwareDetected", "malware") or entry.get("malware")
     if isinstance(malware, dict):
         malware = [malware]
     if isinstance(malware, list):
-        return [(m.get("name") or m.get("malware_name"), m.get("type") or m.get("stype"))
-                for m in malware if isinstance(m, dict)]
-    return [(entry.get("malware_name") or entry.get("name"), entry.get("malware_type") or entry.get("type"))]
+        return [m.get("name") or m.get("malware_name") for m in malware if isinstance(m, dict)]
+    return [entry.get("malware_name") or entry.get("name")]
+
+
+def _entry_malicious(entry: dict) -> bool:
+    return str(entry.get("malicious") or "no").strip().lower() in ("yes", "true", "1")
+
+
+def _dig(obj, *path):
+    cur = obj
+    for key in path:
+        cur = cur.get(key) if isinstance(cur, dict) else None
+        if cur is None:
+            return None
+    return cur

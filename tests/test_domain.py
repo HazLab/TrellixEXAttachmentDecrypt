@@ -6,28 +6,26 @@ import pytest
 
 from trellix_decrypt.domain import AlertEvent, FlowState, QuarantineOutcome, RiskwareRules, TokenService
 
+from .conftest import TRIGGER_MALWARE_NAME
 
-def _alert(name="CustomPolicy.MVX.pdf", malware_type="riskware-object", queue_id="Q1"):
+
+def _alert(name=TRIGGER_MALWARE_NAME, alert_name="RISKWARE_OBJECT", queue_id="Q1"):
     return AlertEvent(queue_id=queue_id, recipient="user@corp.test", subject="Invoice",
-                      malware=[{"name": name, "type": malware_type}])
+                      alert_name=alert_name, malware_names=[name])
 
 
 # --- rules & tokens ---------------------------------------------------------
-TRIGGER_NAMES = ["CustomPolicy.MVX.pdf", "CustomPolicy.MVX.zip", "CustomPolicy.MVX.docx"]
+def test_rules_require_alert_name_and_exact_malware_name():
+    rules = RiskwareRules([TRIGGER_MALWARE_NAME], "RISKWARE_OBJECT")
+    assert rules.matches(_alert(TRIGGER_MALWARE_NAME))                       # exact name + right alert
+    assert not rules.matches(_alert(TRIGGER_MALWARE_NAME, alert_name="MALWARE_OBJECT"))  # wrong alert name
+    assert not rules.matches(_alert("CustomPolicy.MVX.65055.qrCodePresent"))  # different policy
+    assert not rules.matches(_alert("CustomPolicy.MVX"))                     # stem alone doesn't match
 
 
-def test_rules_require_type_and_exact_name():
-    rules = RiskwareRules(TRIGGER_NAMES, "riskware-object")
-    assert rules.matches(_alert("CustomPolicy.MVX.zip"))               # exact name + right type
-    assert not rules.matches(_alert("CustomPolicy.MVX.zip", "malware-object"))  # wrong type
-    assert not rules.matches(_alert("CustomPolicy.MVX.exe"))           # name not in the list
-    assert not rules.matches(_alert("CustomPolicy.MVX"))               # stem alone doesn't match
-
-
-def test_rules_type_only_when_no_names():
-    rules = RiskwareRules([], "riskware-object")
-    assert rules.matches(_alert("anything", "riskware-object"))
-    assert not rules.matches(_alert("anything", "trojan-object"))
+def test_rules_never_trigger_without_configured_names():
+    rules = RiskwareRules([], "RISKWARE_OBJECT")
+    assert not rules.matches(_alert(TRIGGER_MALWARE_NAME))  # empty names => never fire
 
 
 def test_token_roundtrip_and_tamper():
@@ -39,7 +37,8 @@ def test_token_roundtrip_and_tamper():
 
 # --- flow engine ------------------------------------------------------------
 async def test_non_trigger_alert_ignored(engine):
-    assert await engine.handle_alert(_alert(malware_type="trojan-object")) is None
+    # A different CustomPolicy.MVX riskware object (e.g. QR-code) must NOT trigger.
+    assert await engine.handle_alert(_alert("CustomPolicy.MVX.65055.qrCodePresent")) is None
     assert engine.mailer.sent == []
 
 

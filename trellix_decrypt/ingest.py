@@ -40,37 +40,29 @@ def _first(*values):
     return None
 
 
-def _to_int(value):
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None
+def _is_yes(value) -> bool:
+    return str(value or "").strip().lower() in ("yes", "true", "1")
 
 
 def parse_alert(alert: dict) -> AlertEvent:
     """Map one raw EX alert dict to an AlertEvent.
 
-    Field names vary by EX version / notification format — adjust the lookups
-    here if your appliance differs. This is the only place that knows the wire
-    shape of an alert.
+    Verified against docs/sample_alert.json. Field names vary by EX version —
+    adjust the lookups here if your appliance differs. This is the only place
+    that knows the wire shape of an alert.
     """
-    rule_id = _to_int(_first(
-        alert.get("rule_id"), alert.get("ruleId"), alert.get("riskware_rule_id"),
-        _dig(alert, "explanation", "malwareDetected", "malware", 0, "sid"),
-    ))
     return AlertEvent(
         queue_id=str(_first(alert.get("queue_id"), alert.get("queueId"), _dig(alert, "smtpMessage", "queueId")) or ""),
         recipient=str(_first(
             _dig(alert, "smtpMessage", "rcptTo"), _dig(alert, "dst", "smtpTo"),
             alert.get("recipient"), alert.get("rcpt_to"),
         ) or ""),
-        rule_id=rule_id,
+        alert_name=_first(alert.get("name"), alert.get("alert_name")),
+        malicious=_is_yes(alert.get("malicious")),
         sender=_first(_dig(alert, "smtpMessage", "mailFrom"), _dig(alert, "src", "smtpMailFrom"), alert.get("sender")),
         subject=_first(_dig(alert, "smtpMessage", "subject"), alert.get("subject")),
-        malware=[
-            {"name": m.get("name") or m.get("malware_name"), "type": m.get("type") or m.get("stype")}
-            for m in _malware_entries(alert)
-        ],
+        malware_names=[str(name) for m in _malware_entries(alert)
+                       if (name := m.get("name") or m.get("malware_name")) is not None],
         raw=alert,
     )
 
@@ -87,8 +79,8 @@ def _malware_entries(alert: dict) -> list[dict]:
 
 
 def iter_alerts(payload: dict) -> list[dict]:
-    """An EX notification may wrap one or many alerts under ``alert``/``alerts``."""
-    alerts = payload.get("alert") or payload.get("alerts") or payload
+    """An EX notification wraps alerts under ``Alerts`` (see sample); accept variants."""
+    alerts = payload.get("Alerts") or payload.get("alerts") or payload.get("alert") or payload
     return alerts if isinstance(alerts, list) else [alerts]
 
 

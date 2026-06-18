@@ -44,40 +44,39 @@ class AlertEvent:
 
     queue_id: str
     recipient: str
-    rule_id: int | None = None  # parsed for the record; not used for triggering
+    alert_name: str | None = None   # top-level alert "name", e.g. "RISKWARE_OBJECT"
+    malicious: bool = False          # alert "malicious" == "yes"
     sender: str | None = None
     subject: str | None = None
-    malware: list[dict] = dataclasses.field(default_factory=list)  # [{"name": ..., "type": ...}]
+    malware_names: list[str] = dataclasses.field(default_factory=list)
     raw: dict = dataclasses.field(default_factory=dict)
 
 
 class RiskwareRules:
     """Decides whether an alert should trigger the recovery flow.
 
-    An alert matches when it has a malware entry whose TYPE equals the configured
-    trigger type (e.g. "riskware-object") AND whose NAME exactly equals one of the
-    configured names (case-insensitive, e.g. CustomPolicy.MVX.pdf / .zip / .docx).
-    With no names configured, a type match alone is enough.
+    An alert matches when its top-level name equals the configured alert name
+    (e.g. "RISKWARE_OBJECT") AND one of its malware names exactly equals one of
+    the configured malware names (case-insensitive). With no malware names
+    configured nothing matches — this avoids firing on every riskware object
+    (e.g. unrelated CustomPolicy.MVX QR-code detections).
     """
 
-    def __init__(self, trigger_malware_names=(), trigger_malware_type="riskware-object"):
+    def __init__(self, trigger_malware_names=(), trigger_alert_name="RISKWARE_OBJECT"):
         self._names = {str(n).strip().lower() for n in trigger_malware_names if str(n).strip()}
-        self._type = (trigger_malware_type or "").strip().lower()
+        self._alert_name = (trigger_alert_name or "").strip().lower()
 
-    def _type_ok(self, malware_type) -> bool:
-        return not self._type or str(malware_type or "").strip().lower() == self._type
-
-    def _name_ok(self, name) -> bool:
-        if not self._names:
-            return True
+    def name_matches(self, name) -> bool:
+        """Exact (case-insensitive) match of one malware name against the triggers."""
         return str(name or "").strip().lower() in self._names
 
-    def matches_entry(self, name, malware_type) -> bool:
-        """Whether a single malware entry (name + type) is a trigger."""
-        return self._type_ok(malware_type) and self._name_ok(name)
+    def alert_name_matches(self, alert_name) -> bool:
+        return not self._alert_name or str(alert_name or "").strip().lower() == self._alert_name
 
     def matches(self, event: "AlertEvent") -> bool:
-        return any(self.matches_entry(m.get("name"), m.get("type")) for m in event.malware)
+        if not self._names or not self.alert_name_matches(event.alert_name):
+            return False
+        return any(self.name_matches(n) for n in event.malware_names)
 
 
 class TokenService:

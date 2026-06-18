@@ -17,12 +17,11 @@ class Settings(BaseSettings):
 
     # An alert triggers the flow only when its top-level "name" equals
     # trigger_alert_name AND one of its malware names exactly equals one of
-    # trigger_malware_names (case-insensitive). trigger_malware_names is REQUIRED —
-    # leave it empty and nothing triggers (prevents firing on unrelated riskware
-    # objects such as CustomPolicy.MVX QR-code detections). See docs/sample_alert.json
-    # for the alert format; set the encrypted-attachment policy's malware name(s).
+    # trigger_malware_names (case-insensitive). The encrypted-attachment custom
+    # policy emits CustomPolicy.MVX.<ext>. An empty list disables triggering
+    # (prevents firing on unrelated riskware objects).
     trigger_alert_name: str = "RISKWARE_OBJECT"
-    trigger_malware_names: list[str] = []
+    trigger_malware_names: list[str] = ["CustomPolicy.MVX.pdf", "CustomPolicy.MVX.zip", "CustomPolicy.MVX.docx"]
 
     # --- Outbound mail ---
     smtp_host: str

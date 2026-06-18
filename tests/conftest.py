@@ -8,8 +8,8 @@ from trellix_decrypt.config import Settings
 from trellix_decrypt.domain import FlowEngine, QuarantineOutcome, RiskwareRules, TokenService
 from trellix_decrypt.storage import CaseRepository, build_session_factory
 
-# Representative encrypted-attachment policy name (real value TBD against appliance).
-TRIGGER_MALWARE_NAME = "CustomPolicy.MVX.65010.encryptedAttachment"
+# Encrypted-attachment custom-policy malware name.
+TRIGGER_MALWARE_NAME = "CustomPolicy.MVX.zip"
 
 
 def make_settings(**overrides) -> Settings:

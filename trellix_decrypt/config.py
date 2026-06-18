@@ -15,10 +15,11 @@ class Settings(BaseSettings):
     ex_password: str
     ex_verify_tls: bool = True
 
-    # An alert triggers the flow if its rule ID is in trigger_rule_ids OR any of
-    # its malware names contains one of trigger_malware_names (case-insensitive).
-    trigger_rule_ids: list[int] = []
-    trigger_malware_names: list[str] = []
+    # An alert triggers the flow when it has a malware entry whose TYPE equals
+    # trigger_malware_type AND whose NAME exactly equals one of trigger_malware_names
+    # (case-insensitive). Empty names => match on type alone.
+    trigger_malware_type: str = "riskware-object"
+    trigger_malware_names: list[str] = ["CustomPolicy.MVX.pdf", "CustomPolicy.MVX.zip", "CustomPolicy.MVX.docx"]
 
     # --- Outbound mail ---
     smtp_host: str
@@ -48,7 +49,7 @@ class Settings(BaseSettings):
     # --- Storage ---
     db_url: str = "sqlite:///trellix_decrypt.sqlite3"
 
-    @field_validator("trigger_rule_ids", "trigger_malware_names", "webhook_ip_allowlist", mode="before")
+    @field_validator("trigger_malware_names", "webhook_ip_allowlist", mode="before")
     @classmethod
     def _split_csv(cls, v):
         """Accept comma-separated strings from env vars as lists."""

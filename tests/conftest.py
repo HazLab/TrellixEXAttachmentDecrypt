@@ -8,14 +8,17 @@ from trellix_decrypt.config import Settings
 from trellix_decrypt.domain import FlowEngine, QuarantineOutcome, RiskwareRules, TokenService
 from trellix_decrypt.storage import CaseRepository, build_session_factory
 
+# Representative encrypted-attachment policy name (real value TBD against appliance).
+TRIGGER_MALWARE_NAME = "CustomPolicy.MVX.65010.encryptedAttachment"
+
 
 def make_settings(**overrides) -> Settings:
     base = dict(
         ex_base_url="https://ex.test", ex_username="u", ex_password="p",
         smtp_host="smtp.test", public_base_url="https://decrypt.test",
         secret_key="test-secret", webhook_secret="hook-secret",
-        trigger_malware_type="riskware-object",
-        trigger_malware_names=["CustomPolicy.MVX.pdf", "CustomPolicy.MVX.zip", "CustomPolicy.MVX.docx"],
+        trigger_alert_name="RISKWARE_OBJECT",
+        trigger_malware_names=[TRIGGER_MALWARE_NAME],
         max_password_attempts=3,
         recheck_delay=0, recheck_interval=0, recheck_max_attempts=3,
         db_url="sqlite://",  # in-memory
@@ -72,6 +75,6 @@ def engine(settings):
     repo = CaseRepository(build_session_factory(settings.db_url))
     ex, mailer, scheduler = FakeEX(), FakeMailer(), FakeScheduler()
     eng = FlowEngine(repo, ex, mailer, TokenService(settings.secret_key, settings.token_ttl),
-                     RiskwareRules(settings.trigger_malware_names, settings.trigger_malware_type), settings, scheduler)
+                     RiskwareRules(settings.trigger_malware_names, settings.trigger_alert_name), settings, scheduler)
     scheduler.bind(eng)
     return eng

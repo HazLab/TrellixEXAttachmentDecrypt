@@ -139,8 +139,10 @@ class FlowEngine:
 
         self.repo.add_attempt(case, hash_password(password))
         self.repo.set_state(case, FlowState.PASSWORD_SUBMITTED, "password submitted")
-        await self.ex.resubmit(case.queue_id, [password])
-        self.repo.set_state(case, FlowState.RESUBMITTED, "resubmitted to EX")
+        # The rescan endpoint takes the email's UUID; resolve it from quarantine.
+        email_uuid, _ = await self.ex.resolve_email_uuid(case.queue_id)
+        await self.ex.rescan(email_uuid or case.queue_id, [password])
+        self.repo.set_state(case, FlowState.RESUBMITTED, "resubmitted to EX (rescan)")
         self.scheduler.schedule_recheck(case.id)
         return case, "ok"
 
@@ -151,7 +153,7 @@ class FlowEngine:
             return True
         self.repo.set_state(case, FlowState.RECHECKING, "rechecking quarantine")
 
-        outcome = await self.ex.classify_resubmission(case.queue_id, self.rules)
+        outcome = await self.ex.classify_resubmission(case.queue_id, case.recipient, self.rules)
         if outcome is QuarantineOutcome.MALICIOUS:
             self.repo.set_state(case, FlowState.DONE_MALICIOUS, "re-quarantined: malicious")
             return True

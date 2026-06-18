@@ -20,8 +20,9 @@ Pipeline:
    Empty `TRIGGER_MALWARE_NAMES` disables triggering.
 2. We look up the recipient and email them a **one-time randomized link**.
 3. The recipient submits the attachment password on that link.
-4. We call the EX **resubmission API** (it accepts one or more passwords) to
-   re-analyze the email.
+4. We resolve the email's `email_uuid` from the quarantine list and call the EX
+   **rescan** API (`POST /emailmgmt/quarantine/rescan/<email_uuid>` with
+   `{"rescan_properties": {"pwd_list": [...]}}`) to re-analyze with the password.
 5. EX re-detects a failed resubmission under the **same queue id + `_RA`
    suffix**. A background recheck queries the **alerts API** for `<queueId>_RA`
    (`ex_client.classify_resubmission`) and decides:
@@ -51,11 +52,13 @@ trellix_decrypt/
   app.py          Composition root: build Settings, wire deps, start web+scheduler.
   config.py       Settings (pydantic-settings; env vars / real .env created by user).
   domain.py       AlertEvent, FlowState enum, RiskwareRules, one-time tokens,
-                  FlowEngine (the state machine / orchestrator). NO I/O.
-  ex_client.py    EXClient: auth (X-FeApi-Token, auto re-auth), alerts, quarantine
-                  list/get/release/delete, resubmit(queue_id, passwords).
-                  *** ALL wsapis paths + the resubmit payload shape live at the top
-                  of this file — the single place to correct against a live EX. ***
+                  FlowEngine (the state machine / orchestrator) + the pure alert
+                  parser (parse_alert / iter_alerts). NO I/O.
+  ex_client.py    EXClient: auth (X-FeApi-Token + optional X-FeClient-Token, auto
+                  re-auth), get_alerts, quarantine list/release/delete,
+                  resolve_email_uuid, rescan(email_uuid, passwords),
+                  classify_resubmission. Verified against docs/*.pdf (Release 2025.1).
+                  *** ALL wsapis paths live at the top — the single place to adjust. ***
   ingest.py       AlertSource base + EX-alert JSON parser + FastAPI webhook router.
   mailer.py       SMTPMailer + Jinja2 email rendering.
   storage.py      SQLAlchemy engine/session, ORM models (AttachmentCase carries the
@@ -103,9 +106,12 @@ pytest                         # unit + respx-mocked EX client tests
 
 ## Caveats
 
-- The exact `wsapis/v2.0.0` paths and resubmit body field names are **not
-  publicly renderable** (Trellix docs are JS-only). They are centralized in
-  `ex_client.py`; confirm against the live appliance before production use.
-- `_RA`-suffix re-quarantine detection is the signal that resubmission failed —
-  see `recheck.py`.
+- Endpoints/auth/rescan are verified against `docs/*.pdf` (Trellix API Reference
+  Release 2025.1). Two appliance-specific points to confirm on a live box:
+  - The rescan path param is documented as `email_uuid` (we resolve it from the
+    quarantine list by `queue_id`); the doc's example value is queue-id-shaped.
+  - The re-quarantine of a resubmitted email appears under the original
+    `queue_id` plus a suffix EX appends (e.g. `_RA`). We **read** that back from
+    quarantine/alerts by prefix-match and never construct the suffix ourselves
+    (`ex_client.classify_resubmission`).
 ```

@@ -17,7 +17,7 @@ def app_engine():
     settings = make_settings()
     repo = CaseRepository(build_session_factory(settings.db_url))
     engine = FlowEngine(repo, FakeEX(), FakeMailer(), TokenService(settings.secret_key, settings.token_ttl),
-                        RiskwareRules(settings.trigger_rule_ids), settings, FakeScheduler())
+                        RiskwareRules(settings.trigger_malware_names, settings.trigger_malware_type), settings, FakeScheduler())
     engine.scheduler.bind(engine)
     return create_app(engine, settings), engine, settings
 
@@ -29,7 +29,8 @@ def test_full_webhook_to_resubmit(app_engine):
         assert client.post("/webhook/ex-alert", json={}).status_code == 401
 
         # 2. Trigger alert -> email sent, case awaiting.
-        alert = {"queue_id": "Q-77", "recipient": "u@corp.test", "rule_id": 65001, "subject": "Invoice"}
+        alert = {"queue_id": "Q-77", "recipient": "u@corp.test", "subject": "Invoice",
+                 "malware": [{"name": "CustomPolicy.MVX.pdf", "type": "riskware-object"}]}
         resp = client.post("/webhook/ex-alert", json=alert, headers={"X-Webhook-Secret": settings.webhook_secret})
         assert resp.status_code == 200 and resp.json()["handled"] == 1
         assert len(engine.mailer.sent) == 1

@@ -9,7 +9,7 @@ from trellix_decrypt import ex_client as ex
 from trellix_decrypt.domain import QuarantineOutcome, RiskwareRules
 
 BASE = "https://ex.test"
-RULES = RiskwareRules([65001, 65030])
+RULES = RiskwareRules(["CustomPolicy.MVX.pdf", "CustomPolicy.MVX.zip"], "riskware-object")
 
 
 def _client():
@@ -54,11 +54,15 @@ async def test_classify_failed_extraction_vs_malicious():
     _mock_login(router)
     q = router.get(BASE + ex.EP_QUARANTINE)
 
-    q.mock(return_value=httpx.Response(200, json=[{"queue_id": "Q1_RA", "rule_id": 65001}]))
+    q.mock(return_value=httpx.Response(200, json=[
+        {"queue_id": "Q1_RA", "malware": [{"name": "CustomPolicy.MVX.pdf", "type": "riskware-object"}]}
+    ]))
     client = _client()
     assert await client.classify_resubmission("Q1", RULES) is QuarantineOutcome.FAILED_EXTRACTION
 
-    q.mock(return_value=httpx.Response(200, json=[{"queue_id": "Q1_RA", "rule_id": 30100}]))
+    q.mock(return_value=httpx.Response(200, json=[
+        {"queue_id": "Q1_RA", "malware": [{"name": "Exploit.CVE", "type": "malware-object"}]}
+    ]))
     assert await client.classify_resubmission("Q1", RULES) is QuarantineOutcome.MALICIOUS
     await client.aclose()
 

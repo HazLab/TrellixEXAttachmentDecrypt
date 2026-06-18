@@ -7,30 +7,27 @@ import pytest
 from trellix_decrypt.domain import AlertEvent, FlowState, QuarantineOutcome, RiskwareRules, TokenService
 
 
-def _alert(rule_id=65001, queue_id="Q1"):
-    return AlertEvent(queue_id=queue_id, recipient="user@corp.test", rule_id=rule_id, subject="Invoice")
+def _alert(name="CustomPolicy.MVX.pdf", malware_type="riskware-object", queue_id="Q1"):
+    return AlertEvent(queue_id=queue_id, recipient="user@corp.test", subject="Invoice",
+                      malware=[{"name": name, "type": malware_type}])
 
 
 # --- rules & tokens ---------------------------------------------------------
-def test_rules_trigger_matching():
-    rules = RiskwareRules([65001, 65030])
-    assert rules.is_trigger(65001) and rules.is_trigger("65030")
-    assert not rules.is_trigger(99999)
-    assert not rules.is_trigger(None)
+TRIGGER_NAMES = ["CustomPolicy.MVX.pdf", "CustomPolicy.MVX.zip", "CustomPolicy.MVX.docx"]
 
 
-def test_rules_match_by_malware_name():
-    rules = RiskwareRules([], ["encrypted", "password-protected"])
-    enc = AlertEvent(queue_id="Q", recipient="u@x", rule_id=999, malware_names=["Riskware.Encrypted.Archive"])
-    clean = AlertEvent(queue_id="Q", recipient="u@x", rule_id=999, malware_names=["Trojan.Generic"])
-    assert rules.matches(enc)        # name substring match, even though rule_id isn't a trigger
-    assert not rules.matches(clean)
+def test_rules_require_type_and_exact_name():
+    rules = RiskwareRules(TRIGGER_NAMES, "riskware-object")
+    assert rules.matches(_alert("CustomPolicy.MVX.zip"))               # exact name + right type
+    assert not rules.matches(_alert("CustomPolicy.MVX.zip", "malware-object"))  # wrong type
+    assert not rules.matches(_alert("CustomPolicy.MVX.exe"))           # name not in the list
+    assert not rules.matches(_alert("CustomPolicy.MVX"))               # stem alone doesn't match
 
 
-def test_rules_match_by_rule_id_or_name():
-    rules = RiskwareRules([65001], ["encrypted"])
-    assert rules.matches(AlertEvent(queue_id="Q", recipient="u@x", rule_id=65001))  # by rule id
-    assert rules.matches(AlertEvent(queue_id="Q", recipient="u@x", malware_names=["foo-ENCRYPTED-bar"]))  # by name
+def test_rules_type_only_when_no_names():
+    rules = RiskwareRules([], "riskware-object")
+    assert rules.matches(_alert("anything", "riskware-object"))
+    assert not rules.matches(_alert("anything", "trojan-object"))
 
 
 def test_token_roundtrip_and_tamper():
@@ -42,7 +39,7 @@ def test_token_roundtrip_and_tamper():
 
 # --- flow engine ------------------------------------------------------------
 async def test_non_trigger_alert_ignored(engine):
-    assert await engine.handle_alert(_alert(rule_id=42)) is None
+    assert await engine.handle_alert(_alert(malware_type="trojan-object")) is None
     assert engine.mailer.sent == []
 
 

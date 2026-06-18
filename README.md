@@ -48,10 +48,10 @@ EX_USERNAME=api_analyst
 EX_PASSWORD=...
 EX_VERIFY_TLS=true
 
-# What triggers the flow: rule ID in TRIGGER_RULE_IDS OR a malware name
-# containing one of TRIGGER_MALWARE_NAMES (case-insensitive). Set either/both.
-TRIGGER_RULE_IDS=65001,65030
-TRIGGER_MALWARE_NAMES=encrypted,password-protected
+# Trigger: alert has a malware entry whose TYPE == TRIGGER_MALWARE_TYPE and whose
+# NAME exactly equals one of TRIGGER_MALWARE_NAMES (case-insensitive).
+TRIGGER_MALWARE_TYPE=riskware-object
+TRIGGER_MALWARE_NAMES=CustomPolicy.MVX.pdf,CustomPolicy.MVX.zip,CustomPolicy.MVX.docx
 
 # Outbound mail
 SMTP_HOST=smtp.example.com

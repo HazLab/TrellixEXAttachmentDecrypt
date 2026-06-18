@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "trellix-ex-attachment-decrypt"
+version = "0.1.0"
+description = "Recover password-protected attachments quarantined by Trellix Email Security (EX)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "httpx>=0.27",
+    "sqlalchemy>=2.0",
+    "pydantic-settings>=2.2",
+    "jinja2>=3.1",
+    "aiosmtplib>=3.0",
+    "python-multipart>=0.0.9",
+    "itsdangerous>=2.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "respx>=0.21",
+    "ruff>=0.4",
+]
+
+[project.scripts]
+trellix-decrypt = "trellix_decrypt.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["trellix_decrypt*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

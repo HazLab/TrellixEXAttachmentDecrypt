@@ -180,3 +180,62 @@ class FlowEngine:
         link = f"{self.settings.public_base_url.rstrip('/')}/p/{token}"
         await self.mailer.send_password_request(case.recipient, link, case, retry=retry)
         self.repo.set_state(case, FlowState.AWAITING_PASSWORD, "password link sent" + (" (retry)" if retry else ""))
+
+
+# --- Alert parsing ----------------------------------------------------------
+# The single place that knows the wire shape of an EX alert. Verified against
+# docs/sample_alert.json (webhook push) and docs/sample_alerts_query.json (API).
+# Pure functions — reused by the webhook (ingest) and the EX client (recheck).
+
+
+def _dig(obj, *path):
+    """Walk dict keys / list indices, returning None if any step is missing."""
+    cur = obj
+    for key in path:
+        if isinstance(cur, dict):
+            cur = cur.get(key)
+        elif isinstance(cur, list) and isinstance(key, int) and -len(cur) <= key < len(cur):
+            cur = cur[key]
+        else:
+            return None
+    return cur
+
+
+def _first(*values):
+    for value in values:
+        if value not in (None, ""):
+            return value
+    return None
+
+
+def _is_yes(value) -> bool:
+    return str(value or "").strip().lower() in ("yes", "true", "1")
+
+
+def _malware_entries(alert: dict) -> list[dict]:
+    entries = _first(_dig(alert, "explanation", "malwareDetected", "malware"), alert.get("malware")) or []
+    if isinstance(entries, dict):
+        entries = [entries]
+    return [e for e in entries if isinstance(e, dict)]
+
+
+def iter_alerts(payload: dict) -> list[dict]:
+    """EX wraps alerts under ``Alerts`` (webhook push) or ``alert`` (API); accept both."""
+    alerts = payload.get("Alerts") or payload.get("alerts") or payload.get("alert") or payload
+    return alerts if isinstance(alerts, list) else [alerts]
+
+
+def parse_alert(alert: dict) -> AlertEvent:
+    """Map one raw EX alert dict to an AlertEvent."""
+    return AlertEvent(
+        queue_id=str(_first(alert.get("queue_id"), alert.get("queueId"), _dig(alert, "smtpMessage", "queueId")) or ""),
+        recipient=str(_first(_dig(alert, "smtpMessage", "rcptTo"), _dig(alert, "dst", "smtpTo"),
+                             alert.get("recipient"), alert.get("rcpt_to")) or ""),
+        alert_name=_first(alert.get("name"), alert.get("alert_name")),
+        malicious=_is_yes(alert.get("malicious")),
+        sender=_first(_dig(alert, "smtpMessage", "mailFrom"), _dig(alert, "src", "smtpMailFrom"), alert.get("sender")),
+        subject=_first(_dig(alert, "smtpMessage", "subject"), alert.get("subject")),
+        malware_names=[str(name) for m in _malware_entries(alert)
+                       if (name := m.get("name") or m.get("malware_name")) is not None],
+        raw=alert,
+    )

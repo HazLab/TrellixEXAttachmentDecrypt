@@ -40,11 +40,21 @@ async def test_resubmit_authenticates_then_posts():
     assert sent.headers[ex.TOKEN_HEADER] == "tok-123"
 
 
+def _alert(queue_id, name, malware, malicious="no"):
+    return {
+        "name": name, "malicious": malicious,
+        "smtpMessage": {"queueId": queue_id},
+        "explanation": {"malwareDetected": {"malware": [{"name": malware}]}},
+    }
+
+
 @respx.mock
 async def test_classify_not_quarantined():
     router = respx.mock
     _mock_login(router)
-    router.get(BASE + ex.EP_QUARANTINE).mock(return_value=httpx.Response(200, json={"email": []}))
+    # Only the original (pre-resubmit) alert exists, not the _RA one.
+    router.get(BASE + ex.EP_ALERTS).mock(return_value=httpx.Response(
+        200, json={"alert": [_alert("Q1", "RISKWARE_OBJECT", TRIGGER_MALWARE_NAME)]}))
     client = _client()
     assert await client.classify_resubmission("Q1", RULES) is QuarantineOutcome.NOT_QUARANTINED
     await client.aclose()
@@ -54,17 +64,15 @@ async def test_classify_not_quarantined():
 async def test_classify_failed_extraction_vs_malicious():
     router = respx.mock
     _mock_login(router)
-    q = router.get(BASE + ex.EP_QUARANTINE)
+    a = router.get(BASE + ex.EP_ALERTS)
 
-    q.mock(return_value=httpx.Response(200, json=[
-        {"queue_id": "Q1_RA", "malicious": "no", "malware": [{"name": TRIGGER_MALWARE_NAME}]}
-    ]))
+    a.mock(return_value=httpx.Response(200, json={"alert": [
+        _alert("Q1_RA", "RISKWARE_OBJECT", TRIGGER_MALWARE_NAME)]}))
     client = _client()
     assert await client.classify_resubmission("Q1", RULES) is QuarantineOutcome.FAILED_EXTRACTION
 
-    q.mock(return_value=httpx.Response(200, json=[
-        {"queue_id": "Q1_RA", "malicious": "yes", "malware": [{"name": "Exploit.CVE"}]}
-    ]))
+    a.mock(return_value=httpx.Response(200, json={"alert": [
+        _alert("Q1_RA", "MALWARE_OBJECT", "FE_Backdoor_Go_Sandcat_1", malicious="yes")]}))
     assert await client.classify_resubmission("Q1", RULES) is QuarantineOutcome.MALICIOUS
     await client.aclose()
 

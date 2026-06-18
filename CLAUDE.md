@@ -22,11 +22,13 @@ Pipeline:
 3. The recipient submits the attachment password on that link.
 4. We call the EX **resubmission API** (it accepts one or more passwords) to
    re-analyze the email.
-5. EX re-quarantines a failed resubmission under the **same queue ID + `_RA`
-   suffix**. A background recheck decides:
-   - re-quarantined for *failed extraction* (wrong password) → email the user
-     again, up to `max_password_attempts` (default 3, cap 5);
-   - re-quarantined as *malicious*, or *not quarantined at all* → stop.
+5. EX re-detects a failed resubmission under the **same queue id + `_RA`
+   suffix**. A background recheck queries the **alerts API** for `<queueId>_RA`
+   (`ex_client.classify_resubmission`) and decides:
+   - still a riskware trigger (`RISKWARE_OBJECT` + `CustomPolicy.MVX.<ext>`) →
+     wrong password → email the user again, up to `max_password_attempts`
+     (default 3, cap 5);
+   - a `MALWARE_OBJECT` / `malicious: yes` alert, or no `_RA` alert at all → stop.
 6. Every recipient / email / attempt / state transition is tracked.
 
 A web UI may be layered on later — keep layers cleanly separable.

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import httpx
 
-from .domain import QuarantineOutcome, RiskwareRules
+from .domain import QuarantineOutcome, RiskwareRules, iter_alerts, parse_alert
 
 # --- Endpoints (CONFIRM against your appliance) -----------------------------
 API_VERSION = "v2.0.0"
@@ -92,52 +92,20 @@ class EXClient:
         return resp.json() if resp.content else {}
 
     async def classify_resubmission(self, queue_id: str, rules: RiskwareRules) -> QuarantineOutcome:
-        """After resubmission EX re-quarantines under `<queue_id>_RA` if it failed again.
+        """Classify the resubmitted message by inspecting alerts for `<queue_id>_RA`.
 
-        Absent                                   -> NOT_QUARANTINED (delivered/clean)
-        Present, still the same riskware trigger  -> FAILED_EXTRACTION (wrong password)
-        Present for any other reason              -> MALICIOUS
+        EX re-detects a resubmitted email under the same queue id + `_RA` suffix.
+          no alert for it                                  -> NOT_QUARANTINED (delivered/clean)
+          a MALWARE_OBJECT / malicious alert               -> MALICIOUS (stop)
+          still a riskware trigger (CustomPolicy.MVX.<ext>) -> FAILED_EXTRACTION (wrong password)
         """
         ra_id = f"{queue_id}_RA"
-        entries = _quarantine_entries(await self.list_quarantine(queue_id=ra_id), ra_id)
-        if not entries:
+        events = [parse_alert(a) for a in iter_alerts(await self.get_alerts())]
+        relevant = [e for e in events if e.queue_id == ra_id]
+        if not relevant:
             return QuarantineOutcome.NOT_QUARANTINED
-        for entry in entries:
-            if _entry_malicious(entry):
-                return QuarantineOutcome.MALICIOUS
-            if any(rules.name_matches(name) for name in _entry_malware_names(entry)):
-                return QuarantineOutcome.FAILED_EXTRACTION
-        return QuarantineOutcome.MALICIOUS  # re-quarantined for some other reason
-
-
-# --- response parsing helpers (CONFIRM field names against appliance) -------
-def _quarantine_entries(data, queue_id: str) -> list[dict]:
-    """Normalize a quarantine listing into entries matching `queue_id`."""
-    items = data if isinstance(data, list) else (data.get("email") or data.get("emails") or data.get("quarantine") or [])
-    if isinstance(items, dict):
-        items = [items]
-    matched = [e for e in items if str(e.get("queue_id") or e.get("queueId") or "") == queue_id]
-    return matched or items  # fall back to all if the listing was already filtered server-side
-
-
-def _entry_malware_names(entry: dict) -> list:
-    """Extract malware names from a quarantine entry (mirrors the alert shape)."""
-    malware = _dig(entry, "explanation", "malwareDetected", "malware") or entry.get("malware")
-    if isinstance(malware, dict):
-        malware = [malware]
-    if isinstance(malware, list):
-        return [m.get("name") or m.get("malware_name") for m in malware if isinstance(m, dict)]
-    return [entry.get("malware_name") or entry.get("name")]
-
-
-def _entry_malicious(entry: dict) -> bool:
-    return str(entry.get("malicious") or "no").strip().lower() in ("yes", "true", "1")
-
-
-def _dig(obj, *path):
-    cur = obj
-    for key in path:
-        cur = cur.get(key) if isinstance(cur, dict) else None
-        if cur is None:
-            return None
-    return cur
+        if any(e.malicious or (e.alert_name or "").upper() == "MALWARE_OBJECT" for e in relevant):
+            return QuarantineOutcome.MALICIOUS
+        if any(rules.matches(e) for e in relevant):
+            return QuarantineOutcome.FAILED_EXTRACTION
+        return QuarantineOutcome.MALICIOUS  # re-detected for some other reason

@@ -64,6 +64,17 @@ class Settings(BaseSettings):
     notify_max_retries: int = 5
     notify_retry_interval: int = 300  # seconds between background retry sweeps
 
+    # --- Bounce monitoring (IMAP poll of the sender mailbox for DSNs) ---
+    # Leave imap_host blank to disable. Detects "accepted then bounced" mail and
+    # flips the case to BOUNCED.
+    imap_host: str = ""
+    imap_port: int = 993
+    imap_username: str = ""
+    imap_password: str = ""
+    imap_ssl: bool = True
+    imap_mailbox: str = "INBOX"
+    bounce_poll_interval: int = 120  # seconds
+
     # --- Storage ---
     db_url: str = "sqlite:///trellix_decrypt.sqlite3"
 

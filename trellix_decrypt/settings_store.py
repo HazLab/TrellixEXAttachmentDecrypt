@@ -25,9 +25,11 @@ EDITABLE = (
     "trigger_alert_name", "trigger_malware_names",
     "max_password_attempts", "recheck_delay", "recheck_interval", "recheck_max_attempts",
     "notify_max_retries", "notify_retry_interval",
+    "imap_host", "imap_port", "imap_username", "imap_password", "imap_ssl", "imap_mailbox",
+    "bounce_poll_interval",
     "public_base_url", "webhook_username", "webhook_password", "token_ttl",
 )
-SECRET_KEYS = frozenset({"ex_password", "smtp_password", "ex_client_token", "webhook_password"})
+SECRET_KEYS = frozenset({"ex_password", "smtp_password", "ex_client_token", "webhook_password", "imap_password"})
 LIST_KEYS = frozenset({"trigger_malware_names"})
 
 

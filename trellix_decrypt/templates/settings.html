@@ -24,6 +24,17 @@
   </fieldset>
 
   <fieldset>
+    <legend>Bounce monitoring (IMAP — poll the sender mailbox for delivery failures)</legend>
+    <label>IMAP host (blank = disabled)<input name="imap_host" placeholder="imap.example.com"></label>
+    <label>IMAP port<input name="imap_port" type="number"></label>
+    <label>IMAP username<input name="imap_username" autocomplete="off"></label>
+    <label>IMAP password<input name="imap_password" type="password" autocomplete="new-password" placeholder="leave blank to keep"></label>
+    <label>Mailbox<input name="imap_mailbox" placeholder="INBOX"></label>
+    <label>Poll interval (s)<input name="bounce_poll_interval" type="number"></label>
+    <label class="check"><input name="imap_ssl" type="checkbox"> Use SSL (IMAPS)</label>
+  </fieldset>
+
+  <fieldset>
     <legend>Trigger</legend>
     <label>Alert name<input name="trigger_alert_name"></label>
     <label>Malware names (comma-separated)<input name="trigger_malware_names"></label>

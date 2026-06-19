@@ -30,12 +30,25 @@ Pipeline:
    `/alerts` query returns no `uuid` to join the quarantine record's `alert_uuids`
    on, and there is no GET-by-uuid we can rely on, so pulling alert details is
    unworkable. From the pushed alert:
-   - `MALWARE_OBJECT` / `malicious: yes` → decrypted & malicious → stop
-     (`DONE_MALICIOUS`); this is final and always wins (ingest sorts malicious
-     alerts first within a single push so they beat a same-batch riskware retry);
-   - still a riskware trigger (`RISKWARE_OBJECT` + `CustomPolicy.MVX.<ext>`) →
-     wrong password → email the user again, up to `max_password_attempts`
-     (default 3, cap 5).
+   - **Wrong password** (extraction failed again) → email the user again, up to
+     `max_password_attempts` (default 3, cap 5). EX signals this two ways, both
+     treated as wrong-password: a `RISKWARE_OBJECT` + `CustomPolicy.MVX.<ext>`
+     re-detection (pdf/docx in the lab), **or** a malware name
+     `PASSWORD_EXTRACTION_FAILED` — which can appear *inside* a `MALWARE_OBJECT`
+     alert (the zip case), where the other names (`Malware.Parent.ZIP`, EICAR, …)
+     are signature hits on the still-encrypted blob, not extracted content. This
+     marker is **authoritative** and wins over the malware verdict.
+   - **Malicious** — `MALWARE_OBJECT` / `malicious: yes` with **no**
+     `PASSWORD_EXTRACTION_FAILED` marker → decrypted & malicious → stop
+     (`DONE_MALICIOUS`).
+   Wire-format gotchas (lab-verified): pushed alert names are hyphenated lowercase
+   (`malware-object`, `riskware-object`) — always compare via `domain._canon_name`,
+   never `== "MALWARE_OBJECT"`; the push carries no top-level `malicious` field for
+   these, so the name itself is the verdict. One `_RA` can arrive as several
+   separate webhook POSTs (one per detected object), so classification is
+   **order-independent**: a later `PASSWORD_EXTRACTION_FAILED` push reopens a case a
+   malware push had already moved to `DONE_MALICIOUS`, and repeat pushes count as
+   one attempt.
    The `_RA` alert is **correlated** to the original case by stripping the `_RA`
    suffix(es) and matching the queue id (`repo.find_case_by_queue_id`) — it is
    never added as a new case. `recheck` is now only a **fail-closed timeout

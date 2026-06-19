@@ -20,7 +20,14 @@
     <label>Password<input name="smtp_password" type="password" autocomplete="new-password" placeholder="leave blank to keep"></label>
     <label>From address<input name="smtp_from"></label>
     <label>HELO hostname (FQDN, if server requires)<input name="smtp_helo_hostname" placeholder="e.g. decrypt.yourdomain.com"></label>
-    <label class="check"><input name="smtp_starttls" type="checkbox"> Use STARTTLS</label>
+    <label>TLS mode
+      <select name="smtp_tls_mode">
+        <option value="opportunistic">Opportunistic (STARTTLS if offered)</option>
+        <option value="starttls">STARTTLS required</option>
+        <option value="none">None (plaintext)</option>
+        <option value="ssl">Implicit TLS / SMTPS (e.g. 465)</option>
+      </select>
+    </label>
   </fieldset>
 
   <fieldset>

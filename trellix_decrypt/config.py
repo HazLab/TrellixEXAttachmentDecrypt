@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Annotated
+
 from pydantic import field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -22,7 +24,9 @@ class Settings(BaseSettings):
     # policy emits CustomPolicy.MVX.<ext>. An empty list disables triggering
     # (prevents firing on unrelated riskware objects).
     trigger_alert_name: str = "RISKWARE_OBJECT"
-    trigger_malware_names: list[str] = [
+    # NoDecode: take the env value as a raw string so the CSV validator handles it
+    # (pydantic-settings otherwise tries to JSON-decode list fields from env).
+    trigger_malware_names: Annotated[list[str], NoDecode] = [
         "CustomPolicy.MVX.pdf", "CustomPolicy.MVX.zip", "CustomPolicy.MVX.docx",
         "CustomPolicy.MVX.65066.PassExtractFailed",
     ]
@@ -46,7 +50,7 @@ class Settings(BaseSettings):
     # --- Webhook auth (EX HTTP notification posts here using Basic auth) ---
     webhook_username: str = ""
     webhook_password: str = ""
-    webhook_ip_allowlist: list[str] = []
+    webhook_ip_allowlist: Annotated[list[str], NoDecode] = []
 
     # --- Flow tuning ---
     max_password_attempts: int = 3

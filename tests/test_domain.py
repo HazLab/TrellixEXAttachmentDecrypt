@@ -14,10 +14,11 @@ def _alert(name=TRIGGER_MALWARE_NAME, alert_name="RISKWARE_OBJECT", queue_id="Q1
                       alert_name=alert_name, malware_names=[name])
 
 
-def _malware_ra(queue_id="Q1_RA", name="FE_Backdoor_Go_Sandcat_1"):
-    """A pushed _RA re-detection where extraction succeeded and the object is malicious."""
+def _malware_ra(queue_id="Q1_RA", names=("FE_Backdoor_Go_Sandcat_1",)):
+    """A pushed _RA re-detection as EX really sends it: hyphenated lowercase alert name
+    and no top-level `malicious` field (the verdict is the MALWARE_OBJECT name itself)."""
     return AlertEvent(queue_id=queue_id, recipient="user@corp.test", subject="Invoice",
-                      alert_name="MALWARE_OBJECT", malicious=True, malware_names=[name])
+                      alert_name="malware-object", malware_names=list(names))
 
 
 async def _submit(engine, case_id, password="pw"):
@@ -183,7 +184,8 @@ async def test_replayed_link_rejected_after_submission(engine):
 async def test_pushed_malicious_ra_stops(engine):
     case = await engine.handle_alert(_alert())
     await _submit(engine, case.id)                          # -> RESUBMITTED
-    # EX re-analyzes, extracts with the correct password, finds malware, and pushes _RA.
+    # EX re-analyzes, extracts with the correct password, finds malware, pushes _RA
+    # (hyphenated 'malware-object', no extraction-failure marker).
     result = await engine.handle_alert(_malware_ra())
     assert result.id == case.id                            # correlated to the same case
     c = engine.repo.get_case(case.id)
@@ -191,15 +193,41 @@ async def test_pushed_malicious_ra_stops(engine):
     assert c.pwd_enc is None                               # held password purged
 
 
-async def test_pushed_malicious_ra_wins_over_same_batch_riskware(engine):
-    # If a riskware _RA were processed first it would re-send the link; a malicious _RA
-    # for the same case must still override to DONE_MALICIOUS (ingest also sorts these).
+async def test_password_failed_marker_in_malware_alert_is_wrong_password(engine):
+    # A wrong-password zip _RA arrives as a MALWARE_OBJECT alert (signature hits on the
+    # encrypted blob) but names PASSWORD_EXTRACTION_FAILED — that marker is authoritative.
+    case = await engine.handle_alert(_alert())
+    await _submit(engine, case.id)                          # -> RESUBMITTED
+    await engine.handle_alert(_malware_ra(names=["Malware.Parent.ZIP", "PASSWORD_EXTRACTION_FAILED"]))
+    c = engine.repo.get_case(case.id)
+    assert c.state == FlowState.AWAITING_PASSWORD          # re-asked, NOT marked malicious
+    assert c.attempts == 1
+
+
+async def test_RA_arriving_as_multiple_pushes_counts_once(engine):
+    # The real log: a wrong-password zip _RA lands as three malware-object pushes; only
+    # the first names PASSWORD_EXTRACTION_FAILED. Stays wrong-password, counts one attempt.
     case = await engine.handle_alert(_alert())
     await _submit(engine, case.id)
-    await engine.handle_alert(_alert(queue_id="Q1_RA"))    # riskware first -> wrong password
-    assert engine.repo.get_case(case.id).state == FlowState.AWAITING_PASSWORD
-    await engine.handle_alert(_malware_ra())               # malware wins
+    await engine.handle_alert(_malware_ra(names=["Malware.Parent.ZIP", "PASSWORD_EXTRACTION_FAILED"]))
+    await engine.handle_alert(_malware_ra(names=["Test.EICAR.1", "FE_Test_EICAR_1"]))
+    await engine.handle_alert(_malware_ra(names=["CustomPolicy.MVX.com", "Test.EICAR.1"]))
+    c = engine.repo.get_case(case.id)
+    assert c.state == FlowState.AWAITING_PASSWORD
+    assert c.attempts == 1                                 # not 3
+
+
+async def test_password_failed_marker_reopens_if_malware_push_first(engine):
+    # If a no-marker malware push lands before the PASSWORD_EXTRACTION_FAILED one, the
+    # marker must still win and reopen the case for another attempt.
+    case = await engine.handle_alert(_alert())
+    await _submit(engine, case.id)
+    await engine.handle_alert(_malware_ra(names=["Malware.Parent.ZIP"]))   # jumps to malicious
     assert engine.repo.get_case(case.id).state == FlowState.DONE_MALICIOUS
+    await engine.handle_alert(_malware_ra(names=["Malware.Parent.ZIP", "PASSWORD_EXTRACTION_FAILED"]))
+    c = engine.repo.get_case(case.id)
+    assert c.state == FlowState.AWAITING_PASSWORD          # reopened
+    assert c.attempts == 1
 
 
 async def test_recheck_declares_clean_only_when_not_requarantined(engine):

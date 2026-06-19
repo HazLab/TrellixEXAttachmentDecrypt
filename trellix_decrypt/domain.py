@@ -40,6 +40,19 @@ RECHECKABLE = (FlowState.RESUBMITTED, FlowState.RECHECKING)
 TERMINAL = (FlowState.DONE_CLEAN, FlowState.DONE_MALICIOUS, FlowState.FAILED_MAX_RETRIES,
             FlowState.EXPIRED, FlowState.BOUNCED)
 
+#: Canonical EX alert name for "malicious after extraction".
+MALWARE_ALERT_NAME = "malware_object"
+#: Malware names EX puts on an `_RA` re-detection when extraction failed again (wrong
+#: password). Authoritative even inside a MALWARE_OBJECT alert, whose other names are
+#: signature hits on the still-encrypted blob rather than extracted content.
+PASSWORD_FAILED_MARKERS = frozenset({"password_extraction_failed"})
+
+
+def _canon_name(value) -> str:
+    """Canonicalize an EX name: lowercase, trimmed, hyphens→underscores, so that
+    'MALWARE-OBJECT', 'malware_object' and 'Malware-Object' all compare equal."""
+    return str(value or "").strip().lower().replace("-", "_")
+
 
 @dataclasses.dataclass
 class AlertEvent:
@@ -72,7 +85,7 @@ class RiskwareRules:
     @staticmethod
     def _canon(value) -> str:
         """Canonicalize an alert name so RISKWARE_OBJECT == riskware-object."""
-        return str(value or "").strip().lower().replace("-", "_")
+        return _canon_name(value)
 
     def name_matches(self, name) -> bool:
         """Exact (case-insensitive) match of one malware name against the triggers."""
@@ -161,21 +174,30 @@ class FlowEngine:
     async def _classify_resubmission(self, case, event: AlertEvent) -> None:
         """Decide a resubmission outcome from the pushed ``_RA`` alert.
 
-        Per rescan the outcomes are mutually exclusive: a wrong password fails
-        extraction again (RISKWARE_OBJECT + CustomPolicy.MVX); a correct password that
-        reveals malware yields a MALWARE_OBJECT / ``malicious: yes`` alert. We only act
-        while the case is still in flight, and 'malicious' is final and always wins."""
-        if case.state in TERMINAL:
+        EX re-detects the resubmitted email and pushes the verdict. Two outcomes:
+        - **Wrong password** — extraction failed again. EX signals this either as a
+          RISKWARE_OBJECT + CustomPolicy.MVX re-detection, or by naming
+          PASSWORD_EXTRACTION_FAILED among the malware (even inside a MALWARE_OBJECT
+          alert, where the other names are signature hits on the still-encrypted blob).
+          This is authoritative — re-ask the recipient.
+        - **Malicious** — a correct password revealed malware: MALWARE_OBJECT /
+          ``malicious: yes`` with no extraction-failure marker → stop (DONE_MALICIOUS).
+
+        A single ``_RA`` can arrive as several webhook pushes (one per detected object),
+        so a wrong-password marker must win even if a malware push for the same ``_RA``
+        landed first — hence we reopen DONE_MALICIOUS when a marker arrives."""
+        extraction_failed = (any(_canon_name(n) in PASSWORD_FAILED_MARKERS for n in event.malware_names)
+                             or self.rules.matches(event))
+        if extraction_failed:
+            if case.state in RECHECKABLE or case.state == FlowState.DONE_MALICIOUS:
+                await self._fail_extraction(case)  # reopen if a malware push jumped ahead
             return
-        if event.malicious or (event.alert_name or "").upper() == "MALWARE_OBJECT":
+        if case.state in RECHECKABLE and (event.malicious
+                                          or _canon_name(event.alert_name) == MALWARE_ALERT_NAME):
             self.repo.clear_password(case)  # purge the held password; we're done
             detail = ", ".join(event.malware_names) or event.alert_name or "malicious"
             self.repo.set_state(case, FlowState.DONE_MALICIOUS,
                                 f"re-detected malicious after extraction: {detail}")
-            return
-        # Still a failed-extraction riskware re-detection -> the password was wrong.
-        if case.state in RECHECKABLE and self.rules.matches(event):
-            await self._fail_extraction(case)
 
     async def reissue_expired_link(self, token: str):
         """If an expired-but-valid link is opened and the case still awaits a

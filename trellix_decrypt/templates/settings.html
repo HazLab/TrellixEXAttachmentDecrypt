@@ -10,6 +10,12 @@
     <label>Password<input name="ex_password" type="password" autocomplete="new-password" placeholder="leave blank to keep"></label>
     <label>Client token (optional)<input name="ex_client_token" type="password" autocomplete="new-password" placeholder="leave blank to keep"></label>
     <label class="check"><input name="ex_verify_tls" type="checkbox"> Verify TLS certificate</label>
+    <label>Rescan path id (flip if rescan returns an authorization error)
+      <select name="ex_rescan_id_field">
+        <option value="queue_id">queue_id</option>
+        <option value="email_uuid">email_uuid</option>
+      </select>
+    </label>
   </fieldset>
 
   <fieldset>

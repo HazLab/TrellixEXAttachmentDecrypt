@@ -184,6 +184,21 @@ class FlowEngine:
         for case_id in self.repo.list_pending_ids():
             self.scheduler.schedule_recheck(case_id)
 
+    async def resend(self, case_id: str):
+        """Operator-triggered re-send. Returns the send result, or None if the
+        case isn't in a re-sendable state."""
+        case = self.repo.get_case(case_id)
+        if case is None or case.state not in (FlowState.NOTIFY_FAILED, FlowState.AWAITING_PASSWORD):
+            return None
+        return await self._send_password_request(case)
+
+    async def retry_failed_notifications(self):
+        """Background sweep: re-attempt emails for NOTIFY_FAILED cases under the cap."""
+        for case_id in self.repo.list_notify_failed_ids(self.settings.notify_max_retries):
+            case = self.repo.get_case(case_id)
+            if case is not None:
+                await self._send_password_request(case)
+
     async def aclose(self):
         await self.ex.aclose()
 
@@ -194,6 +209,7 @@ class FlowEngine:
             await self.mailer.send_password_request(case.recipient, link, case, retry=retry)
         except Exception as exc:  # noqa: BLE001 — record send failures instead of crashing
             log.exception("failed to email %s for case %s", case.recipient, case.id)
+            self.repo.increment_notify_attempts(case)
             self.repo.set_state(case, FlowState.NOTIFY_FAILED, f"email send failed: {exc}")
             return False
         self.repo.set_state(case, FlowState.AWAITING_PASSWORD, "password link sent" + (" (retry)" if retry else ""))

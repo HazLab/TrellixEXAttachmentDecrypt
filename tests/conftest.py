@@ -69,6 +69,9 @@ class FakeScheduler:
     def schedule_recheck(self, case_id):
         self.scheduled.append(case_id)
 
+    def start_notify_retrier(self):
+        pass
+
     async def shutdown(self):
         pass
 

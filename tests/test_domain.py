@@ -58,7 +58,37 @@ async def test_email_failure_recorded_not_raised(engine):
     engine.mailer.fail = True
     case = await engine.handle_alert(_alert())          # must not raise
     assert case.state == FlowState.NOTIFY_FAILED
+    assert case.notify_attempts == 1
     assert engine.mailer.sent == []                      # nothing delivered
+
+
+async def test_retry_sweep_resends_failed_then_succeeds(engine):
+    engine.mailer.fail = True
+    case = await engine.handle_alert(_alert())
+    assert case.state == FlowState.NOTIFY_FAILED
+
+    engine.mailer.fail = False                           # SMTP recovers
+    await engine.retry_failed_notifications()
+    assert engine.repo.get_case(case.id).state == FlowState.AWAITING_PASSWORD
+    assert len(engine.mailer.sent) == 1
+
+
+async def test_retry_sweep_respects_cap(engine):
+    engine.mailer.fail = True
+    case = await engine.handle_alert(_alert())           # attempt 1
+    for _ in range(10):
+        await engine.retry_failed_notifications()        # keeps failing
+    # the sweep stops once notify_attempts reaches the configured cap
+    assert engine.repo.get_case(case.id).notify_attempts <= engine.settings.notify_max_retries
+
+
+async def test_manual_resend_after_recovery(engine):
+    engine.mailer.fail = True
+    case = await engine.handle_alert(_alert())
+    engine.mailer.fail = False
+    assert await engine.resend(case.id) is True
+    assert engine.repo.get_case(case.id).state == FlowState.AWAITING_PASSWORD
+    assert await engine.resend("no-such-case") is None   # invalid -> None
 
 
 async def test_password_submission_resubmits(engine):

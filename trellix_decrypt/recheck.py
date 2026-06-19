@@ -26,6 +26,20 @@ class RecheckScheduler:
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
 
+    def start_notify_retrier(self) -> None:
+        """Periodic background sweep that re-sends emails for NOTIFY_FAILED cases."""
+        task = asyncio.create_task(self._notify_loop())
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
+
+    async def _notify_loop(self) -> None:
+        while True:
+            await asyncio.sleep(max(30, self._engine.settings.notify_retry_interval))
+            try:
+                await self._engine.retry_failed_notifications()
+            except Exception:  # never let the sweep die
+                log.exception("notify retry sweep failed")
+
     async def shutdown(self) -> None:
         for task in list(self._tasks):
             task.cancel()

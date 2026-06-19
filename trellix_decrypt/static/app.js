@@ -23,6 +23,13 @@ async function api(path) {
   return r.json();
 }
 
+async function post(path) {
+  const r = await fetch(path, { method: "POST", headers: { Accept: "application/json" } });
+  if (r.status === 401) { window.location = "/login"; throw new Error("unauth"); }
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  return r.json();
+}
+
 function fmtTime(iso) {
   if (!iso) return "";
   const d = new Date(iso);
@@ -83,13 +90,23 @@ async function openDrawer(id) {
       <dt>Attachment</dt><dd>${esc(c.attachment || "—")}</dd>
       <dt>Queue ID</dt><dd class="mono">${esc(c.queue_id)}</dd>
       <dt>Password fails</dt><dd>${c.attempts || 0}</dd>
+      <dt>Email attempts</dt><dd>${c.notify_attempts || 0}</dd>
       <dt>Created</dt><dd class="mono">${esc(fmtTime(c.created_at))}</dd>
     </dl>
+    ${["notify_failed", "awaiting_password"].includes(c.state)
+      ? `<button id="resend-btn" class="btn" data-id="${esc(c.id)}">Resend email</button>` : ""}
     <h3 style="font-size:14px;margin:18px 0 0;">Timeline</h3>
     <ul class="timeline">${(c.events || []).map((e) => `
       <li><div class="t-state">${esc((e.state || "").replace(/_/g, " "))}</div>
       <div class="t-detail">${esc(e.detail || "")}</div>
       <div class="t-time">${esc(fmtTime(e.at))}</div></li>`).join("")}</ul>`;
+
+  const resend = document.getElementById("resend-btn");
+  if (resend) resend.addEventListener("click", async () => {
+    resend.disabled = true; resend.textContent = "Sending…";
+    try { await post("/api/cases/" + encodeURIComponent(id) + "/resend"); await openDrawer(id); refresh(); }
+    catch (e) { resend.disabled = false; resend.textContent = "Resend failed — try again"; }
+  });
   $("drawer").hidden = false;
 }
 

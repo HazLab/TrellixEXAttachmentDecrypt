@@ -32,6 +32,12 @@ class RecheckScheduler:
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
 
+    def start_loop(self, coro) -> None:
+        """Run an arbitrary long-lived coroutine as a tracked background task."""
+        task = asyncio.create_task(coro)
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
+
     async def _notify_loop(self) -> None:
         while True:
             await asyncio.sleep(max(30, self._engine.settings.notify_retry_interval))

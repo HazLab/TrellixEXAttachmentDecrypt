@@ -27,13 +27,15 @@ class FlowState(str, enum.Enum):
     DONE_MALICIOUS = "done_malicious"
     FAILED_MAX_RETRIES = "failed_max_retries"
     EXPIRED = "expired"
-    NOTIFY_FAILED = "notify_failed"  # couldn't email the recipient (SMTP error)
+    NOTIFY_FAILED = "notify_failed"  # couldn't hand the email to the mail server (SMTP error)
+    BOUNCED = "bounced"              # accepted by the server then bounced (DSN)
 
 
 #: States from which a recheck poll may still run.
 RECHECKABLE = (FlowState.RESUBMITTED, FlowState.RECHECKING)
 #: Terminal states.
-TERMINAL = (FlowState.DONE_CLEAN, FlowState.DONE_MALICIOUS, FlowState.FAILED_MAX_RETRIES, FlowState.EXPIRED)
+TERMINAL = (FlowState.DONE_CLEAN, FlowState.DONE_MALICIOUS, FlowState.FAILED_MAX_RETRIES,
+            FlowState.EXPIRED, FlowState.BOUNCED)
 
 
 class QuarantineOutcome(str, enum.Enum):
@@ -188,7 +190,8 @@ class FlowEngine:
         """Operator-triggered re-send. Returns the send result, or None if the
         case isn't in a re-sendable state."""
         case = self.repo.get_case(case_id)
-        if case is None or case.state not in (FlowState.NOTIFY_FAILED, FlowState.AWAITING_PASSWORD):
+        resendable = (FlowState.NOTIFY_FAILED, FlowState.AWAITING_PASSWORD, FlowState.BOUNCED)
+        if case is None or case.state not in resendable:
             return None
         return await self._send_password_request(case)
 
@@ -198,6 +201,19 @@ class FlowEngine:
             case = self.repo.get_case(case_id)
             if case is not None:
                 await self._send_password_request(case)
+
+    def handle_bounce(self, bounce: dict) -> bool:
+        """Record a delivery bounce (DSN). Correlate by X-Case-Id, else by recipient.
+        Returns True if a case was marked BOUNCED."""
+        case = None
+        if bounce.get("case_id"):
+            case = self.repo.get_case(bounce["case_id"])
+        if case is None and bounce.get("recipient"):
+            case = self.repo.find_open_case_by_recipient(bounce["recipient"])
+        if case is None or case.state in TERMINAL:  # don't override a real verdict
+            return False
+        self.repo.set_state(case, FlowState.BOUNCED, f"delivery bounced: {bounce.get('reason', 'unknown')}")
+        return True
 
     async def aclose(self):
         await self.ex.aclose()

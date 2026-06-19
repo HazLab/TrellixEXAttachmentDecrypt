@@ -9,7 +9,7 @@ const FLOW = [
   ["rechecking", "Re-checking"],
   ["__verdict__", "Verdict"],
 ];
-const TERMINAL = { done_clean: "Clean", done_malicious: "Malicious", failed_max_retries: "Wrong password", expired: "Expired", notify_failed: "Email failed" };
+const TERMINAL = { done_clean: "Clean", done_malicious: "Malicious", failed_max_retries: "Wrong password", expired: "Expired", notify_failed: "Email failed", bounced: "Bounced" };
 
 let cases = [];
 const $ = (id) => document.getElementById(id);
@@ -93,7 +93,7 @@ async function openDrawer(id) {
       <dt>Email attempts</dt><dd>${c.notify_attempts || 0}</dd>
       <dt>Created</dt><dd class="mono">${esc(fmtTime(c.created_at))}</dd>
     </dl>
-    ${["notify_failed", "awaiting_password"].includes(c.state)
+    ${["notify_failed", "awaiting_password", "bounced"].includes(c.state)
       ? `<button id="resend-btn" class="btn" data-id="${esc(c.id)}">Resend email</button>` : ""}
     <h3 style="font-size:14px;margin:18px 0 0;">Timeline</h3>
     <ul class="timeline">${(c.events || []).map((e) => `

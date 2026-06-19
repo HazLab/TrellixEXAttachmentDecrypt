@@ -15,7 +15,7 @@ from sqlalchemy import ForeignKey, create_engine, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from .domain import RECHECKABLE, AlertEvent, FlowState
+from .domain import RECHECKABLE, TERMINAL, AlertEvent, FlowState
 
 
 def _now() -> datetime:
@@ -149,6 +149,14 @@ class CaseRepository:
             return list(s.scalars(select(AttachmentCase.id).where(
                 AttachmentCase.state == FlowState.NOTIFY_FAILED,
                 AttachmentCase.notify_attempts < max_attempts)))
+
+    def find_open_case_by_recipient(self, recipient: str) -> AttachmentCase | None:
+        """Most-recent non-terminal case for a recipient (bounce-correlation fallback)."""
+        with self._sf() as s:
+            return s.scalars(
+                select(AttachmentCase)
+                .where(AttachmentCase.recipient == recipient, AttachmentCase.state.not_in(TERMINAL))
+                .order_by(AttachmentCase.updated_at.desc())).first()
 
     # --- read models for the dashboard/API ---------------------------------
     def list_cases(self, limit: int = 300) -> list[dict]:

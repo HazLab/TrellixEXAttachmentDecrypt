@@ -47,6 +47,30 @@ def test_query_sample_distinguishes_trigger_riskware_and_malware():
     assert not rules.matches(malware)                                    # malicious -> not a trigger
 
 
+def test_parse_http_notification_push_format():
+    # Hyphenated keys with {"value": ...} wrappers, lowercase-hyphen alert name.
+    push = {"alert": [{
+        "name": "riskware-object",
+        "malicious": "no",
+        "queue-id": "4gh3zJ4CHGzmWwX",
+        "dst": {"smtp-to": {"value": "head.sales@networkshark.com"}},
+        "src": {"smtp-mail-from": {"value": "sales@networkshark.com"}},
+        "smtp-message": {"subject": {"value": "Encrypted doc"}},
+        "explanation": {"malware-detected": {"malware": [{"name": "CustomPolicy.MVX.zip"}]}},
+    }]}
+    event = parse_alert(iter_alerts(push)[0])
+    assert event.queue_id == "4gh3zJ4CHGzmWwX"
+    assert event.recipient == "head.sales@networkshark.com"
+    assert event.sender == "sales@networkshark.com"
+    assert event.subject == "Encrypted doc"
+    assert event.alert_name == "riskware-object"
+    assert event.malware_names == ["CustomPolicy.MVX.zip"]
+
+    # And it triggers: alert name normalizes (riskware-object == RISKWARE_OBJECT).
+    rules = RiskwareRules(["CustomPolicy.MVX.zip"], "RISKWARE_OBJECT")
+    assert rules.matches(event)
+
+
 def test_iter_alerts_handles_both_envelopes_and_single():
     assert iter_alerts({"Alerts": [{"a": 1}]}) == [{"a": 1}]
     assert iter_alerts({"alert": [{"a": 1}, {"a": 2}]}) == [{"a": 1}, {"a": 2}]

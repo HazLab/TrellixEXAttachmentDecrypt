@@ -64,14 +64,19 @@ class RiskwareRules:
 
     def __init__(self, trigger_malware_names=(), trigger_alert_name="RISKWARE_OBJECT"):
         self._names = {str(n).strip().lower() for n in trigger_malware_names if str(n).strip()}
-        self._alert_name = (trigger_alert_name or "").strip().lower()
+        self._alert_name = self._canon(trigger_alert_name)
+
+    @staticmethod
+    def _canon(value) -> str:
+        """Canonicalize an alert name so RISKWARE_OBJECT == riskware-object."""
+        return str(value or "").strip().lower().replace("-", "_")
 
     def name_matches(self, name) -> bool:
         """Exact (case-insensitive) match of one malware name against the triggers."""
         return str(name or "").strip().lower() in self._names
 
     def alert_name_matches(self, alert_name) -> bool:
-        return not self._alert_name or str(alert_name or "").strip().lower() == self._alert_name
+        return not self._alert_name or self._canon(alert_name) == self._alert_name
 
     def matches(self, event: "AlertEvent") -> bool:
         if not self._names or not self.alert_name_matches(event.alert_name):
@@ -211,34 +216,67 @@ def _first(*values):
     return None
 
 
+def _text(value):
+    """Resolve a field that may be a scalar, a {"value": ...} wrapper, or a list of either.
+
+    The HTTP notification push wraps element text in {"value": ...}; the alerts
+    query returns plain scalars. This normalizes both.
+    """
+    if isinstance(value, list):
+        value = value[0] if value else None
+    if isinstance(value, dict):
+        value = value.get("value")
+    return None if value in (None, "") else str(value)
+
+
 def _is_yes(value) -> bool:
     return str(value or "").strip().lower() in ("yes", "true", "1")
 
 
 def _malware_entries(alert: dict) -> list[dict]:
-    entries = _first(_dig(alert, "explanation", "malwareDetected", "malware"), alert.get("malware")) or []
+    entries = _first(
+        _dig(alert, "explanation", "malware-detected", "malware"),   # push (hyphenated)
+        _dig(alert, "explanation", "malwareDetected", "malware"),     # query (camelCase)
+        alert.get("malware"),
+    ) or []
     if isinstance(entries, dict):
         entries = [entries]
     return [e for e in entries if isinstance(e, dict)]
 
 
 def iter_alerts(payload: dict) -> list[dict]:
-    """EX wraps alerts under ``Alerts`` (webhook push) or ``alert`` (API); accept both."""
+    """EX wraps alerts under ``Alerts``/``alerts``/``alert`` (or a bare alert); accept all."""
     alerts = payload.get("Alerts") or payload.get("alerts") or payload.get("alert") or payload
     return alerts if isinstance(alerts, list) else [alerts]
 
 
 def parse_alert(alert: dict) -> AlertEvent:
-    """Map one raw EX alert dict to an AlertEvent."""
+    """Map one raw EX alert dict to an AlertEvent.
+
+    Handles both wire formats: the alerts-query JSON (camelCase scalars, e.g.
+    ``queueId``, ``dst.smtpTo``) and the HTTP notification push (hyphenated keys
+    with ``{"value": ...}`` wrappers, e.g. ``queue-id``, ``dst.smtp-to.value``).
+    """
     return AlertEvent(
-        queue_id=str(_first(alert.get("queue_id"), alert.get("queueId"), _dig(alert, "smtpMessage", "queueId")) or ""),
-        recipient=str(_first(_dig(alert, "smtpMessage", "rcptTo"), _dig(alert, "dst", "smtpTo"),
-                             alert.get("recipient"), alert.get("rcpt_to")) or ""),
-        alert_name=_first(alert.get("name"), alert.get("alert_name")),
-        malicious=_is_yes(alert.get("malicious")),
-        sender=_first(_dig(alert, "smtpMessage", "mailFrom"), _dig(alert, "src", "smtpMailFrom"), alert.get("sender")),
-        subject=_first(_dig(alert, "smtpMessage", "subject"), alert.get("subject")),
-        malware_names=[str(name) for m in _malware_entries(alert)
-                       if (name := m.get("name") or m.get("malware_name")) is not None],
+        queue_id=_text(_first(
+            alert.get("queue-id"), alert.get("queueId"), alert.get("queue_id"),
+            _dig(alert, "smtp-message", "queue-id"), _dig(alert, "smtpMessage", "queueId"),
+        )) or "",
+        recipient=_text(_first(
+            _dig(alert, "dst", "smtp-to"), _dig(alert, "dst", "smtpTo"),
+            _dig(alert, "smtpMessage", "rcptTo"), alert.get("recipient"), alert.get("rcpt_to"),
+        )) or "",
+        alert_name=_text(_first(alert.get("name"), alert.get("alert_name"))),
+        malicious=_is_yes(_text(alert.get("malicious"))),
+        sender=_text(_first(
+            _dig(alert, "src", "smtp-mail-from"), _dig(alert, "src", "smtpMailFrom"),
+            _dig(alert, "smtpMessage", "mailFrom"), alert.get("sender"),
+        )),
+        subject=_text(_first(
+            _dig(alert, "smtp-message", "subject"), _dig(alert, "smtpMessage", "subject"),
+            alert.get("subject"),
+        )),
+        malware_names=[name for m in _malware_entries(alert)
+                       if (name := _text(m.get("name")) or _text(m.get("malware_name"))) is not None],
         raw=alert,
     )

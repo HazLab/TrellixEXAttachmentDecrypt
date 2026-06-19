@@ -72,6 +72,7 @@ class SMTPMailer:
                 username=username,
                 password=password,
                 local_hostname=self._s.smtp_helo_hostname or None,
+                validate_certs=self._s.smtp_verify_tls,
                 **tls_kwargs(self._s.smtp_tls_mode),
             )
         except SMTPException as exc:

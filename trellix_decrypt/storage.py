@@ -118,6 +118,10 @@ class CaseRepository:
         with self._sf() as s:
             return s.get(AttachmentCase, case_id)
 
+    def find_case_by_queue_id(self, queue_id: str) -> AttachmentCase | None:
+        with self._sf() as s:
+            return s.scalar(select(AttachmentCase).where(AttachmentCase.queue_id == queue_id))
+
     def set_state(self, case: AttachmentCase, state: FlowState, detail: str = "") -> AttachmentCase:
         with self._sf() as s:
             db_case = s.get(AttachmentCase, case.id)

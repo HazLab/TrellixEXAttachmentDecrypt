@@ -144,6 +144,17 @@ class FlowEngine:
         """Entry point for an incoming EX alert. Returns the case, or None if ignored."""
         if not self.rules.matches(event):
             return None
+        # EX re-quarantines a resubmitted email under the original queue id + "_RA".
+        # That is the SAME email failing extraction again — fold it into the
+        # original case (the recheck loop counts it and re-requests the password);
+        # never create a separate entry for it.
+        base = event.queue_id
+        while base.endswith("_RA"):
+            base = base[: -len("_RA")]
+        if base != event.queue_id:
+            parent = self.repo.find_case_by_queue_id(base)
+            if parent is not None:
+                return parent
         case = self.repo.get_or_create_case(event)
         if case.state == FlowState.RECEIVED:
             await self._send_password_request(case)

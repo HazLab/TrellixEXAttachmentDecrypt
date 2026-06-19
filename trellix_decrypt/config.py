@@ -43,8 +43,9 @@ class Settings(BaseSettings):
     token_ttl: int = 86400  # seconds
     ui_password: str = ""  # admin password gating the dashboard/settings UI (UI_PASSWORD)
 
-    # --- Webhook auth ---
-    webhook_secret: str = "change-me"
+    # --- Webhook auth (EX HTTP notification posts here using Basic auth) ---
+    webhook_username: str = ""
+    webhook_password: str = ""
     webhook_ip_allowlist: list[str] = []
 
     # --- Flow tuning ---

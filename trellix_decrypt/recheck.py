@@ -26,6 +26,13 @@ class RecheckScheduler:
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
 
+    def schedule_resubmit(self, case_id: str, password: str) -> None:
+        """Run the EX rescan for a case in the background (decoupled from the
+        recipient's password submission)."""
+        task = asyncio.create_task(self._engine.resubmit_case(case_id, password))
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
+
     def start_notify_retrier(self) -> None:
         """Periodic background sweep that re-sends emails for NOTIFY_FAILED cases."""
         task = asyncio.create_task(self._notify_loop())

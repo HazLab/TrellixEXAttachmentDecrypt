@@ -43,11 +43,10 @@ def test_full_webhook_to_resubmit(app_ctx):
 
         submit = client.post(f"/p/{token}", data={"password": "secret"})
         assert submit.status_code == 200
-        assert engine.ex.rescanned == [("Q-77", ["secret"])]
+        # Recipient acknowledged immediately; EX rescan is scheduled (decoupled).
+        case = engine.repo.get_case(engine.tokens.verify(token))
+        assert case.state == FlowState.PASSWORD_SUBMITTED
+        assert engine.scheduler.resubmits == [(case.id, "secret")]
 
         # 4. Replaying the link is rejected.
         assert client.post(f"/p/{token}", data={"password": "secret"}).status_code == 400
-
-        case = engine.repo.get_case(engine.tokens.verify(token))
-        assert case.state == FlowState.RESUBMITTED
-        assert engine.scheduler.scheduled == [case.id]

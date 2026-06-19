@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 _RESULTS = {
-    "ok": "Thanks — we're re-checking your attachment. You'll hear from us if we need anything else.",
+    "ok": "Thanks — we've received your password and are processing your attachment.",
     "invalid_or_expired": "This link is invalid or has expired.",
     "not_found": "We couldn't find a matching request.",
     "not_awaiting": "This request has already been processed.",

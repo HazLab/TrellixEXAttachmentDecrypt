@@ -71,7 +71,9 @@ trellix_decrypt/
   web/            FastAPI package: server.py (app factory), auth.py (shared-password
                   session), routes_password.py (public form), routes_dashboard.py
                   (dashboard/settings/login pages), routes_api.py (auth JSON API).
-  recheck.py      Scheduler wrapper + recheck job (reads timing live from engine).
+  recheck.py      Scheduler wrapper + recheck job + notify-retry/bounce loops.
+  bounce.py       parse_bounce() DSN parser + BounceMonitor (IMAP poll of sender
+                  mailbox); flips accepted-then-bounced mail to BOUNCED.
   templates/      Jinja2: recipient email + form/result; base/dashboard/settings/login.
   static/         style.css (light/dark), app.js (dashboard), settings.js.
 tests/            pytest; respx mocks the EX API.
@@ -91,6 +93,8 @@ saving persists to the `Setting` table (secrets encrypted) and calls
 `RECEIVED → AWAITING_PASSWORD → PASSWORD_SUBMITTED → RESUBMITTED → RECHECKING →`
 one of `{DONE_CLEAN, DONE_MALICIOUS, FAILED_MAX_RETRIES, EXPIRED}`.
 Wrong password loops `RECHECKING → AWAITING_PASSWORD` with `attempt += 1`.
+Email problems: `NOTIFY_FAILED` (SMTP error handing off — auto-retried + resendable)
+and `BOUNCED` (accepted then DSN'd back — detected by `bounce.py`, resendable).
 
 ## Security
 

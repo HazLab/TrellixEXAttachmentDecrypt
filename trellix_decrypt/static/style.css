@@ -108,6 +108,15 @@ td.subject, td.attach { max-width: 220px; overflow: hidden; text-overflow: ellip
   color: var(--text); font-size: 14px; }
 .form input:focus { outline: 2px solid var(--brand); border-color: var(--brand); }
 .form input[type=checkbox] { width: 16px; height: 16px; }
+.form select {
+  padding: 9px 34px 9px 12px; border: 1px solid var(--border); border-radius: 9px;
+  background-color: var(--surface-2); color: var(--text); font-size: 14px; cursor: pointer;
+  appearance: none; -webkit-appearance: none; -moz-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%238a93a3' stroke-width='1.5'><path d='M1 1l5 5 5-5'/></svg>");
+  background-repeat: no-repeat; background-position: right 12px center; background-size: 11px;
+}
+.form select:focus { outline: 2px solid var(--brand); border-color: var(--brand); }
+.form select option { background: var(--surface); color: var(--text); }
 .form-actions { display: flex; align-items: center; gap: 14px; margin-top: 20px; }
 .btn { background: var(--brand); color: var(--brand-ink); border: 0; border-radius: 10px; padding: 11px 20px;
   font-size: 14px; font-weight: 600; cursor: pointer; }

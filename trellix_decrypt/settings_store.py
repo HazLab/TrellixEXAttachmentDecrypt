@@ -16,7 +16,8 @@ from .storage import Setting
 # Fields the settings UI may change (everything else is infra: db_url, web_*,
 # secret_key, ui_password — set via environment only).
 EDITABLE = (
-    "ex_base_url", "ex_username", "ex_password", "ex_verify_tls", "ex_client_token", "ex_rescan_id_field",
+    "ex_base_url", "ex_username", "ex_password", "ex_verify_tls", "ex_client_token",
+    "ex_rescan_id_field", "ex_timeout",
     "smtp_host", "smtp_port", "smtp_username", "smtp_password", "smtp_from", "smtp_tls_mode",
     "smtp_verify_tls", "smtp_helo_hostname",
     "trigger_alert_name", "trigger_malware_names",

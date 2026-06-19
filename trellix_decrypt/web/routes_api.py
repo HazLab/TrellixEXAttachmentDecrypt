@@ -60,6 +60,15 @@ def build_api_router(ctx) -> APIRouter:
         case = ctx.repo.case_detail(case_id)
         return {"sent": bool(result), "state": case["state"] if case else None}
 
+    @router.post("/cases/{case_id}/rescan")
+    async def rescan(request: Request, case_id: str):
+        _guard(request)
+        if ctx.repo.get_case(case_id) is None:
+            raise HTTPException(status_code=404, detail="not found")
+        await ctx.engine.resubmit_case(case_id)  # no-op unless it still holds the password
+        case = ctx.repo.case_detail(case_id)
+        return {"state": case["state"] if case else None}
+
     @router.get("/settings")
     async def get_settings(request: Request):
         _guard(request)

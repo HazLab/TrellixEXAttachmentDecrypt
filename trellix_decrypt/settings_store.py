@@ -7,13 +7,10 @@ the app uses; the AppContext rebuilds the EX client/mailer from it on save.
 
 from __future__ import annotations
 
-import base64
-import hashlib
-
-from cryptography.fernet import Fernet
 from sqlalchemy import select
 
 from .config import Settings
+from .crypto import fernet
 from .storage import Setting
 
 # Fields the settings UI may change (everything else is infra: db_url, web_*,
@@ -25,6 +22,7 @@ EDITABLE = (
     "trigger_alert_name", "trigger_malware_names",
     "max_password_attempts", "recheck_delay", "recheck_interval", "recheck_max_attempts",
     "notify_max_retries", "notify_retry_interval",
+    "resubmit_max_retries", "resubmit_retry_interval",
     "imap_host", "imap_port", "imap_username", "imap_password", "imap_ssl", "imap_mailbox",
     "bounce_poll_interval",
     "public_base_url", "webhook_username", "webhook_password", "token_ttl",
@@ -33,15 +31,11 @@ SECRET_KEYS = frozenset({"ex_password", "smtp_password", "ex_client_token", "web
 LIST_KEYS = frozenset({"trigger_malware_names"})
 
 
-def _fernet(secret_key: str) -> Fernet:
-    return Fernet(base64.urlsafe_b64encode(hashlib.sha256(secret_key.encode()).digest()))
-
-
 class SettingsStore:
     def __init__(self, env: Settings, session_factory):
         self._env = env
         self._sf = session_factory
-        self._fernet = _fernet(env.secret_key)
+        self._fernet = fernet(env.secret_key)
 
     def _overrides(self) -> dict:
         out: dict = {}

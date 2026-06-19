@@ -60,6 +60,15 @@ async def test_duplicate_alert_does_not_resend(engine):
     assert len(engine.mailer.sent) == 1
 
 
+async def test_ra_realert_folds_into_existing_case(engine):
+    case = await engine.handle_alert(_alert(queue_id="QABC"))
+    # EX re-quarantines the resubmitted email as <queue>_RA and pushes a new alert.
+    result = await engine.handle_alert(_alert(queue_id="QABC_RA"))
+    assert result.id == case.id                    # same case, not a new one
+    assert len(engine.repo.list_cases()) == 1      # no duplicate entry
+    assert len(engine.mailer.sent) == 1            # no second "new case" email
+
+
 async def test_email_failure_recorded_not_raised(engine):
     engine.mailer.fail = True
     case = await engine.handle_alert(_alert())          # must not raise

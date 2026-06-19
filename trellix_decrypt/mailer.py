@@ -13,6 +13,19 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 log = logging.getLogger(__name__)
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 
+# Map our TLS mode to aiosmtplib's (start_tls, use_tls) arguments.
+# start_tls=None => opportunistic (upgrade if the server offers STARTTLS).
+_TLS_MODES = {
+    "opportunistic": {"start_tls": None, "use_tls": False},
+    "starttls": {"start_tls": True, "use_tls": False},
+    "none": {"start_tls": False, "use_tls": False},
+    "ssl": {"start_tls": False, "use_tls": True},   # implicit TLS / SMTPS (e.g. 465)
+}
+
+
+def tls_kwargs(mode: str) -> dict:
+    return _TLS_MODES.get((mode or "opportunistic").strip().lower(), _TLS_MODES["opportunistic"])
+
 
 def _format_smtp_error(exc: Exception) -> str:
     """Turn an aiosmtplib error into the server's actual reason (code + message)."""
@@ -58,8 +71,8 @@ class SMTPMailer:
                 port=self._s.smtp_port,
                 username=username,
                 password=password,
-                start_tls=self._s.smtp_starttls,
                 local_hostname=self._s.smtp_helo_hostname or None,
+                **tls_kwargs(self._s.smtp_tls_mode),
             )
         except SMTPException as exc:
             # Surface the server's actual response so "recipient refused" vs

@@ -61,7 +61,7 @@ SMTP_PORT=587
 SMTP_USERNAME=...
 SMTP_PASSWORD=...
 SMTP_FROM=attachment-help@example.com
-SMTP_STARTTLS=true
+SMTP_TLS_MODE=opportunistic    # opportunistic | starttls | none | ssl(implicit/465)
 
 # Web / links
 PUBLIC_BASE_URL=https://decrypt.example.com   # used to build the one-time link

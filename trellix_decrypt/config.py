@@ -37,7 +37,9 @@ class Settings(BaseSettings):
     smtp_username: str = ""
     smtp_password: str = ""
     smtp_from: str = "attachment-help@example.com"
-    smtp_starttls: bool = True
+    # TLS mode: opportunistic (STARTTLS if offered, else plaintext), starttls
+    # (require STARTTLS), none (never), ssl (implicit TLS / SMTPS, e.g. port 465).
+    smtp_tls_mode: str = "opportunistic"
     # HELO/EHLO name announced to the server. Some servers require a FQDN here
     # and reject the OS hostname (504 5.5.2). Set to a fully-qualified name.
     smtp_helo_hostname: str = ""

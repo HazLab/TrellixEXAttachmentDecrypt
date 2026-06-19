@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from email.message import EmailMessage
 from pathlib import Path
 
@@ -9,6 +10,7 @@ import aiosmtplib
 from aiosmtplib.errors import SMTPException, SMTPRecipientsRefused
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
+log = logging.getLogger(__name__)
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 
 
@@ -45,7 +47,7 @@ class SMTPMailer:
         msg.add_alternative(html, subtype="html")
 
         try:
-            await aiosmtplib.send(
+            errors, response = await aiosmtplib.send(
                 msg,
                 hostname=self._s.smtp_host,
                 port=self._s.smtp_port,
@@ -58,3 +60,9 @@ class SMTPMailer:
             # Surface the server's actual response so "recipient refused" vs
             # "relay denied" / "auth required" is distinguishable.
             raise RuntimeError(_format_smtp_error(exc)) from exc
+        # Success path: log the server's final response (often "250 ... queued as
+        # <id>"), which is the handle to trace the message in the mail server logs.
+        log.info("SMTP accepted message for %s via %s:%s — %s",
+                 recipient, self._s.smtp_host, self._s.smtp_port, response)
+        if errors:
+            log.warning("SMTP reported per-recipient issues for %s: %s", recipient, errors)

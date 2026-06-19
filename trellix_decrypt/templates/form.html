@@ -9,16 +9,22 @@
     .card { background:#fff; padding:32px; border-radius:10px; box-shadow:0 2px 12px rgba(0,0,0,.08); width:360px; }
     h1 { font-size:18px; margin:0 0 8px; }
     p { color:#555; font-size:14px; }
-    input[type=password] { width:100%; padding:10px; margin:12px 0; border:1px solid #ccc; border-radius:6px; box-sizing:border-box; }
-    button { width:100%; padding:11px; background:#1a73e8; color:#fff; border:0; border-radius:6px; font-size:15px; cursor:pointer; }
+    input[type=password], input[type=text] { width:100%; padding:10px 40px 10px 10px; margin:12px 0; border:1px solid #ccc; border-radius:6px; box-sizing:border-box; }
+    button.submit { width:100%; padding:11px; background:#1a73e8; color:#fff; border:0; border-radius:6px; font-size:15px; cursor:pointer; }
+    .pwd-wrap { position:relative; }
+    .reveal-btn { position:absolute; right:6px; top:50%; transform:translateY(-50%); background:none; border:0; padding:4px; cursor:pointer; font-size:15px; opacity:.65; }
+    .reveal-btn:hover { opacity:1; }
   </style>
 </head>
 <body>
   <form class="card" method="post" action="/p/{{ token }}">
     <h1>Attachment password</h1>
     <p>Enter the password for your protected attachment so we can scan and release it.</p>
-    <input type="password" name="password" placeholder="Attachment password" required autofocus>
-    <button type="submit">Submit</button>
+    <span class="pwd-wrap">
+      <input type="password" name="password" placeholder="Attachment password" required autofocus>
+      <button type="button" class="reveal-btn" aria-label="Show or hide password" onclick="var i=this.previousElementSibling;var s=i.type==='password';i.type=s?'text':'password';this.textContent=s?'🙈':'👁';">👁</button>
+    </span>
+    <button type="submit" class="submit">Submit</button>
   </form>
 </body>
 </html>

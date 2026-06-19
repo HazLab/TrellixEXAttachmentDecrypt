@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Attachment Decrypt{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Encrypted attachments</h1>
+    <p class="muted" id="summary">Loading…</p>
+  </div>
+  <input id="search" class="search" type="search" placeholder="Search recipient, subject, queue id, status…" autocomplete="off">
+</div>
+
+<div class="card table-card">
+  <table class="cases">
+    <thead>
+      <tr>
+        <th>Status</th><th>Recipient</th><th>Sender</th><th>Subject</th>
+        <th>Attachment</th><th>Queue ID</th><th class="num">Fails</th><th>Updated</th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <p id="empty" class="empty" hidden>No matching cases.</p>
+</div>
+
+<div id="drawer" class="drawer" hidden>
+  <div class="drawer-panel">
+    <button id="drawer-close" class="icon-btn drawer-close" aria-label="Close">✕</button>
+    <div id="drawer-body"></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="/static/app.js"></script>{% endblock %}

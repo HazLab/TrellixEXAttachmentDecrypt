@@ -14,8 +14,7 @@ log = logging.getLogger(__name__)
 
 
 class RecheckScheduler:
-    def __init__(self, settings):
-        self._settings = settings
+    def __init__(self):
         self._engine = None  # bound after the FlowEngine is built (avoids a cycle)
         self._tasks: set[asyncio.Task] = set()
 
@@ -32,7 +31,7 @@ class RecheckScheduler:
             task.cancel()
 
     async def _poll(self, case_id: str) -> None:
-        s = self._settings
+        s = self._engine.settings  # read live so settings changes apply
         await asyncio.sleep(s.recheck_delay)
         for attempt in range(s.recheck_max_attempts):
             final = attempt == s.recheck_max_attempts - 1

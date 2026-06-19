@@ -26,6 +26,9 @@ def build(settings: Settings | None = None):
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     ctx = build_context(settings)
     eff = ctx.engine.settings
-    logging.getLogger(__name__).info(
-        "trigger config: alert_name=%r malware_names=%r", eff.trigger_alert_name, eff.trigger_malware_names)
+    log = logging.getLogger(__name__)
+    log.info("trigger config: alert_name=%r malware_names=%r", eff.trigger_alert_name, eff.trigger_malware_names)
+    log.info("serving on http://%s:%s — password links built from PUBLIC_BASE_URL=%s "
+             "(scheme/host/port must match how recipients reach this server)",
+             settings.web_host, settings.web_port, eff.public_base_url)
     return create_app(ctx), settings

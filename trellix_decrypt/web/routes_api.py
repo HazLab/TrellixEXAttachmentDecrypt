@@ -19,6 +19,7 @@ STATUS_META = {
     "failed_max_retries": ("Wrong password", "warn"),
     "expired": ("Expired", "neutral"),
     "notify_failed": ("Email failed", "danger"),
+    "bounced": ("Bounced", "danger"),
 }
 
 

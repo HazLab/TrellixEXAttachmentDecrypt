@@ -72,6 +72,9 @@ class FakeScheduler:
     def start_notify_retrier(self):
         pass
 
+    def start_loop(self, coro):
+        coro.close()  # don't run it in tests; avoid 'coroutine never awaited'
+
     async def shutdown(self):
         pass
 

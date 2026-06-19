@@ -42,6 +42,7 @@ class SMTPMailer:
         msg = EmailMessage()
         msg["From"] = self._s.smtp_from
         msg["To"] = recipient
+        msg["X-Case-Id"] = case.id  # lets the bounce monitor correlate a DSN back to this case
         msg["Subject"] = ("Reminder: " if retry else "") + "Password needed for your quarantined attachment"
         msg.set_content(text)
         msg.add_alternative(html, subtype="html")

@@ -5,6 +5,7 @@ settings UI can apply changes without a restart.
 
 from __future__ import annotations
 
+from .bounce import BounceMonitor
 from .domain import FlowEngine, RiskwareRules, TokenService
 from .ex_client import EXClient
 from .mailer import SMTPMailer
@@ -31,6 +32,7 @@ class AppContext:
             ex, mailer, tokens, rules = _build_components(s)
             self.engine = FlowEngine(repo, ex, mailer, tokens, rules, s, scheduler)
         scheduler.bind(self.engine)
+        self.bounce_monitor = BounceMonitor(self.engine)
 
     async def reload(self) -> None:
         """Apply current settings to the running engine (keeps its identity stable)."""

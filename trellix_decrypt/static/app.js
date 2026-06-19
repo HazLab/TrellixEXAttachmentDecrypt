@@ -40,8 +40,8 @@ function rowHtml(c) {
   const fails = c.attempts || 0;
   return `<tr data-id="${esc(c.id)}">
     <td><span class="badge ${c.status_kind}">${esc(c.status_label)}</span></td>
-    <td>${esc(c.recipient)}</td>
-    <td>${esc(c.sender || "")}</td>
+    <td class="recipient" title="${esc(c.recipient)}">${esc(c.recipient)}</td>
+    <td class="sender" title="${esc(c.sender || "")}">${esc(c.sender || "")}</td>
     <td class="subject" title="${esc(c.subject || "")}">${esc(c.subject || "")}</td>
     <td class="attach" title="${esc(c.attachment || "")}">${esc(c.attachment || "")}</td>
     <td class="mono">${esc(c.queue_id)}</td>

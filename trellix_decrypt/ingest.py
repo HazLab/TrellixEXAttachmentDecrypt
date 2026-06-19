@@ -66,11 +66,10 @@ def build_webhook_router(ctx) -> APIRouter:
                 raise HTTPException(status_code=403, detail="ip not allowed")
 
         payload = await request.json()
+        # A single _RA re-detection can arrive as several pushes (one per detected
+        # object); classification is order-independent (see FlowEngine), so we just
+        # process each alert as it comes.
         events = [parse_alert(raw) for raw in iter_alerts(payload)]
-        # Handle malicious re-detections before riskware ones within the same push, so a
-        # decrypted-malicious verdict (MALWARE_OBJECT) always wins over a same-batch
-        # wrong-password retry for the same email.
-        events.sort(key=lambda e: 0 if (e.malicious or (e.alert_name or "").upper() == "MALWARE_OBJECT") else 1)
         rules = ctx.engine.rules
         log.info("webhook: received %d alert(s)", len(events))
         handled = 0

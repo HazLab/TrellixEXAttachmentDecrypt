@@ -41,12 +41,6 @@ TERMINAL = (FlowState.DONE_CLEAN, FlowState.DONE_MALICIOUS, FlowState.FAILED_MAX
             FlowState.EXPIRED, FlowState.BOUNCED)
 
 
-class QuarantineOutcome(str, enum.Enum):
-    NOT_QUARANTINED = "not_quarantined"   # delivered / clean
-    FAILED_EXTRACTION = "failed_extraction"  # wrong password — retry
-    MALICIOUS = "malicious"               # stop
-
-
 @dataclasses.dataclass
 class AlertEvent:
     """Normalized EX alert."""
@@ -142,23 +136,46 @@ class FlowEngine:
 
     async def handle_alert(self, event: AlertEvent):
         """Entry point for an incoming EX alert. Returns the case, or None if ignored."""
-        if not self.rules.matches(event):
-            return None
-        # EX re-quarantines a resubmitted email under the original queue id + "_RA".
-        # That is the SAME email failing extraction again — fold it into the
-        # original case (the recheck loop counts it and re-requests the password);
-        # never create a separate entry for it.
+        # A resubmitted email is re-analyzed and re-detected under the original queue
+        # id + "_RA". EX *pushes* that re-detection here, carrying the verdict — so we
+        # correlate it to the original case and classify it BEFORE the trigger rules:
+        # a decrypted-malicious re-detection is MALWARE_OBJECT and would never pass the
+        # riskware rules. Never create a separate case for an "_RA" alert.
         base = event.queue_id
         while base.endswith("_RA"):
             base = base[: -len("_RA")]
         if base != event.queue_id:
             parent = self.repo.find_case_by_queue_id(base)
             if parent is not None:
-                return parent
+                await self._classify_resubmission(parent, event)
+            return parent  # may be None (uncorrelated _RA) — still never created here
+
+        # First-time detection: gate on the trigger rules, then start the flow.
+        if not self.rules.matches(event):
+            return None
         case = self.repo.get_or_create_case(event)
         if case.state == FlowState.RECEIVED:
             await self._send_password_request(case)
         return case
+
+    async def _classify_resubmission(self, case, event: AlertEvent) -> None:
+        """Decide a resubmission outcome from the pushed ``_RA`` alert.
+
+        Per rescan the outcomes are mutually exclusive: a wrong password fails
+        extraction again (RISKWARE_OBJECT + CustomPolicy.MVX); a correct password that
+        reveals malware yields a MALWARE_OBJECT / ``malicious: yes`` alert. We only act
+        while the case is still in flight, and 'malicious' is final and always wins."""
+        if case.state in TERMINAL:
+            return
+        if event.malicious or (event.alert_name or "").upper() == "MALWARE_OBJECT":
+            self.repo.clear_password(case)  # purge the held password; we're done
+            detail = ", ".join(event.malware_names) or event.alert_name or "malicious"
+            self.repo.set_state(case, FlowState.DONE_MALICIOUS,
+                                f"re-detected malicious after extraction: {detail}")
+            return
+        # Still a failed-extraction riskware re-detection -> the password was wrong.
+        if case.state in RECHECKABLE and self.rules.matches(event):
+            await self._fail_extraction(case)
 
     async def reissue_expired_link(self, token: str):
         """If an expired-but-valid link is opened and the case still awaits a
@@ -216,9 +233,17 @@ class FlowEngine:
         try:
             await self.ex.rescan(target, [password])
         except Exception as exc:  # noqa: BLE001 — record + count for the retry cap, don't crash
-            log.exception("rescan failed for case %s", case.id)
+            # Duck-type the transport's "email not quarantined" flag (a 400/404 from EX)
+            # so domain stays free of the ex_client import. It's a race we can retry:
+            # the email may have been listed a moment ago and not yet (re)indexed.
+            if getattr(exc, "not_found", False):
+                log.warning("rescan rejected for case %s (email not quarantined): %s", case.id, exc)
+                reason = "quarantined email not found at rescan time"
+            else:
+                log.exception("rescan failed for case %s", case.id)
+                reason = f"resubmission to EX failed: {exc}"
             self.repo.increment_resubmit_attempts(case)
-            self.repo.set_state(case, FlowState.RESUBMIT_FAILED, f"resubmission to EX failed: {exc}")
+            self.repo.set_state(case, FlowState.RESUBMIT_FAILED, reason)
             return
         self.repo.record_password_hash(case, hash_password(password))  # audit only — not a failure
         self.repo.clear_password(case)  # no longer needed
@@ -231,32 +256,38 @@ class FlowEngine:
         for case_id in self.repo.list_resubmit_pending_ids(self.settings.resubmit_max_retries):
             await self.resubmit_case(case_id)
 
+    async def _fail_extraction(self, case) -> None:
+        """A confirmed wrong password: the resubmission was re-quarantined as the same
+        failed-extraction riskware. Count the attempt and re-ask, or give up at the cap."""
+        self.repo.increment_attempts(case)
+        if case.attempts >= self.settings.max_password_attempts:
+            self.repo.set_state(case, FlowState.FAILED_MAX_RETRIES, "max password attempts reached")
+        else:
+            await self._send_password_request(case, retry=True)  # re-send the link to retry
+
     async def recheck(self, case_id: str, final: bool = False) -> bool:
-        """Re-evaluate a resubmitted case. Returns True when polling should stop."""
+        """Fail-closed timeout backstop for a resubmitted case. Returns True to stop polling.
+
+        The verdict normally arrives via the pushed ``_RA`` alert (see handle_alert), so
+        a resolved case has already left RECHECKABLE and we stop. If none has arrived by
+        the final poll, we consult the quarantine list and only declare DONE_CLEAN when
+        the email is genuinely no longer (re-)quarantined; if it still is, we treat it as
+        a wrong password rather than risk releasing a held email."""
         case = self.repo.get_case(case_id)
         if case is None or case.state not in RECHECKABLE:
-            return True
-        self.repo.set_state(case, FlowState.RECHECKING, "rechecking quarantine")
-
-        outcome = await self.ex.classify_resubmission(case.queue_id, case.sender, case.subject, self.rules)
-        if outcome is QuarantineOutcome.MALICIOUS:
-            self.repo.set_state(case, FlowState.DONE_MALICIOUS, "re-quarantined: malicious")
-            return True
-        if outcome is QuarantineOutcome.FAILED_EXTRACTION:
-            # Only NOW is it a confirmed wrong password: the resubmission succeeded
-            # and EX re-quarantined it as the same failed-extraction riskware.
-            self.repo.increment_attempts(case)
-            if case.attempts >= self.settings.max_password_attempts:
-                self.repo.set_state(case, FlowState.FAILED_MAX_RETRIES, "max password attempts reached")
-            else:
-                # Wrong password — re-send the link so the recipient can try again.
-                await self._send_password_request(case, retry=True)
-            return True
-        # NOT_QUARANTINED: maybe still analyzing — only conclude clean on the last poll.
-        if final:
+            return True  # already resolved (typically by the pushed _RA alert)
+        if case.state == FlowState.RESUBMITTED:
+            self.repo.set_state(case, FlowState.RECHECKING, "awaiting re-detection")
+        if not final:
+            return False  # keep waiting for the pushed verdict
+        if await self.ex.has_resubmission_quarantine(case.queue_id, case.sender, case.subject):
+            log.warning("case %s: re-quarantined but no _RA alert received; treating as wrong password",
+                        case.id)
+            await self._fail_extraction(case)
+        else:
+            self.repo.clear_password(case)
             self.repo.set_state(case, FlowState.DONE_CLEAN, "not re-quarantined: delivered")
-            return True
-        return False
+        return True
 
     async def resume_pending(self):
         """On startup, reschedule work left mid-flight: rechecks and resubmissions."""

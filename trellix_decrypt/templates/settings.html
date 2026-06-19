@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Settings — Attachment Decrypt{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Settings</h1></div>
+<form id="settings-form" class="card form">
+  <fieldset>
+    <legend>Trellix EX appliance</legend>
+    <label>Base URL<input name="ex_base_url" placeholder="https://ex.example.com"></label>
+    <label>Username<input name="ex_username" autocomplete="off"></label>
+    <label>Password<input name="ex_password" type="password" autocomplete="new-password" placeholder="leave blank to keep"></label>
+    <label>Client token (optional)<input name="ex_client_token" type="password" autocomplete="new-password" placeholder="leave blank to keep"></label>
+    <label class="check"><input name="ex_verify_tls" type="checkbox"> Verify TLS certificate</label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Mail gateway (SMTP)</legend>
+    <label>Host<input name="smtp_host" placeholder="smtp.example.com"></label>
+    <label>Port<input name="smtp_port" type="number"></label>
+    <label>Username<input name="smtp_username" autocomplete="off"></label>
+    <label>Password<input name="smtp_password" type="password" autocomplete="new-password" placeholder="leave blank to keep"></label>
+    <label>From address<input name="smtp_from"></label>
+    <label class="check"><input name="smtp_starttls" type="checkbox"> Use STARTTLS</label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Trigger</legend>
+    <label>Alert name<input name="trigger_alert_name"></label>
+    <label>Malware names (comma-separated)<input name="trigger_malware_names"></label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Web & webhook</legend>
+    <label>Public base URL<input name="public_base_url" placeholder="https://decrypt.example.com"></label>
+    <label>Webhook secret<input name="webhook_secret" type="password" autocomplete="new-password" placeholder="leave blank to keep"></label>
+    <label>Link lifetime (seconds)<input name="token_ttl" type="number"></label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Retry &amp; recheck</legend>
+    <label>Max password attempts<input name="max_password_attempts" type="number"></label>
+    <label>Recheck delay (s)<input name="recheck_delay" type="number"></label>
+    <label>Recheck interval (s)<input name="recheck_interval" type="number"></label>
+    <label>Recheck max attempts<input name="recheck_max_attempts" type="number"></label>
+  </fieldset>
+
+  <div class="form-actions">
+    <button type="submit" class="btn">Save changes</button>
+    <span id="save-status" class="save-status"></span>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}<script src="/static/settings.js"></script>{% endblock %}

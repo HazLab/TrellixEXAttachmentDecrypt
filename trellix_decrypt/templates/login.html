@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in — Attachment Decrypt</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    (function () {
+      var t = localStorage.getItem("theme")
+        || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", t);
+    })();
+  </script>
+</head>
+<body class="centered">
+  <form class="card login" method="post" action="/login">
+    <h1><span class="brand-mark">◆</span> Attachment Decrypt</h1>
+    {% if not configured %}
+      <p class="notice">No admin password is set. Define <code>UI_PASSWORD</code> in the environment to enable sign-in.</p>
+    {% endif %}
+    {% if error %}<p class="error-text">{{ error }}</p>{% endif %}
+    <input type="password" name="password" placeholder="Admin password" required autofocus {% if not configured %}disabled{% endif %}>
+    <button type="submit" class="btn" {% if not configured %}disabled{% endif %}>Sign in</button>
+  </form>
+</body>
+</html>

@@ -5,30 +5,23 @@ from __future__ import annotations
 import logging
 
 from .config import Settings
-from .domain import FlowEngine, RiskwareRules, TokenService
-from .ex_client import EXClient
-from .mailer import SMTPMailer
+from .context import AppContext
 from .recheck import RecheckScheduler
+from .settings_store import SettingsStore
 from .storage import CaseRepository, build_session_factory
 from .web import create_app
 
 
-def build_engine(settings: Settings) -> FlowEngine:
-    repo = CaseRepository(build_session_factory(settings.db_url))
-    ex = EXClient(settings.ex_base_url, settings.ex_username, settings.ex_password,
-                  settings.ex_verify_tls, settings.ex_client_token)
-    mailer = SMTPMailer(settings)
-    tokens = TokenService(settings.secret_key, settings.token_ttl)
-    rules = RiskwareRules(settings.trigger_malware_names, settings.trigger_alert_name)
-    scheduler = RecheckScheduler(settings)
-
-    engine = FlowEngine(repo, ex, mailer, tokens, rules, settings, scheduler)
-    scheduler.bind(engine)
-    return engine
+def build_context(settings: Settings) -> AppContext:
+    session_factory = build_session_factory(settings.db_url)
+    repo = CaseRepository(session_factory)
+    store = SettingsStore(settings, session_factory)
+    scheduler = RecheckScheduler()
+    return AppContext(settings, store, repo, scheduler)
 
 
 def build(settings: Settings | None = None):
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     settings = settings or Settings()
-    engine = build_engine(settings)
-    return create_app(engine, settings), settings
+    ctx = build_context(settings)
+    return create_app(ctx), settings

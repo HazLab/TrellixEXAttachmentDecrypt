@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     web_port: int = 8080
     secret_key: str = "change-me"
     token_ttl: int = 86400  # seconds
+    ui_password: str = ""  # admin password gating the dashboard/settings UI (UI_PASSWORD)
 
     # --- Webhook auth ---
     webhook_secret: str = "change-me"

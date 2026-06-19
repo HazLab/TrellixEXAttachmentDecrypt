@@ -90,6 +90,20 @@ python -m trellix_decrypt
 trellix-decrypt
 ```
 
+## Admin UI
+
+Once running, open the host root in a browser and sign in with `UI_PASSWORD`:
+
+- **Dashboard** (`/`) — live, searchable list of cases with status badges and the
+  password-failure counter. Click a row for a detail drawer (lifecycle stepper +
+  event timeline). Auto-refreshes every few seconds; dark/light toggle.
+- **Settings** (`/settings`) — edit EX appliance creds, SMTP gateway, trigger,
+  and retry/recheck tuning. Saved settings are stored in the DB (secrets
+  encrypted at rest) and **applied live** — no restart. Env vars are the defaults.
+
+The recipient password links (`/p/<token>`), the webhook, and `/healthz` are
+public; everything else requires sign-in.
+
 ## Test
 
 ```bash

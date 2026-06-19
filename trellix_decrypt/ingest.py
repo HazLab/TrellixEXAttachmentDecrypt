@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 
 from fastapi import APIRouter, Header, HTTPException, Request
 
-from .domain import FlowEngine, iter_alerts, parse_alert
+from .domain import iter_alerts, parse_alert
 
 
 class AlertSource(ABC):
@@ -22,11 +22,15 @@ class AlertSource(ABC):
     async def start(self) -> None: ...
 
 
-def build_webhook_router(engine: FlowEngine, settings) -> APIRouter:
+def build_webhook_router(ctx) -> APIRouter:
+    """Public EX alert webhook. Reads the engine/settings from ctx at request
+    time so a settings change (e.g. webhook secret) applies without a restart.
+    """
     router = APIRouter()
 
     @router.post("/webhook/ex-alert")
     async def receive_alert(request: Request, x_webhook_secret: str = Header(default="")):
+        settings = ctx.engine.settings
         if not hmac.compare_digest(x_webhook_secret, settings.webhook_secret):
             raise HTTPException(status_code=401, detail="bad webhook secret")
         if settings.webhook_ip_allowlist:
@@ -40,7 +44,7 @@ def build_webhook_router(engine: FlowEngine, settings) -> APIRouter:
             event = parse_alert(raw)
             if not event.queue_id or not event.recipient:
                 continue
-            if await engine.handle_alert(event) is not None:
+            if await ctx.engine.handle_alert(event) is not None:
                 handled += 1
         return {"received": True, "handled": handled}
 

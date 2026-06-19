@@ -69,6 +69,17 @@ class EventLog(Base):
     case: Mapped[AttachmentCase] = relationship(back_populates="events")
 
 
+class Setting(Base):
+    """Key/value store for UI-editable config overrides (secrets stored encrypted)."""
+
+    __tablename__ = "settings"
+
+    key: Mapped[str] = mapped_column(primary_key=True)
+    value: Mapped[str] = mapped_column(default="")
+    is_secret: Mapped[bool] = mapped_column(default=False)
+    updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
+
+
 def build_session_factory(db_url: str):
     kwargs = {}
     if db_url in ("sqlite://", "sqlite:///:memory:"):  # share one in-memory DB across sessions
@@ -124,3 +135,37 @@ class CaseRepository:
     def list_pending_ids(self) -> list[str]:
         with self._sf() as s:
             return list(s.scalars(select(AttachmentCase.id).where(AttachmentCase.state.in_(RECHECKABLE))))
+
+    # --- read models for the dashboard/API ---------------------------------
+    def list_cases(self, limit: int = 300) -> list[dict]:
+        with self._sf() as s:
+            cases = s.scalars(select(AttachmentCase).order_by(AttachmentCase.updated_at.desc()).limit(limit))
+            return [_case_dict(c) for c in cases]
+
+    def case_detail(self, case_id: str) -> dict | None:
+        with self._sf() as s:
+            case = s.get(AttachmentCase, case_id)
+            if case is None:
+                return None
+            data = _case_dict(case)
+            data["events"] = [
+                {"state": e.state.value, "detail": e.detail, "at": e.created_at.isoformat()}
+                for e in sorted(case.events, key=lambda e: e.created_at)
+            ]
+            return data
+
+
+def _case_dict(c: AttachmentCase) -> dict:
+    return {
+        "id": c.id,
+        "queue_id": c.queue_id,
+        "recipient": c.recipient,
+        "sender": c.sender,
+        "subject": c.subject,
+        "attachment": c.malware_name,
+        "alert_name": c.alert_name,
+        "state": c.state.value,
+        "attempts": c.attempts,
+        "created_at": c.created_at.isoformat(),
+        "updated_at": c.updated_at.isoformat(),
+    }

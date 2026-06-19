@@ -92,6 +92,13 @@ python -m trellix_decrypt
 trellix-decrypt
 ```
 
+Before wiring the webhook, validate EX connectivity (logs in + sample
+alerts/quarantine query, exit code 0 = OK):
+
+```bash
+python -m trellix_decrypt --check
+```
+
 ## Admin UI
 
 Once running, open the host root in a browser and sign in with `UI_PASSWORD`:

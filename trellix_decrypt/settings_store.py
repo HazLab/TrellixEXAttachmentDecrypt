@@ -20,7 +20,7 @@ from .storage import Setting
 # secret_key, ui_password — set via environment only).
 EDITABLE = (
     "ex_base_url", "ex_username", "ex_password", "ex_verify_tls", "ex_client_token",
-    "smtp_host", "smtp_port", "smtp_username", "smtp_password", "smtp_from", "smtp_starttls",
+    "smtp_host", "smtp_port", "smtp_username", "smtp_password", "smtp_from", "smtp_tls_mode",
     "smtp_helo_hostname",
     "trigger_alert_name", "trigger_malware_names",
     "max_password_attempts", "recheck_delay", "recheck_interval", "recheck_max_attempts",

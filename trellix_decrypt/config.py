@@ -57,6 +57,9 @@ class Settings(BaseSettings):
     recheck_delay: int = 120
     recheck_interval: int = 60
     recheck_max_attempts: int = 10
+    # Auto-retry of failed recipient emails (SMTP errors).
+    notify_max_retries: int = 5
+    notify_retry_interval: int = 300  # seconds between background retry sweeps
 
     # --- Storage ---
     db_url: str = "sqlite:///trellix_decrypt.sqlite3"

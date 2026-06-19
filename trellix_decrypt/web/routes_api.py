@@ -49,6 +49,15 @@ def build_api_router(ctx) -> APIRouter:
             raise HTTPException(status_code=404, detail="not found")
         return _decorate(case)
 
+    @router.post("/cases/{case_id}/resend")
+    async def resend(request: Request, case_id: str):
+        _guard(request)
+        result = await ctx.engine.resend(case_id)
+        if result is None:
+            raise HTTPException(status_code=409, detail="case is not in a re-sendable state")
+        case = ctx.repo.case_detail(case_id)
+        return {"sent": bool(result), "state": case["state"] if case else None}
+
     @router.get("/settings")
     async def get_settings(request: Request):
         _guard(request)

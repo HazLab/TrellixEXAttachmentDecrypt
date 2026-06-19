@@ -42,6 +42,7 @@ class AttachmentCase(Base):
     malware_name: Mapped[str | None] = mapped_column(default=None)
     state: Mapped[FlowState] = mapped_column(SAEnum(FlowState), default=FlowState.RECEIVED)
     attempts: Mapped[int] = mapped_column(default=0)
+    notify_attempts: Mapped[int] = mapped_column(default=0)
     created_at: Mapped[datetime] = mapped_column(default=_now)
     updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
 
@@ -136,6 +137,19 @@ class CaseRepository:
         with self._sf() as s:
             return list(s.scalars(select(AttachmentCase.id).where(AttachmentCase.state.in_(RECHECKABLE))))
 
+    def increment_notify_attempts(self, case: AttachmentCase) -> None:
+        with self._sf() as s:
+            db_case = s.get(AttachmentCase, case.id)
+            db_case.notify_attempts += 1
+            s.commit()
+            case.notify_attempts = db_case.notify_attempts
+
+    def list_notify_failed_ids(self, max_attempts: int) -> list[str]:
+        with self._sf() as s:
+            return list(s.scalars(select(AttachmentCase.id).where(
+                AttachmentCase.state == FlowState.NOTIFY_FAILED,
+                AttachmentCase.notify_attempts < max_attempts)))
+
     # --- read models for the dashboard/API ---------------------------------
     def list_cases(self, limit: int = 300) -> list[dict]:
         with self._sf() as s:
@@ -166,6 +180,7 @@ def _case_dict(c: AttachmentCase) -> dict:
         "alert_name": c.alert_name,
         "state": c.state.value,
         "attempts": c.attempts,
+        "notify_attempts": c.notify_attempts,
         "created_at": c.created_at.isoformat(),
         "updated_at": c.updated_at.isoformat(),
     }

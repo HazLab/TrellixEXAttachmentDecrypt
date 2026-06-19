@@ -33,12 +33,15 @@ class FakeEX:
     def __init__(self, outcomes=None):
         self.rescanned = []
         self.outcomes = list(outcomes or [])
+        self.rescan_fail = False
 
-    async def current_queue_id(self, queue_id):
-        return queue_id
+    async def quarantine_ids(self, queue_id):
+        return queue_id, f"uuid-{queue_id}"
 
-    async def rescan(self, queue_id, passwords):
-        self.rescanned.append((queue_id, passwords))
+    async def rescan(self, target_id, passwords):
+        if self.rescan_fail:
+            raise RuntimeError("EX 400: insufficient authorization")
+        self.rescanned.append((target_id, passwords))
         return {}
 
     async def classify_resubmission(self, queue_id, recipient, rules):
@@ -62,12 +65,16 @@ class FakeMailer:
 class FakeScheduler:
     def __init__(self):
         self.scheduled = []
+        self.resubmits = []
 
     def bind(self, engine):
         self.engine = engine
 
     def schedule_recheck(self, case_id):
         self.scheduled.append(case_id)
+
+    def schedule_resubmit(self, case_id, password):
+        self.resubmits.append((case_id, password))
 
     def start_notify_retrier(self):
         pass

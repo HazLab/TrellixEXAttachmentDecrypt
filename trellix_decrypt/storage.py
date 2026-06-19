@@ -125,11 +125,17 @@ class CaseRepository:
             case.state = state  # keep caller's reference in sync
             return db_case
 
-    def add_attempt(self, case: AttachmentCase, password_hash: str) -> None:
+    def record_password_hash(self, case: AttachmentCase, password_hash: str) -> None:
+        """Audit trail of submitted passwords (hashes only). Does NOT count a failure."""
+        with self._sf() as s:
+            s.add(PasswordAttempt(case_id=case.id, password_hash=password_hash))
+            s.commit()
+
+    def increment_attempts(self, case: AttachmentCase) -> None:
+        """Count one confirmed wrong-password round (failed extraction after resubmit)."""
         with self._sf() as s:
             db_case = s.get(AttachmentCase, case.id)
             db_case.attempts += 1
-            s.add(PasswordAttempt(case_id=db_case.id, password_hash=password_hash))
             s.commit()
             case.attempts = db_case.attempts
 

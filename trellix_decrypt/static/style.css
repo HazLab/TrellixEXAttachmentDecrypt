@@ -62,12 +62,33 @@ td.subject, td.attach { max-width: 220px; overflow: hidden; text-overflow: ellip
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; color: var(--muted); }
 .empty { text-align: center; color: var(--muted); padding: 28px; }
 
-.badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
-.badge.success { background: var(--ok-bg); color: var(--ok-fg); }
-.badge.info { background: var(--info-bg); color: var(--info-fg); }
-.badge.warn { background: var(--warn-bg); color: var(--warn-fg); }
-.badge.danger { background: var(--danger-bg); color: var(--danger-fg); }
-.badge.neutral { background: var(--neutral-bg); color: var(--neutral-fg); }
+.badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
+  white-space: nowrap; background: var(--bb); color: var(--bf); }
+/* One distinct hue per status (light theme). */
+.badge.received    { --bb:#e9ecf1; --bf:#5b6675; }   /* slate   */
+.badge.awaiting    { --bb:#e3eefe; --bf:#1a5fd0; }   /* blue    */
+.badge.submitted   { --bb:#e6e6fb; --bf:#3f3fd1; }   /* indigo  */
+.badge.resubmitted { --bb:#d9f2f3; --bf:#0a7b85; }   /* teal    */
+.badge.rechecking  { --bb:#fdf0d3; --bf:#946700; }   /* amber   */
+.badge.clean       { --bb:#e3f5e9; --bf:#1a7f3c; }   /* green   */
+.badge.malicious   { --bb:#fce4e2; --bf:#c5221f; }   /* red     */
+.badge.wrongpw     { --bb:#fde6d2; --bf:#b3540c; }   /* orange  */
+.badge.expired     { --bb:#efe9df; --bf:#836a3b; }   /* taupe   */
+.badge.emailfail   { --bb:#fce0ee; --bf:#c12a78; }   /* magenta */
+.badge.bounced     { --bb:#efe2fb; --bf:#8a2be0; }   /* purple  */
+.badge.resubmitfail{ --bb:#fde7ec; --bf:#be123c; }   /* crimson */
+[data-theme="dark"] .badge.received    { --bb:#222b36; --bf:#9aa6b4; }
+[data-theme="dark"] .badge.awaiting     { --bb:#13243c; --bf:#7fb0ff; }
+[data-theme="dark"] .badge.submitted    { --bb:#1e1e44; --bf:#9b9bff; }
+[data-theme="dark"] .badge.resubmitted  { --bb:#0d2e31; --bf:#5fd0d8; }
+[data-theme="dark"] .badge.rechecking   { --bb:#33290f; --bf:#e6c068; }
+[data-theme="dark"] .badge.clean        { --bb:#10301d; --bf:#7ee2a8; }
+[data-theme="dark"] .badge.malicious    { --bb:#3a1512; --bf:#f3a39b; }
+[data-theme="dark"] .badge.wrongpw      { --bb:#37230d; --bf:#f0a667; }
+[data-theme="dark"] .badge.expired      { --bb:#2c2618; --bf:#c7b083; }
+[data-theme="dark"] .badge.emailfail    { --bb:#3a1228; --bf:#f08fc0; }
+[data-theme="dark"] .badge.bounced      { --bb:#271640; --bf:#c79bff; }
+[data-theme="dark"] .badge.resubmitfail { --bb:#3a0f1c; --bf:#f590a8; }
 .fails { font-weight: 700; }
 .fails.has { color: var(--warn-fg); }
 

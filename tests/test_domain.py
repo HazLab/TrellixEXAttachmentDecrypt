@@ -14,6 +14,12 @@ def _alert(name=TRIGGER_MALWARE_NAME, alert_name="RISKWARE_OBJECT", queue_id="Q1
                       alert_name=alert_name, malware_names=[name])
 
 
+async def _submit(engine, case_id, password="pw"):
+    """Recipient submits the password, then drive the (decoupled) background rescan."""
+    await engine.handle_password(engine.tokens.mint(case_id), password)
+    await engine.resubmit_case(case_id, password)
+
+
 # --- rules & tokens ---------------------------------------------------------
 def test_rules_require_alert_name_and_exact_malware_name():
     rules = RiskwareRules([TRIGGER_MALWARE_NAME], "RISKWARE_OBJECT")
@@ -91,14 +97,34 @@ async def test_manual_resend_after_recovery(engine):
     assert await engine.resend("no-such-case") is None   # invalid -> None
 
 
-async def test_password_submission_resubmits(engine):
+async def test_password_submission_decoupled_from_ex(engine):
     case = await engine.handle_alert(_alert())
-    token = engine.tokens.mint(case.id)
-    result, status = await engine.handle_password(token, "hunter2")
+    result, status = await engine.handle_password(engine.tokens.mint(case.id), "hunter2")
+    # Recipient is acknowledged immediately; EX rescan is only scheduled, not awaited.
     assert status == "ok"
-    assert result.state == FlowState.RESUBMITTED
-    assert engine.ex.rescanned == [("Q1", ["hunter2"])]  # rescans by current queue id
+    assert result.state == FlowState.PASSWORD_SUBMITTED
+    assert engine.scheduler.resubmits == [(case.id, "hunter2")]
+    assert engine.ex.rescanned == []
+
+    # Driving the background step then performs the rescan.
+    await engine.resubmit_case(case.id, "hunter2")
+    c = engine.repo.get_case(case.id)
+    assert c.state == FlowState.RESUBMITTED
+    assert engine.ex.rescanned == [("Q1", ["hunter2"])]
     assert engine.scheduler.scheduled == [case.id]
+
+
+async def test_password_accepted_even_if_ex_rescan_fails(engine):
+    case = await engine.handle_alert(_alert())
+    engine.ex.rescan_fail = True
+    _, status = await engine.handle_password(engine.tokens.mint(case.id), "pw")
+    assert status == "ok"                                   # user's submission still succeeds
+    await engine.resubmit_case(case.id, "pw")               # background rescan fails
+    assert engine.repo.get_case(case.id).state == FlowState.RESUBMIT_FAILED
+
+    engine.ex.rescan_fail = False                           # EX fixed -> background retry works
+    await engine.resubmit_case(case.id, "pw")
+    assert engine.repo.get_case(case.id).state == FlowState.RESUBMITTED
 
 
 async def test_replayed_link_rejected_after_submission(engine):
@@ -111,7 +137,7 @@ async def test_replayed_link_rejected_after_submission(engine):
 
 async def test_recheck_malicious_stops(engine):
     case = await engine.handle_alert(_alert())
-    await engine.handle_password(engine.tokens.mint(case.id), "pw")
+    await _submit(engine, case.id)
     engine.ex.outcomes = [QuarantineOutcome.MALICIOUS]
     assert await engine.recheck(case.id) is True
     assert engine.repo.get_case(case.id).state == FlowState.DONE_MALICIOUS
@@ -119,7 +145,7 @@ async def test_recheck_malicious_stops(engine):
 
 async def test_recheck_clean_only_on_final_poll(engine):
     case = await engine.handle_alert(_alert())
-    await engine.handle_password(engine.tokens.mint(case.id), "pw")
+    await _submit(engine, case.id)
     engine.ex.outcomes = [QuarantineOutcome.NOT_QUARANTINED, QuarantineOutcome.NOT_QUARANTINED]
     assert await engine.recheck(case.id, final=False) is False  # keep polling
     assert await engine.recheck(case.id, final=True) is True
@@ -130,7 +156,7 @@ async def test_wrong_password_retries_then_gives_up(engine):
     case = await engine.handle_alert(_alert())
     # 3 wrong-password rounds (max_password_attempts=3)
     for _ in range(3):
-        await engine.handle_password(engine.tokens.mint(case.id), "wrong")
+        await _submit(engine, case.id, "wrong")
         engine.ex.outcomes = [QuarantineOutcome.FAILED_EXTRACTION]
         await engine.recheck(case.id)
     assert engine.repo.get_case(case.id).state == FlowState.FAILED_MAX_RETRIES

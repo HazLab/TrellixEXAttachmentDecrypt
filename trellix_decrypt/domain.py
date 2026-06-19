@@ -27,8 +27,9 @@ class FlowState(str, enum.Enum):
     DONE_MALICIOUS = "done_malicious"
     FAILED_MAX_RETRIES = "failed_max_retries"
     EXPIRED = "expired"
-    NOTIFY_FAILED = "notify_failed"  # couldn't hand the email to the mail server (SMTP error)
-    BOUNCED = "bounced"              # accepted by the server then bounced (DSN)
+    NOTIFY_FAILED = "notify_failed"   # couldn't hand the email to the mail server (SMTP error)
+    BOUNCED = "bounced"               # accepted by the server then bounced (DSN)
+    RESUBMIT_FAILED = "resubmit_failed"  # password captured, but EX rescan failed (retryable)
 
 
 #: States from which a recheck poll may still run.
@@ -148,15 +149,31 @@ class FlowEngine:
         if case.state != FlowState.AWAITING_PASSWORD:
             return case, "not_awaiting"
 
-        self.repo.add_attempt(case, hash_password(password))
-        self.repo.set_state(case, FlowState.PASSWORD_SUBMITTED, "password submitted")
-        # Rescan by the queue id the email is currently quarantined under
-        # (the original, or its re-quarantine suffix on a retry).
-        queue_id = await self.ex.current_queue_id(case.queue_id) or case.queue_id
-        await self.ex.rescan(queue_id, [password])
+        # The recipient's part is done the moment we have the password. Acknowledge
+        # immediately and do the EX rescan in the background — the user's success
+        # does not depend on EX being reachable/authorized.
+        self.repo.set_state(case, FlowState.PASSWORD_SUBMITTED, "password received")
+        self.scheduler.schedule_resubmit(case.id, password)
+        return case, "ok"
+
+    async def resubmit_case(self, case_id: str, password: str):
+        """Background step: rescan the quarantined email in EX with the password.
+        Independent of the recipient's submission — records its own outcome."""
+        case = self.repo.get_case(case_id)
+        if case is None or case.state not in (FlowState.PASSWORD_SUBMITTED, FlowState.RESUBMIT_FAILED):
+            return
+        ids = await self.ex.quarantine_ids(case.queue_id)  # (queue_id, email_uuid)
+        target = ids[1] if self.settings.ex_rescan_id_field == "email_uuid" else ids[0]
+        target = target or case.queue_id
+        try:
+            await self.ex.rescan(target, [password])
+        except Exception as exc:  # noqa: BLE001 — record, don't crash
+            log.exception("rescan failed for case %s", case.id)
+            self.repo.set_state(case, FlowState.RESUBMIT_FAILED, f"resubmission to EX failed: {exc}")
+            return
+        self.repo.record_password_hash(case, hash_password(password))  # audit only — not a failure
         self.repo.set_state(case, FlowState.RESUBMITTED, "resubmitted to EX (rescan)")
         self.scheduler.schedule_recheck(case.id)
-        return case, "ok"
 
     async def recheck(self, case_id: str, final: bool = False) -> bool:
         """Re-evaluate a resubmitted case. Returns True when polling should stop."""
@@ -170,9 +187,13 @@ class FlowEngine:
             self.repo.set_state(case, FlowState.DONE_MALICIOUS, "re-quarantined: malicious")
             return True
         if outcome is QuarantineOutcome.FAILED_EXTRACTION:
+            # Only NOW is it a confirmed wrong password: the resubmission succeeded
+            # and EX re-quarantined it as the same failed-extraction riskware.
+            self.repo.increment_attempts(case)
             if case.attempts >= self.settings.max_password_attempts:
                 self.repo.set_state(case, FlowState.FAILED_MAX_RETRIES, "max password attempts reached")
             else:
+                # Wrong password — re-send the link so the recipient can try again.
                 await self._send_password_request(case, retry=True)
             return True
         # NOT_QUARANTINED: maybe still analyzing — only conclude clean on the last poll.

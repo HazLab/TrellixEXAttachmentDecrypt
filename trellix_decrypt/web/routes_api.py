@@ -7,19 +7,20 @@ from fastapi import APIRouter, HTTPException, Request
 from . import auth
 from ..settings_store import EDITABLE
 
-# FlowState value -> (human label, badge kind for CSS).
+# FlowState value -> (human label, unique badge class for CSS).
 STATUS_META = {
-    "received": ("Received", "neutral"),
-    "awaiting_password": ("Password requested", "info"),
-    "password_submitted": ("Password received", "info"),
-    "resubmitted": ("Resubmitted", "info"),
-    "rechecking": ("Re-checking", "info"),
-    "done_clean": ("Clean", "success"),
-    "done_malicious": ("Malicious", "danger"),
-    "failed_max_retries": ("Wrong password", "warn"),
-    "expired": ("Expired", "neutral"),
-    "notify_failed": ("Email failed", "danger"),
-    "bounced": ("Bounced", "danger"),
+    "received": ("Received", "received"),
+    "awaiting_password": ("Password requested", "awaiting"),
+    "password_submitted": ("Password received", "submitted"),
+    "resubmitted": ("Resubmitted", "resubmitted"),
+    "rechecking": ("Re-checking", "rechecking"),
+    "done_clean": ("Clean", "clean"),
+    "done_malicious": ("Malicious", "malicious"),
+    "failed_max_retries": ("Wrong password", "wrongpw"),
+    "expired": ("Expired", "expired"),
+    "notify_failed": ("Email failed", "emailfail"),
+    "bounced": ("Bounced", "bounced"),
+    "resubmit_failed": ("Resubmit failed", "resubmitfail"),
 }
 
 

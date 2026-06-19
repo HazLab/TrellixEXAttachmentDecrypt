@@ -70,7 +70,7 @@ class EXClient:
             headers[TOKEN_HEADER] = self._token
             resp = await self._client.request(method, url, headers=headers, **kwargs)
         if resp.status_code >= 400:
-            raise EXApiError(f"{method} {url} -> HTTP {resp.status_code}: {resp.text[:200]}")
+            raise EXApiError(f"{method} {url} -> HTTP {resp.status_code}: {resp.text[:1000]}")
         return resp
 
     # --- alerts -------------------------------------------------------------
@@ -84,18 +84,18 @@ class EXClient:
         resp = await self._request("GET", EP_QUARANTINE, params=params)
         return _as_quarantine_list(resp.json())
 
-    async def current_queue_id(self, queue_id: str) -> str | None:
-        """Return the queue id under which `queue_id`'s email is currently quarantined.
-
-        After a failed resubmission EX re-quarantines it under the original id plus
-        a suffix it appends (e.g. `_RA`); we read that back rather than constructing
-        it — an exact match wins, otherwise the prefixed (re-quarantine) entry.
+    async def quarantine_ids(self, queue_id: str) -> tuple[str | None, str | None]:
+        """Return (queue_id, email_uuid) for the email currently quarantined under
+        `queue_id`. After a failed resubmission EX re-quarantines under the original
+        id plus a suffix it appends (e.g. `_RA`); we read that back (exact match
+        wins, otherwise the prefixed re-quarantine entry) rather than constructing it.
         """
         entries = await self.list_quarantine()
-        exact = [_qid(e) for e in entries if _qid(e) == queue_id]
-        prefixed = [_qid(e) for e in entries if _qid(e) != queue_id and _qid(e).startswith(queue_id)]
-        found = exact or prefixed
-        return found[0] if found else None
+        exact = [e for e in entries if _qid(e) == queue_id]
+        prefixed = [e for e in entries if _qid(e) != queue_id and _qid(e).startswith(queue_id)]
+        for entry in exact or prefixed:
+            return _qid(entry), (entry.get("email_uuid") or entry.get("emailUuid"))
+        return None, None
 
     async def rescan(self, queue_id: str, passwords: list[str]) -> dict:
         """Rescan a quarantined email by queue id, supplying decryption password(s)."""

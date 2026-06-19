@@ -34,18 +34,18 @@ def _alert(queue_id, name, malware, malicious="no"):
 
 
 @respx.mock
-async def test_current_queue_id_and_rescan():
+async def test_quarantine_ids_and_rescan():
     router = respx.mock
     _mock_login(router)
     # On a retry the email is re-quarantined under the original id + suffix.
     router.get(BASE + ex.EP_QUARANTINE).mock(return_value=httpx.Response(200, json=[
-        {"email_uuid": "u", "queue_id": "Q1_RA", "from": "x@y.test", "subject": "s"},
+        {"email_uuid": "uuid-xyz", "queue_id": "Q1_RA", "from": "x@y.test", "subject": "s"},
     ]))
     rescan = router.post(url__regex=rf"{BASE}{ex.EP_QUARANTINE_RESCAN}/.*").mock(
         return_value=httpx.Response(200, json={"ok": True}))
 
     client = _client()
-    assert await client.current_queue_id("Q1") == "Q1_RA"  # reads EX-appended suffix
+    assert await client.quarantine_ids("Q1") == ("Q1_RA", "uuid-xyz")  # reads suffix + email_uuid
 
     await client.rescan("Q1_RA", ["pw1", "pw2"])
     sent = rescan.calls.last.request

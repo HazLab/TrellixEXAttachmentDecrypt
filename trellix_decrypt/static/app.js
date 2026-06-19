@@ -93,7 +93,7 @@ async function openDrawer(id) {
       <dt>Email attempts</dt><dd>${c.notify_attempts || 0}</dd>
       <dt>Created</dt><dd class="mono">${esc(fmtTime(c.created_at))}</dd>
     </dl>
-    ${["notify_failed", "awaiting_password", "bounced"].includes(c.state)
+    ${["notify_failed", "awaiting_password", "bounced", "resubmit_failed"].includes(c.state)
       ? `<button id="resend-btn" class="btn" data-id="${esc(c.id)}">Resend email</button>` : ""}
     <h3 style="font-size:14px;margin:18px 0 0;">Timeline</h3>
     <ul class="timeline">${(c.events || []).map((e) => `

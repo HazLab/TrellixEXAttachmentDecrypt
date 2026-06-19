@@ -47,13 +47,17 @@ class SMTPMailer:
         msg.set_content(text)
         msg.add_alternative(html, subtype="html")
 
+        # Only authenticate when a username is set; otherwise don't attempt AUTH
+        # (relays without the AUTH extension reject the attempt outright).
+        username = self._s.smtp_username or None
+        password = (self._s.smtp_password or None) if username else None
         try:
             errors, response = await aiosmtplib.send(
                 msg,
                 hostname=self._s.smtp_host,
                 port=self._s.smtp_port,
-                username=self._s.smtp_username or None,
-                password=self._s.smtp_password or None,
+                username=username,
+                password=password,
                 start_tls=self._s.smtp_starttls,
                 local_hostname=self._s.smtp_helo_hostname or None,
             )

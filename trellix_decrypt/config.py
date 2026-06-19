@@ -72,6 +72,9 @@ class Settings(BaseSettings):
     # Auto-retry of failed recipient emails (SMTP errors).
     notify_max_retries: int = 5
     notify_retry_interval: int = 300  # seconds between background retry sweeps
+    # Auto-retry of failed EX resubmissions (rescan errors / EX briefly down).
+    resubmit_max_retries: int = 5
+    resubmit_retry_interval: int = 120  # seconds between background rescan-retry sweeps
 
     # --- Bounce monitoring (IMAP poll of the sender mailbox for DSNs) ---
     # Leave imap_host blank to disable. Detects "accepted then bounced" mail and

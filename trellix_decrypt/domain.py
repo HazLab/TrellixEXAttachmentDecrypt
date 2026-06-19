@@ -14,6 +14,8 @@ import logging
 
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
+from .crypto import fernet
+
 log = logging.getLogger(__name__)
 
 
@@ -106,9 +108,17 @@ class TokenService:
         return self._serializer.dumps(case_id)
 
     def verify(self, token: str) -> str | None:
+        """Case id for a valid, unexpired token."""
         try:
             return self._serializer.loads(token, max_age=self._ttl)
         except (BadSignature, SignatureExpired):
+            return None
+
+    def peek(self, token: str) -> str | None:
+        """Case id for a validly-signed token regardless of age (None if tampered)."""
+        try:
+            return self._serializer.loads(token)
+        except BadSignature:
             return None
 
 
@@ -128,6 +138,7 @@ class FlowEngine:
         self.rules = rules
         self.settings = settings
         self.scheduler = scheduler
+        self._fernet = fernet(settings.secret_key)  # encrypts the held password at rest
 
     async def handle_alert(self, event: AlertEvent):
         """Entry point for an incoming EX alert. Returns the case, or None if ignored."""
@@ -138,9 +149,23 @@ class FlowEngine:
             await self._send_password_request(case)
         return case
 
+    async def reissue_expired_link(self, token: str):
+        """If an expired-but-valid link is opened and the case still awaits a
+        password, e-mail a fresh link. Returns the case, or None."""
+        case_id = self.tokens.peek(token)
+        if not case_id:
+            return None
+        case = self.repo.get_case(case_id)
+        if case is None or case.state != FlowState.AWAITING_PASSWORD:
+            return None
+        await self._send_password_request(case)  # mints a new token + re-emails
+        return case
+
     async def handle_password(self, token: str, password: str):
         """Handle a password submission. Returns (case_or_None, status_string)."""
-        case_id = self.tokens.verify(token)
+        # Accept a just-expired but validly-signed token (the recipient is actively
+        # submitting); single use is still enforced by the case state below.
+        case_id = self.tokens.peek(token)
         if not case_id:
             return None, "invalid_or_expired"
         case = self.repo.get_case(case_id)
@@ -149,31 +174,44 @@ class FlowEngine:
         if case.state != FlowState.AWAITING_PASSWORD:
             return case, "not_awaiting"
 
-        # The recipient's part is done the moment we have the password. Acknowledge
-        # immediately and do the EX rescan in the background — the user's success
-        # does not depend on EX being reachable/authorized.
+        # The recipient's part is done the moment we have the password. Store it
+        # (encrypted), acknowledge immediately, and do the EX rescan in the
+        # background — the user's success does not depend on EX being reachable.
+        self.repo.store_password(case, self._fernet.encrypt(password.encode()).decode())
         self.repo.set_state(case, FlowState.PASSWORD_SUBMITTED, "password received")
-        self.scheduler.schedule_resubmit(case.id, password)
+        self.scheduler.schedule_resubmit(case.id)
         return case, "ok"
 
-    async def resubmit_case(self, case_id: str, password: str):
-        """Background step: rescan the quarantined email in EX with the password.
-        Independent of the recipient's submission — records its own outcome."""
+    async def resubmit_case(self, case_id: str):
+        """Background step: rescan the quarantined email in EX with the held password.
+        Independent of the recipient's submission; retryable until it succeeds."""
         case = self.repo.get_case(case_id)
-        if case is None or case.state not in (FlowState.PASSWORD_SUBMITTED, FlowState.RESUBMIT_FAILED):
+        if case is None or case.state not in (FlowState.PASSWORD_SUBMITTED, FlowState.RESUBMIT_FAILED) or not case.pwd_enc:
+            return
+        try:
+            password = self._fernet.decrypt(case.pwd_enc.encode()).decode()
+        except Exception:  # noqa: BLE001 — unreadable (e.g. SECRET_KEY changed)
+            self.repo.set_state(case, FlowState.RESUBMIT_FAILED, "stored password unreadable")
             return
         ids = await self.ex.quarantine_ids(case.queue_id)  # (queue_id, email_uuid)
-        target = ids[1] if self.settings.ex_rescan_id_field == "email_uuid" else ids[0]
-        target = target or case.queue_id
+        target = (ids[1] if self.settings.ex_rescan_id_field == "email_uuid" else ids[0]) or case.queue_id
         try:
             await self.ex.rescan(target, [password])
-        except Exception as exc:  # noqa: BLE001 — record, don't crash
+        except Exception as exc:  # noqa: BLE001 — record + count for the retry cap, don't crash
             log.exception("rescan failed for case %s", case.id)
+            self.repo.increment_resubmit_attempts(case)
             self.repo.set_state(case, FlowState.RESUBMIT_FAILED, f"resubmission to EX failed: {exc}")
             return
         self.repo.record_password_hash(case, hash_password(password))  # audit only — not a failure
+        self.repo.clear_password(case)  # no longer needed
         self.repo.set_state(case, FlowState.RESUBMITTED, "resubmitted to EX (rescan)")
         self.scheduler.schedule_recheck(case.id)
+
+    async def retry_failed_resubmissions(self):
+        """Background sweep: re-attempt EX rescans for cases still holding a
+        password (PASSWORD_SUBMITTED stuck, or RESUBMIT_FAILED) under the cap."""
+        for case_id in self.repo.list_resubmit_pending_ids(self.settings.resubmit_max_retries):
+            await self.resubmit_case(case_id)
 
     async def recheck(self, case_id: str, final: bool = False) -> bool:
         """Re-evaluate a resubmitted case. Returns True when polling should stop."""
@@ -203,9 +241,11 @@ class FlowEngine:
         return False
 
     async def resume_pending(self):
-        """On startup, reschedule rechecks for cases left mid-flight."""
+        """On startup, reschedule work left mid-flight: rechecks and resubmissions."""
         for case_id in self.repo.list_pending_ids():
             self.scheduler.schedule_recheck(case_id)
+        for case_id in self.repo.list_resubmit_pending_ids(self.settings.resubmit_max_retries):
+            self.scheduler.schedule_resubmit(case_id)
 
     async def resend(self, case_id: str):
         """Operator-triggered re-send. Returns the send result, or None if the

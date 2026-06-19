@@ -17,7 +17,7 @@ def _alert(name=TRIGGER_MALWARE_NAME, alert_name="RISKWARE_OBJECT", queue_id="Q1
 async def _submit(engine, case_id, password="pw"):
     """Recipient submits the password, then drive the (decoupled) background rescan."""
     await engine.handle_password(engine.tokens.mint(case_id), password)
-    await engine.resubmit_case(case_id, password)
+    await engine.resubmit_case(case_id)
 
 
 # --- rules & tokens ---------------------------------------------------------
@@ -103,14 +103,16 @@ async def test_password_submission_decoupled_from_ex(engine):
     # Recipient is acknowledged immediately; EX rescan is only scheduled, not awaited.
     assert status == "ok"
     assert result.state == FlowState.PASSWORD_SUBMITTED
-    assert engine.scheduler.resubmits == [(case.id, "hunter2")]
+    assert engine.scheduler.resubmits == [case.id]
     assert engine.ex.rescanned == []
+    assert engine.repo.get_case(case.id).pwd_enc is not None  # held (encrypted) for the rescan
 
-    # Driving the background step then performs the rescan.
-    await engine.resubmit_case(case.id, "hunter2")
+    # Driving the background step then performs the rescan and clears the password.
+    await engine.resubmit_case(case.id)
     c = engine.repo.get_case(case.id)
     assert c.state == FlowState.RESUBMITTED
     assert engine.ex.rescanned == [("Q1", ["hunter2"])]
+    assert c.pwd_enc is None
     assert engine.scheduler.scheduled == [case.id]
 
 
@@ -119,11 +121,24 @@ async def test_password_accepted_even_if_ex_rescan_fails(engine):
     engine.ex.rescan_fail = True
     _, status = await engine.handle_password(engine.tokens.mint(case.id), "pw")
     assert status == "ok"                                   # user's submission still succeeds
-    await engine.resubmit_case(case.id, "pw")               # background rescan fails
+    await engine.resubmit_case(case.id)                     # background rescan fails
     assert engine.repo.get_case(case.id).state == FlowState.RESUBMIT_FAILED
 
-    engine.ex.rescan_fail = False                           # EX fixed -> background retry works
-    await engine.resubmit_case(case.id, "pw")
+    engine.ex.rescan_fail = False                           # EX fixed -> retry works without re-asking
+    await engine.resubmit_case(case.id)                     # (same as the Retry-rescan button / sweep)
+    assert engine.repo.get_case(case.id).state == FlowState.RESUBMITTED
+    assert engine.ex.rescanned == [("Q1", ["pw"])]
+
+
+async def test_resubmit_retry_sweep_recovers(engine):
+    case = await engine.handle_alert(_alert())
+    engine.ex.rescan_fail = True
+    await engine.handle_password(engine.tokens.mint(case.id), "pw")
+    await engine.resubmit_case(case.id)                     # -> RESUBMIT_FAILED, password retained
+    assert engine.repo.get_case(case.id).state == FlowState.RESUBMIT_FAILED
+
+    engine.ex.rescan_fail = False
+    await engine.retry_failed_resubmissions()               # background sweep, no user involvement
     assert engine.repo.get_case(case.id).state == FlowState.RESUBMITTED
 
 

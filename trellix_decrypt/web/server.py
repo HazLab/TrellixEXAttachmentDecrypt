@@ -25,6 +25,7 @@ def create_app(ctx) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         await ctx.engine.resume_pending()
+        ctx.scheduler.start_notify_retrier()
         yield
         await ctx.scheduler.shutdown()
         await ctx.engine.aclose()

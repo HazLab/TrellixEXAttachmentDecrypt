@@ -10,8 +10,11 @@ from __future__ import annotations
 import dataclasses
 import enum
 import hashlib
+import logging
 
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+
+log = logging.getLogger(__name__)
 
 
 class FlowState(str, enum.Enum):
@@ -24,6 +27,7 @@ class FlowState(str, enum.Enum):
     DONE_MALICIOUS = "done_malicious"
     FAILED_MAX_RETRIES = "failed_max_retries"
     EXPIRED = "expired"
+    NOTIFY_FAILED = "notify_failed"  # couldn't email the recipient (SMTP error)
 
 
 #: States from which a recheck poll may still run.
@@ -183,11 +187,17 @@ class FlowEngine:
     async def aclose(self):
         await self.ex.aclose()
 
-    async def _send_password_request(self, case, retry: bool = False):
+    async def _send_password_request(self, case, retry: bool = False) -> bool:
         token = self.tokens.mint(case.id)
         link = f"{self.settings.public_base_url.rstrip('/')}/p/{token}"
-        await self.mailer.send_password_request(case.recipient, link, case, retry=retry)
+        try:
+            await self.mailer.send_password_request(case.recipient, link, case, retry=retry)
+        except Exception as exc:  # noqa: BLE001 — record send failures instead of crashing
+            log.exception("failed to email %s for case %s", case.recipient, case.id)
+            self.repo.set_state(case, FlowState.NOTIFY_FAILED, f"email send failed: {exc}")
+            return False
         self.repo.set_state(case, FlowState.AWAITING_PASSWORD, "password link sent" + (" (retry)" if retry else ""))
+        return True
 
 
 # --- Alert parsing ----------------------------------------------------------

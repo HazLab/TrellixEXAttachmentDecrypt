@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from trellix_decrypt.domain import AlertEvent, FlowState, QuarantineOutcome, RiskwareRules, TokenService
+from trellix_decrypt.domain import AlertEvent, FlowState, RiskwareRules, TokenService
 
 from .conftest import TRIGGER_MALWARE_NAME
 
@@ -12,6 +12,12 @@ from .conftest import TRIGGER_MALWARE_NAME
 def _alert(name=TRIGGER_MALWARE_NAME, alert_name="RISKWARE_OBJECT", queue_id="Q1"):
     return AlertEvent(queue_id=queue_id, recipient="user@corp.test", subject="Invoice",
                       alert_name=alert_name, malware_names=[name])
+
+
+def _malware_ra(queue_id="Q1_RA", name="FE_Backdoor_Go_Sandcat_1"):
+    """A pushed _RA re-detection where extraction succeeded and the object is malicious."""
+    return AlertEvent(queue_id=queue_id, recipient="user@corp.test", subject="Invoice",
+                      alert_name="MALWARE_OBJECT", malicious=True, malware_names=[name])
 
 
 async def _submit(engine, case_id, password="pw"):
@@ -139,6 +145,21 @@ async def test_password_accepted_even_if_ex_rescan_fails(engine):
     assert engine.ex.rescanned == [("Q1", ["pw"])]
 
 
+async def test_resubmit_email_not_found_handled_cleanly(engine):
+    case = await engine.handle_alert(_alert())
+    engine.ex.rescan_not_found = True                       # EX 400 "email not quarantined"
+    await engine.handle_password(engine.tokens.mint(case.id), "pw")
+    await engine.resubmit_case(case.id)                     # must not crash the background task
+    stored = engine.repo.get_case(case.id)
+    assert stored.state == FlowState.RESUBMIT_FAILED
+    assert stored.resubmit_attempts == 1                    # counted toward the bounded retry cap
+    assert stored.pwd_enc                                   # password retained for the retry
+
+    engine.ex.rescan_not_found = False                      # email (re)appears -> retry succeeds
+    await engine.resubmit_case(case.id)
+    assert engine.repo.get_case(case.id).state == FlowState.RESUBMITTED
+
+
 async def test_resubmit_retry_sweep_recovers(engine):
     case = await engine.handle_alert(_alert())
     engine.ex.rescan_fail = True
@@ -159,30 +180,56 @@ async def test_replayed_link_rejected_after_submission(engine):
     assert status == "not_awaiting"
 
 
-async def test_recheck_malicious_stops(engine):
+async def test_pushed_malicious_ra_stops(engine):
+    case = await engine.handle_alert(_alert())
+    await _submit(engine, case.id)                          # -> RESUBMITTED
+    # EX re-analyzes, extracts with the correct password, finds malware, and pushes _RA.
+    result = await engine.handle_alert(_malware_ra())
+    assert result.id == case.id                            # correlated to the same case
+    c = engine.repo.get_case(case.id)
+    assert c.state == FlowState.DONE_MALICIOUS
+    assert c.pwd_enc is None                               # held password purged
+
+
+async def test_pushed_malicious_ra_wins_over_same_batch_riskware(engine):
+    # If a riskware _RA were processed first it would re-send the link; a malicious _RA
+    # for the same case must still override to DONE_MALICIOUS (ingest also sorts these).
     case = await engine.handle_alert(_alert())
     await _submit(engine, case.id)
-    engine.ex.outcomes = [QuarantineOutcome.MALICIOUS]
-    assert await engine.recheck(case.id) is True
+    await engine.handle_alert(_alert(queue_id="Q1_RA"))    # riskware first -> wrong password
+    assert engine.repo.get_case(case.id).state == FlowState.AWAITING_PASSWORD
+    await engine.handle_alert(_malware_ra())               # malware wins
     assert engine.repo.get_case(case.id).state == FlowState.DONE_MALICIOUS
 
 
-async def test_recheck_clean_only_on_final_poll(engine):
+async def test_recheck_declares_clean_only_when_not_requarantined(engine):
     case = await engine.handle_alert(_alert())
-    await _submit(engine, case.id)
-    engine.ex.outcomes = [QuarantineOutcome.NOT_QUARANTINED, QuarantineOutcome.NOT_QUARANTINED]
-    assert await engine.recheck(case.id, final=False) is False  # keep polling
+    await _submit(engine, case.id)                          # -> RESUBMITTED
+    engine.ex.ra_quarantined = False                       # no _RA entry remains
+    assert await engine.recheck(case.id, final=False) is False   # wait for the pushed verdict
+    assert engine.repo.get_case(case.id).state == FlowState.RECHECKING
     assert await engine.recheck(case.id, final=True) is True
     assert engine.repo.get_case(case.id).state == FlowState.DONE_CLEAN
 
 
+async def test_recheck_backstop_fails_closed_when_still_requarantined(engine):
+    # The verdict push was missed but the email is still re-quarantined: never declare
+    # clean — treat as a wrong password (re-ask), so a held email is never released.
+    case = await engine.handle_alert(_alert())
+    await _submit(engine, case.id)
+    engine.ex.ra_quarantined = True
+    assert await engine.recheck(case.id, final=True) is True
+    c = engine.repo.get_case(case.id)
+    assert c.state == FlowState.AWAITING_PASSWORD          # re-asked, not DONE_CLEAN
+    assert c.attempts == 1
+
+
 async def test_wrong_password_retries_then_gives_up(engine):
     case = await engine.handle_alert(_alert())
-    # 3 wrong-password rounds (max_password_attempts=3)
+    # 3 wrong-password rounds (max_password_attempts=3); each pushes a riskware _RA.
     for _ in range(3):
-        await _submit(engine, case.id, "wrong")
-        engine.ex.outcomes = [QuarantineOutcome.FAILED_EXTRACTION]
-        await engine.recheck(case.id)
+        await _submit(engine, case.id, "wrong")            # -> RESUBMITTED
+        await engine.handle_alert(_alert(queue_id="Q1_RA"))  # still failed extraction
     assert engine.repo.get_case(case.id).state == FlowState.FAILED_MAX_RETRIES
     # one initial + two retry emails (third attempt hits the cap)
     assert len(engine.mailer.sent) == 3

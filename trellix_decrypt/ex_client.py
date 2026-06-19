@@ -7,13 +7,7 @@ at the top of this file — the single place to adjust for another appliance.
 
 from __future__ import annotations
 
-import logging
-
 import httpx
-
-from .domain import QuarantineOutcome, RiskwareRules, iter_alerts, parse_alert
-
-log = logging.getLogger(__name__)
 
 # --- Endpoints (Trellix WSAPI v2.0.0) ---------------------------------------
 API_VERSION = "v2.0.0"
@@ -21,7 +15,6 @@ _BASE = f"/wsapis/{API_VERSION}"
 EP_LOGIN = f"{_BASE}/auth/login"
 EP_LOGOUT = f"{_BASE}/auth/logout"
 EP_ALERTS = f"{_BASE}/alerts"
-EP_ALERT_DETAILS = f"{_BASE}/alerts/alert"  # + /<uuid>
 EP_QUARANTINE = f"{_BASE}/emailmgmt/quarantine"
 EP_QUARANTINE_RELEASE = f"{_BASE}/emailmgmt/quarantine/release"
 EP_QUARANTINE_DELETE = f"{_BASE}/emailmgmt/quarantine/delete"
@@ -36,7 +29,22 @@ class EXAuthError(RuntimeError):
 
 
 class EXApiError(RuntimeError):
-    pass
+    """A non-2xx response from EX. Carries the status + body for clean handling."""
+
+    def __init__(self, message: str, status_code: int | None = None, body: str = ""):
+        super().__init__(message)
+        self.status_code = status_code
+        self.body = body
+
+    @property
+    def not_found(self) -> bool:
+        """True when EX reports the email isn't (or is no longer) quarantined —
+        e.g. rescanning an id that has no quarantined file behind it. EX answers
+        this with a 400/404 whose body mentions the missing email / invalid id."""
+        if self.status_code not in (400, 404):
+            return False
+        body = self.body.lower()
+        return any(s in body for s in ("could not find", "not quarantined", "invalid queueid", "does not exist"))
 
 
 class EXClient:
@@ -75,7 +83,8 @@ class EXClient:
             headers[TOKEN_HEADER] = self._token
             resp = await self._client.request(method, url, headers=headers, **kwargs)
         if resp.status_code >= 400:
-            raise EXApiError(f"{method} {url} -> HTTP {resp.status_code}: {resp.text[:1000]}")
+            raise EXApiError(f"{method} {url} -> HTTP {resp.status_code}: {resp.text[:1000]}",
+                             status_code=resp.status_code, body=resp.text)
         return resp
 
     # --- alerts -------------------------------------------------------------
@@ -83,16 +92,6 @@ class EXClient:
         params = {"info_level": "normal", **filters}
         resp = await self._request("GET", EP_ALERTS, params=params)
         return resp.json()
-
-    async def get_alert_by_uuid(self, uuid: str):
-        """Fetch a single alert's details by UUID (quarantine objects reference
-        alert_uuids; this is how we learn the malware type/maliciousness)."""
-        try:
-            resp = await self._request("GET", f"{EP_ALERT_DETAILS}/{uuid}")
-        except EXApiError:
-            return None
-        alerts = iter_alerts(resp.json())
-        return parse_alert(alerts[0]) if alerts else None
 
     # --- quarantine ---------------------------------------------------------
     async def list_quarantine(self, sender: str | None = None, subject: str | None = None, **params) -> list[dict]:
@@ -130,32 +129,18 @@ class EXClient:
         resp = await self._request("POST", EP_QUARANTINE_DELETE, json={"queue_ids": queue_ids})
         return resp.json() if resp.content else {}
 
-    # --- recheck classification --------------------------------------------
-    async def classify_resubmission(self, queue_id: str, sender: str, subject: str,
-                                    rules: RiskwareRules) -> QuarantineOutcome:
-        """Classify a resubmitted email by reading EX state.
+    # --- recheck backstop ---------------------------------------------------
+    async def has_resubmission_quarantine(self, queue_id: str, sender: str | None = None,
+                                          subject: str | None = None) -> bool:
+        """True if EX still holds a re-analysis (``_RA``) quarantine entry for this email.
 
-        EX re-quarantines a failed resubmission under the original queue id + a
-        suffix (e.g. `_RA`). We find that re-analysis record in the quarantine list
-        (matched by from/subject) and read its reason from the referenced alert
-        (quarantine objects themselves carry no malware details, only alert_uuids):
-          no re-analysis record      -> NOT_QUARANTINED (delivered / clean)
-          alert is MALWARE/malicious -> MALICIOUS (stop)
-          alert still riskware       -> FAILED_EXTRACTION (wrong password, retry)
-        """
+        The resubmission verdict normally arrives as a pushed ``<queueId>_RA`` alert
+        (handled in the FlowEngine). This is only a fail-closed backstop for the recheck
+        timeout: an email is declared clean *only* when no re-analysis entry remains, so
+        a missed alert push never lets a still-quarantined email be treated as delivered.
+        Matched by sender+subject, then by queue-id prefix (we never build the suffix)."""
         entries = await self.list_quarantine(sender=sender, subject=subject)
-        redetections = [e for e in entries if _qid(e) != queue_id and _qid(e).startswith(queue_id)]
-        if not redetections:
-            return QuarantineOutcome.NOT_QUARANTINED
-
-        for entry in redetections:
-            for uuid in entry.get("alert_uuids") or []:
-                alert = await self.get_alert_by_uuid(uuid)
-                if alert is None:
-                    continue
-                if alert.malicious or (alert.alert_name or "").upper() == "MALWARE_OBJECT":
-                    return QuarantineOutcome.MALICIOUS
-        return QuarantineOutcome.FAILED_EXTRACTION
+        return any(_qid(e) != queue_id and _qid(e).startswith(queue_id) for e in entries)
 
 
 # --- helpers ----------------------------------------------------------------

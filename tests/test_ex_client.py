@@ -6,13 +6,8 @@ import httpx
 import respx
 
 from trellix_decrypt import ex_client as ex
-from trellix_decrypt.domain import QuarantineOutcome, RiskwareRules
-
-from .conftest import TRIGGER_MALWARE_NAME
 
 BASE = "https://ex.test"
-RULES = RiskwareRules([TRIGGER_MALWARE_NAME], "RISKWARE_OBJECT")
-RECIPIENT = "head.sales@networkshark.com"
 
 
 def _client():
@@ -22,15 +17,6 @@ def _client():
 def _mock_login(router):
     router.post(BASE + ex.EP_LOGIN).mock(
         return_value=httpx.Response(200, headers={ex.TOKEN_HEADER: "tok-123"}))
-
-
-def _alert(queue_id, name, malware, malicious="no"):
-    return {
-        "name": name, "malicious": malicious,
-        "smtpMessage": {"queueId": queue_id},
-        "dst": {"smtpTo": RECIPIENT},
-        "explanation": {"malwareDetected": {"malware": [{"name": malware}]}},
-    }
 
 
 @respx.mock
@@ -65,41 +51,44 @@ async def test_rescan_target_none_when_only_RA():
 
 
 @respx.mock
-async def test_classify_not_quarantined():
+async def test_has_resubmission_quarantine_true_when_RA_present():
     router = respx.mock
     _mock_login(router)
-    # Only the original remains (no _RA re-analysis record) -> delivered/clean.
+    # An _RA re-analysis record alongside the original means it was re-quarantined.
     router.get(BASE + ex.EP_QUARANTINE).mock(return_value=httpx.Response(200, json=[
-        {"email_uuid": "u", "queue_id": "Q1", "quarantine_path": "/p"}]))
+        {"queue_id": "Q1", "quarantine_path": "/p"},
+        {"queue_id": "Q1_RA", "quarantine_path": None},
+    ]))
     client = _client()
-    assert await client.classify_resubmission("Q1", "s@x", "subj", RULES) is QuarantineOutcome.NOT_QUARANTINED
+    assert await client.has_resubmission_quarantine("Q1", "s@x", "subj") is True
     await client.aclose()
 
 
 @respx.mock
-async def test_classify_failed_extraction_via_alert_uuid():
+async def test_has_resubmission_quarantine_false_when_only_original():
     router = respx.mock
     _mock_login(router)
-    # _RA re-analysis record present; its alert is still a riskware trigger.
+    # Only the original remains (no _RA) -> released/delivered.
     router.get(BASE + ex.EP_QUARANTINE).mock(return_value=httpx.Response(200, json=[
-        {"queue_id": "Q1_RA", "quarantine_path": None, "alert_uuids": ["a-1"]}]))
-    router.get(BASE + ex.EP_ALERT_DETAILS + "/a-1").mock(return_value=httpx.Response(200, json={"alert": [
-        _alert("Q1_RA", "RISKWARE_OBJECT", TRIGGER_MALWARE_NAME)]}))
+        {"queue_id": "Q1", "quarantine_path": "/p"}]))
     client = _client()
-    assert await client.classify_resubmission("Q1", "s@x", "subj", RULES) is QuarantineOutcome.FAILED_EXTRACTION
+    assert await client.has_resubmission_quarantine("Q1", "s@x", "subj") is False
     await client.aclose()
 
 
 @respx.mock
-async def test_classify_malicious_via_alert_uuid():
+async def test_rescan_not_found_flags_error():
     router = respx.mock
     _mock_login(router)
-    router.get(BASE + ex.EP_QUARANTINE).mock(return_value=httpx.Response(200, json=[
-        {"queue_id": "Q1_RA", "quarantine_path": None, "alert_uuids": ["a-2"]}]))
-    router.get(BASE + ex.EP_ALERT_DETAILS + "/a-2").mock(return_value=httpx.Response(200, json={"alert": [
-        _alert("Q1_RA", "MALWARE_OBJECT", "FE_Backdoor_Go_Sandcat_1", malicious="yes")]}))
+    router.post(url__regex=rf"{BASE}{ex.EP_QUARANTINE_RESCAN}/.*").mock(return_value=httpx.Response(
+        400, text='{"message":"Could not find quarantined email or Invalid queueid"}'))
     client = _client()
-    assert await client.classify_resubmission("Q1", "s@x", "subj", RULES) is QuarantineOutcome.MALICIOUS
+    try:
+        await client.rescan("Q1_RA", ["pw"])
+        assert False, "expected EXApiError"
+    except ex.EXApiError as exc:
+        assert exc.status_code == 400
+        assert exc.not_found is True  # recognized as "email not quarantined"
     await client.aclose()
 
 

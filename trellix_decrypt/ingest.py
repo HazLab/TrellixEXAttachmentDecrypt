@@ -66,25 +66,28 @@ def build_webhook_router(ctx) -> APIRouter:
                 raise HTTPException(status_code=403, detail="ip not allowed")
 
         payload = await request.json()
-        alerts = iter_alerts(payload)
+        events = [parse_alert(raw) for raw in iter_alerts(payload)]
+        # Handle malicious re-detections before riskware ones within the same push, so a
+        # decrypted-malicious verdict (MALWARE_OBJECT) always wins over a same-batch
+        # wrong-password retry for the same email.
+        events.sort(key=lambda e: 0 if (e.malicious or (e.alert_name or "").upper() == "MALWARE_OBJECT") else 1)
         rules = ctx.engine.rules
-        log.info("webhook: received %d alert(s)", len(alerts))
+        log.info("webhook: received %d alert(s)", len(events))
         handled = 0
-        for raw in alerts:
-            event = parse_alert(raw)
+        for event in events:
             log.info("webhook: alert queue_id=%r recipient=%r name=%r malware=%r",
                      event.queue_id, event.recipient, event.alert_name, event.malware_names)
             if not event.queue_id or not event.recipient:
                 log.warning("webhook: SKIPPED — missing queue_id/recipient. raw alert: %s",
-                            _dump(raw))
+                            _dump(event.raw))
                 continue
             if await ctx.engine.handle_alert(event) is not None:
                 handled += 1
                 log.info("webhook: HANDLED queue_id=%s (case created/updated)", event.queue_id)
             else:
-                log.info("webhook: IGNORED (no trigger match) — need alert name==%r AND a malware "
-                         "name in %r. raw alert: %s",
-                         rules._alert_name, sorted(rules._names), _dump(raw))
+                log.info("webhook: IGNORED (no trigger match / uncorrelated _RA) — need alert "
+                         "name==%r AND a malware name in %r. raw alert: %s",
+                         rules._alert_name, sorted(rules._names), _dump(event.raw))
         return {"received": True, "handled": handled}
 
     return router

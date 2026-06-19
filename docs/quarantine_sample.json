@@ -1,0 +1,2033 @@
+[
+    {
+        "completed_at": "2026-06-19T12:43:22",
+        "email_uuid": "6823e4ab-7ffa-46c7-b305-23b6e923b8b6",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghchN5pgYzmX06",
+        "subject": "Invoice Payment Due",
+        "message_id": "queue-id-4ghchN5pgYzmX06@no-message-id",
+        "from": "billing1@networkshark.com",
+        "alert_uuids": [
+            "918da6d2-d7ea-42c8-8d6a-f5047772a725",
+            "676bb020-bf41-4957-9e0e-162518772f5e"
+        ],
+        "queue_id": "4ghchN5pgYzmX06"
+    },
+    {
+        "completed_at": "2026-06-19T12:50:20",
+        "email_uuid": "aea42318-7f25-4806-9376-d21c3b6da73e",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcrP2KjwzmX0Z",
+        "subject": "Account Alert: Unusual Sign‑in Activity",
+        "message_id": "queue-id-4ghcrP2KjwzmX0Z@no-message-id",
+        "from": "security1@networkshark.com",
+        "alert_uuids": [
+            "a3e7de07-7059-4c8e-b55b-9e4209b62861"
+        ],
+        "queue_id": "4ghcrP2KjwzmX0Z"
+    },
+    {
+        "completed_at": "2026-06-19T12:43:23",
+        "email_uuid": "6e3fb860-cc58-47b6-b5c0-3129dff1afcc",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghchQ5w5BzmX00",
+        "subject": "Account Alert: Unusual Sign‑in Activity",
+        "message_id": "queue-id-4ghchQ5w5BzmX00@no-message-id",
+        "from": "security1@networkshark.com",
+        "alert_uuids": [
+            "b11c5d84-a9de-4a7b-9db8-fb3e03b3a5ab"
+        ],
+        "queue_id": "4ghchQ5w5BzmX00"
+    },
+    {
+        "completed_at": "2026-06-18T20:12:59",
+        "email_uuid": "71cd4833-ef7b-452f-afbb-e8ec102269ba",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-18/20/4ghBjb72h5zmWx9",
+        "subject": "Invoice Payment Due",
+        "message_id": "queue-id-4ghBjb72h5zmWx9@no-message-id",
+        "from": "billing1@networkshark.com",
+        "alert_uuids": [
+            "454cc3cc-10d3-41a3-88e6-9f4cb3d94399",
+            "7a3c124e-ee8c-4d12-aaca-16c9d8fbf78c"
+        ],
+        "queue_id": "4ghBjb72h5zmWx9"
+    },
+    {
+        "completed_at": "2026-06-19T12:17:45",
+        "email_uuid": "5175adbc-c74e-44d0-a567-5197ddb80a07",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghc5G6DZbzmWxW",
+        "subject": "Limited-Time HeliosGuard Savings",
+        "message_id": "queue-id-4ghc5G6DZbzmWxW@no-message-id",
+        "from": "sales@networkshark.com",
+        "alert_uuids": [
+            "a0769e89-8da9-4bee-b94a-a82dbdaea688",
+            "bf3edd87-67c3-468f-ad7b-dbe7ed7007d4",
+            "535d7435-bdc3-4a68-8881-cd6eebd49e87",
+            "6015d2f6-4809-4d43-9ee7-d668dd597a4f"
+        ],
+        "queue_id": "4ghc5G6DZbzmWxW"
+    },
+    {
+        "completed_at": "2026-06-19T12:46:21",
+        "email_uuid": "6b70a352-a5ea-48de-9d9a-955970f8ac2d",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcjc6ghZzmX0d",
+        "subject": "Action required: encrypted PDF for your review",
+        "message_id": "queue-id-4ghcjc6ghZzmX0d@no-message-id",
+        "from": "it-support@networkshark.com",
+        "alert_uuids": [
+            "fae51616-3816-4b10-911b-9027b756a5e7"
+        ],
+        "queue_id": "4ghcjc6ghZzmX0d"
+    },
+    {
+        "completed_at": "2026-06-18T20:13:00",
+        "email_uuid": "412f2e6b-f9bf-4cc8-9d19-0b355e66ddcb",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-18/20/4ghBjf01ttzmWx8",
+        "subject": "Account Alert: Unusual Sign‑in Activity",
+        "message_id": "queue-id-4ghBjf01ttzmWx8@no-message-id",
+        "from": "security1@networkshark.com",
+        "alert_uuids": [
+            "f9d9e03f-87d5-4bae-99c7-526624ef05d8"
+        ],
+        "queue_id": "4ghBjf01ttzmWx8"
+    },
+    {
+        "completed_at": "2026-06-18T20:14:16",
+        "email_uuid": "617296c7-d751-4bee-b946-c536630e10c5",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-18/20/4ghBjW6WvyzmWwt",
+        "subject": "Limited-Time HeliosGuard Savings",
+        "message_id": "queue-id-4ghBjW6WvyzmWwt@no-message-id",
+        "from": "sales@networkshark.com",
+        "alert_uuids": [
+            "9469900c-6698-4178-83b9-7eb013827511",
+            "8757dad2-d56d-4102-80d7-9de5cb4cd43a",
+            "4bdccb0d-9328-433e-95b6-8b44edc5bb01",
+            "da07ac77-762a-4b13-8d8e-63816df0e12b"
+        ],
+        "queue_id": "4ghBjW6WvyzmWwt"
+    },
+    {
+        "completed_at": "2026-06-18T20:14:23",
+        "email_uuid": "171211de-f961-480c-a49f-f2eab6e7daf5",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-18/20/4ghBjg04gJzmWx7",
+        "subject": "Required: Review updated policy document",
+        "message_id": "queue-id-4ghBjg04gJzmWx7@no-message-id",
+        "from": "hr@networkshark.com",
+        "alert_uuids": [
+            "4d3dab25-4d5e-4855-ae10-cf467a6aad2a"
+        ],
+        "queue_id": "4ghBjg04gJzmWx7"
+    },
+    {
+        "completed_at": "2026-06-18T20:14:24",
+        "email_uuid": "90993097-50b2-4f75-b95a-42be20d9c1d9",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-18/20/4ghBjh09c4zmWxD",
+        "subject": "Action required: encrypted PDF for your review",
+        "message_id": "queue-id-4ghBjh09c4zmWxD@no-message-id",
+        "from": "it-support@networkshark.com",
+        "alert_uuids": [
+            "2a0a6496-e685-4fa6-9c74-109d4bafb4ed"
+        ],
+        "queue_id": "4ghBjh09c4zmWxD"
+    },
+    {
+        "completed_at": "2026-06-19T12:44:23",
+        "email_uuid": "2243f805-94db-4f46-935e-ad4c622670b9",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcjZ6VtGzmX0P",
+        "subject": "Account Alert: Unusual Sign‑in Activity",
+        "message_id": "queue-id-4ghcjZ6VtGzmX0P@no-message-id",
+        "from": "security1@networkshark.com",
+        "alert_uuids": [
+            "b94525a0-6308-43d5-8e09-2eb451ae0e05"
+        ],
+        "queue_id": "4ghcjZ6VtGzmX0P"
+    },
+    {
+        "completed_at": "2026-06-18T20:15:24",
+        "email_uuid": "62ee9637-8f85-4b00-97d6-7f9eb977ef81",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-18/20/4ghBjV5x8rzmWwW",
+        "subject": "An Exclusive Offer from HeliosGuard",
+        "message_id": "queue-id-4ghBjV5x8rzmWwW@no-message-id",
+        "from": "john.f@heliosguard.com",
+        "alert_uuids": [
+            "44fda428-75f6-41ae-9fe3-eee9af8ea67a",
+            "84ba952a-5b49-4356-a24d-70bfed2c6782"
+        ],
+        "queue_id": "4ghBjV5x8rzmWwW"
+    },
+    {
+        "completed_at": "2026-06-18T20:15:59",
+        "email_uuid": "040fe43f-c113-40d0-ad0c-8a6bfef9bbf1",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-18/20/4ghBjY6wxNzmWx3",
+        "subject": "NetworkShark Security Update",
+        "message_id": "queue-id-4ghBjY6wxNzmWx3@no-message-id",
+        "from": "secops1@networkshark.com",
+        "alert_uuids": [
+            "33e83508-83f5-42c5-94d1-9e2ee97ba6a3"
+        ],
+        "queue_id": "4ghBjY6wxNzmWx3"
+    },
+    {
+        "completed_at": "2026-06-19T12:14:26",
+        "email_uuid": "c29f862d-f70a-4099-8d32-4f703f2d42f4",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghc306g7JzmWxQ",
+        "subject": "Invoice Payment Due",
+        "message_id": "queue-id-4ghc306g7JzmWxQ@no-message-id",
+        "from": "billing1@networkshark.com",
+        "alert_uuids": [
+            "71b9b96c-a9c5-42ce-b845-ab9e1a8e2211",
+            "c1b32864-2ee3-40f3-9bbf-253cb11eec9e"
+        ],
+        "queue_id": "4ghc306g7JzmWxQ"
+    },
+    {
+        "completed_at": "2026-06-19T12:14:27",
+        "email_uuid": "77b22c0a-63a0-42e1-b982-755688199cc7",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghc326myPzmWxT",
+        "subject": "Account Alert: Unusual Sign‑in Activity",
+        "message_id": "queue-id-4ghc326myPzmWxT@no-message-id",
+        "from": "security1@networkshark.com",
+        "alert_uuids": [
+            "cf0d0759-eece-41c5-8be5-92920b58a9ee"
+        ],
+        "queue_id": "4ghc326myPzmWxT"
+    },
+    {
+        "completed_at": "2026-06-19T12:44:22",
+        "email_uuid": "c04b9b5d-1eaa-4b13-8fd6-c96d18563e62",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcjX6QP7zmX0W",
+        "subject": "Invoice Payment Due",
+        "message_id": "queue-id-4ghcjX6QP7zmX0W@no-message-id",
+        "from": "billing1@networkshark.com",
+        "alert_uuids": [
+            "5ceb50f8-9d93-4167-8c88-be1ea4ec13fb",
+            "37dc6b7b-0657-44c2-985b-ea9570578fed"
+        ],
+        "queue_id": "4ghcjX6QP7zmX0W"
+    },
+    {
+        "completed_at": "2026-06-19T12:15:44",
+        "email_uuid": "5350173d-63e1-4e67-b143-14673f04d09a",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghc2w6F66zmWxB",
+        "subject": "Limited-Time HeliosGuard Savings",
+        "message_id": "queue-id-4ghc2w6F66zmWxB@no-message-id",
+        "from": "sales@networkshark.com",
+        "alert_uuids": [
+            "a1f6165d-6411-4343-8f32-9301537b968f",
+            "f3aa119f-3212-48c5-901d-41952dc9078a",
+            "24860f02-ea54-44cc-bde4-8fd44f4e9184",
+            "f2d13eaa-0851-49e3-8201-2ae2995120ce"
+        ],
+        "queue_id": "4ghc2w6F66zmWxB"
+    },
+    {
+        "completed_at": "2026-06-19T12:44:38",
+        "email_uuid": "9bdcc564-a499-4573-8f7c-cba336de2bda",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghchJ5WSYzmWyv",
+        "subject": "Limited-Time HeliosGuard Savings",
+        "message_id": "queue-id-4ghchJ5WSYzmWyv@no-message-id",
+        "from": "sales@networkshark.com",
+        "alert_uuids": [
+            "6debf954-1f39-4052-9615-f73e886e2e38",
+            "808fd4b3-7a99-47c5-8098-81d5151d96a3",
+            "c337344b-af62-459f-8a7a-7f49f8150a39",
+            "abce9c6a-224d-411e-85ee-d2f83ebd0754"
+        ],
+        "queue_id": "4ghchJ5WSYzmWyv"
+    },
+    {
+        "completed_at": "2026-06-19T12:15:54",
+        "email_uuid": "24998ff9-fd3f-495c-b501-5fb7f549d685",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghc3373YczmWxS",
+        "subject": "Required: Review updated policy document",
+        "message_id": "queue-id-4ghc3373YczmWxS@no-message-id",
+        "from": "hr@networkshark.com",
+        "alert_uuids": [
+            "154b8d4b-f962-4121-89e4-077c72579e60"
+        ],
+        "queue_id": "4ghc3373YczmWxS"
+    },
+    {
+        "completed_at": "2026-06-19T12:15:57",
+        "email_uuid": "5a52c3ea-b25f-40ac-950b-f538c70fa798",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghc3509XnzmWxX",
+        "subject": "Action required: encrypted PDF for your review",
+        "message_id": "queue-id-4ghc3509XnzmWxX@no-message-id",
+        "from": "it-support@networkshark.com",
+        "alert_uuids": [
+            "b5950639-3bd8-4b98-903d-f85b2f86b2cf"
+        ],
+        "queue_id": "4ghc3509XnzmWxX"
+    },
+    {
+        "completed_at": "2026-06-19T12:16:29",
+        "email_uuid": "e562c182-d0b5-471c-a91c-d64a24e9e7fb",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghc5N6dlDzmWxZ",
+        "subject": "Account Alert: Unusual Sign‑in Activity",
+        "message_id": "queue-id-4ghc5N6dlDzmWxZ@no-message-id",
+        "from": "security1@networkshark.com",
+        "alert_uuids": [
+            "afd1a5c7-d329-4562-8980-d82635f7c76a"
+        ],
+        "queue_id": "4ghc5N6dlDzmWxZ"
+    },
+    {
+        "completed_at": "2026-06-19T12:16:29",
+        "email_uuid": "80dd3aea-b086-4866-a350-0dea635359db",
+        "quarantine_path": "/data/email-analysis/riskware-alerts/2026-06-19/12/4ghc2y6X3lzmWxM",
+        "subject": "NetworkShark Security Update",
+        "message_id": "queue-id-4ghc2y6X3lzmWxM@no-message-id",
+        "from": "secops1@networkshark.com",
+        "alert_uuids": [
+            "85551927-7aa0-4450-9f66-82fcf5a3c2b7"
+        ],
+        "queue_id": "4ghc2y6X3lzmWxM"
+    },
+    {
+        "completed_at": "2026-06-19T12:16:28",
+        "email_uuid": "25a2d5a0-06f7-491d-9644-7ff5c276761e",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghc5L6XyYzmWxm",
+        "subject": "Invoice Payment Due",
+        "message_id": "queue-id-4ghc5L6XyYzmWxm@no-message-id",
+        "from": "billing1@networkshark.com",
+        "alert_uuids": [
+            "5284462d-b2c3-48e6-aec9-8f2a00010e4b",
+            "2e4996a5-fa9b-4eaf-a2ff-6085a2dd2751"
+        ],
+        "queue_id": "4ghc5L6XyYzmWxm"
+    },
+    {
+        "completed_at": "2026-06-19T12:16:55",
+        "email_uuid": "fb15a819-10bd-42b3-bf35-67c890a205a3",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghc2v5TlSzmWx3",
+        "subject": "An Exclusive Offer from HeliosGuard",
+        "message_id": "queue-id-4ghc2v5TlSzmWx3@no-message-id",
+        "from": "john.f@heliosguard.com",
+        "alert_uuids": [
+            "df8dcc22-314d-4cbf-810b-7702b0071b5f",
+            "b0270379-7144-4d59-b241-07a6c7dd58a1"
+        ],
+        "queue_id": "4ghc2v5TlSzmWx3"
+    },
+    {
+        "completed_at": "2026-06-19T17:50:40",
+        "email_uuid": "fc9b1563-2f0e-441c-98f9-789d4bab9c4e",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/17/4ghlW22zSyzmX4J",
+        "subject": "Limited-Time HeliosGuard Savings",
+        "message_id": "queue-id-4ghlW22zSyzmX4J@no-message-id",
+        "from": "sales@networkshark.com",
+        "alert_uuids": [
+            "08c161ad-01b6-42f3-b1cd-892a7db1ffdb"
+        ],
+        "queue_id": "4ghlW22zSyzmX4J"
+    },
+    {
+        "completed_at": "2026-06-19T12:17:53",
+        "email_uuid": "5fb71c65-7725-4699-91dc-8d4cdc38abbf",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghc5P6hPfzmWxq",
+        "subject": "Required: Review updated policy document",
+        "message_id": "queue-id-4ghc5P6hPfzmWxq@no-message-id",
+        "from": "hr@networkshark.com",
+        "alert_uuids": [
+            "47a89b2e-681b-4825-ba8f-92918ef51062"
+        ],
+        "queue_id": "4ghc5P6hPfzmWxq"
+    },
+    {
+        "completed_at": "2026-06-19T12:18:04",
+        "email_uuid": "8f0d87c1-4f52-48c5-b0d9-0695768f0cf3",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghc5Q6nJVzmWxt",
+        "subject": "Action required: encrypted PDF for your review",
+        "message_id": "queue-id-4ghc5Q6nJVzmWxt@no-message-id",
+        "from": "it-support@networkshark.com",
+        "alert_uuids": [
+            "345ad443-86ec-4fd3-938a-81d21ba0dc63"
+        ],
+        "queue_id": "4ghc5Q6nJVzmWxt"
+    },
+    {
+        "completed_at": "2026-06-19T12:18:32",
+        "email_uuid": "4bb6b310-b473-4671-b548-3c6e030c51e0",
+        "quarantine_path": "/data/email-analysis/riskware-alerts/2026-06-19/12/4ghc5J6QqrzmWxj",
+        "subject": "NetworkShark Security Update",
+        "message_id": "queue-id-4ghc5J6QqrzmWxj@no-message-id",
+        "from": "secops1@networkshark.com",
+        "alert_uuids": [
+            "638d4122-102d-47bc-9981-9eceb79aea59"
+        ],
+        "queue_id": "4ghc5J6QqrzmWxj"
+    },
+    {
+        "completed_at": "2026-06-19T12:18:54",
+        "email_uuid": "0cda6df8-86c4-47bd-aca8-a5fbead9603e",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghc5F5YmqzmWxS",
+        "subject": "An Exclusive Offer from HeliosGuard",
+        "message_id": "queue-id-4ghc5F5YmqzmWxS@no-message-id",
+        "from": "john.f@heliosguard.com",
+        "alert_uuids": [
+            "b116c45b-f41d-4e87-ae8d-4b5f4bbe1fcd",
+            "a4906d98-0905-40db-af88-b5c4e32e798a"
+        ],
+        "queue_id": "4ghc5F5YmqzmWxS"
+    },
+    {
+        "completed_at": "2026-06-19T12:44:48",
+        "email_uuid": "f48192e5-2f94-4634-ad61-0c76af62c9de",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghchS640SzmX0G",
+        "subject": "Action required: encrypted PDF for your review",
+        "message_id": "queue-id-4ghchS640SzmX0G@no-message-id",
+        "from": "it-support@networkshark.com",
+        "alert_uuids": [
+            "cf01f789-ecb6-4df2-8fb4-a76dd546301b"
+        ],
+        "queue_id": "4ghchS640SzmX0G"
+    },
+    {
+        "completed_at": "2026-06-19T12:46:38",
+        "email_uuid": "8c6ef260-8fb2-4966-9e5e-fdbc87032236",
+        "quarantine_path": "/data/email-analysis/riskware-alerts/2026-06-19/12/4ghcjV6GbbzmX0S",
+        "subject": "NetworkShark Security Update",
+        "message_id": "queue-id-4ghcjV6GbbzmX0S@no-message-id",
+        "from": "secops1@networkshark.com",
+        "alert_uuids": [
+            "0427ea3e-823a-4795-84d0-8fbb30607403"
+        ],
+        "queue_id": "4ghcjV6GbbzmX0S"
+    },
+    {
+        "completed_at": "2026-06-19T12:25:40",
+        "email_uuid": "7edd9dff-5a13-41f1-a595-abbc00b63082",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcHz0sKvzmWxs",
+        "subject": "Account Alert: Unusual Sign‑in Activity",
+        "message_id": "queue-id-4ghcHz0sKvzmWxs@no-message-id",
+        "from": "security1@networkshark.com",
+        "alert_uuids": [
+            "8cccebfc-4721-4b24-a95f-12d153c62ea6"
+        ],
+        "queue_id": "4ghcHz0sKvzmWxs"
+    },
+    {
+        "completed_at": "2026-06-19T12:25:39",
+        "email_uuid": "640a2699-e135-4c85-add1-66a0fee3320a",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcHx0m8SzmWy3",
+        "subject": "Invoice Payment Due",
+        "message_id": "queue-id-4ghcHx0m8SzmWy3@no-message-id",
+        "from": "billing1@networkshark.com",
+        "alert_uuids": [
+            "fc586c7a-6369-44e8-b4ac-146952bcb603",
+            "c5f51e63-a33c-47cf-8fb1-dfd2576845a1"
+        ],
+        "queue_id": "4ghcHx0m8SzmWy3"
+    },
+    {
+        "completed_at": "2026-06-19T12:44:45",
+        "email_uuid": "2e35ce98-bbad-4fb5-b9fe-015eea86fb96",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghchH4s1pzmWyR",
+        "subject": "An Exclusive Offer from HeliosGuard",
+        "message_id": "queue-id-4ghchH4s1pzmWyR@no-message-id",
+        "from": "john.f@heliosguard.com",
+        "alert_uuids": [
+            "c76be3d5-2dad-4641-85f5-8055cdddab0f",
+            "903e880f-be10-4d87-80e6-b6974646436c"
+        ],
+        "queue_id": "4ghchH4s1pzmWyR"
+    },
+    {
+        "completed_at": "2026-06-19T12:26:55",
+        "email_uuid": "9439d038-6bed-48c9-bf7f-4661b65989d8",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcHs0RvHzmWxl",
+        "subject": "Limited-Time HeliosGuard Savings",
+        "message_id": "queue-id-4ghcHs0RvHzmWxl@no-message-id",
+        "from": "sales@networkshark.com",
+        "alert_uuids": [
+            "39209cbe-ad7c-40ca-845f-be78795f7854",
+            "e0598511-470f-4f6d-b58e-6a3a1cc761b1",
+            "ec9feaf1-08a6-406a-8ac3-6d00d67f6946",
+            "1f9377bf-778a-494e-a786-c33f071e441a"
+        ],
+        "queue_id": "4ghcHs0RvHzmWxl"
+    },
+    {
+        "completed_at": "2026-06-19T12:27:04",
+        "email_uuid": "6134d459-d807-495e-9ff3-458cc577b0a8",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcJ00wNJzmWy6",
+        "subject": "Required: Review updated policy document",
+        "message_id": "queue-id-4ghcJ00wNJzmWy6@no-message-id",
+        "from": "hr@networkshark.com",
+        "alert_uuids": [
+            "148e0322-65a4-412b-a5e3-7757105f4bdd"
+        ],
+        "queue_id": "4ghcJ00wNJzmWy6"
+    },
+    {
+        "completed_at": "2026-06-19T12:27:11",
+        "email_uuid": "de63bcab-9554-414e-9764-107051ef4fa6",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcJ110zvzmWy9",
+        "subject": "Action required: encrypted PDF for your review",
+        "message_id": "queue-id-4ghcJ110zvzmWy9@no-message-id",
+        "from": "it-support@networkshark.com",
+        "alert_uuids": [
+            "47df5135-0ffc-4aac-9635-d6f59c570625"
+        ],
+        "queue_id": "4ghcJ110zvzmWy9"
+    },
+    {
+        "completed_at": "2026-06-19T12:27:40",
+        "email_uuid": "1d8fbe2f-55be-4b09-9336-2936f99a4042",
+        "quarantine_path": "/data/email-analysis/riskware-alerts/2026-06-19/12/4ghcHv0fH7zmWxw",
+        "subject": "NetworkShark Security Update",
+        "message_id": "queue-id-4ghcHv0fH7zmWxw@no-message-id",
+        "from": "secops1@networkshark.com",
+        "alert_uuids": [
+            "8e1da899-007a-4ca4-a54c-7cc92c839c63"
+        ],
+        "queue_id": "4ghcHv0fH7zmWxw"
+    },
+    {
+        "completed_at": "2026-06-19T12:28:05",
+        "email_uuid": "8d661adf-f769-48b5-a495-4b112dc5c653",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcHq6zBwzmWxS",
+        "subject": "An Exclusive Offer from HeliosGuard",
+        "message_id": "queue-id-4ghcHq6zBwzmWxS@no-message-id",
+        "from": "john.f@heliosguard.com",
+        "alert_uuids": [
+            "2a98f65e-e3a8-4558-bda6-60d5083411fc",
+            "b891ded8-b8bf-4065-8306-13a3c7dd3164"
+        ],
+        "queue_id": "4ghcHq6zBwzmWxS"
+    },
+    {
+        "completed_at": "2026-06-19T12:44:47",
+        "email_uuid": "70e56679-c772-4d6a-bd63-a67b75b8b7a5",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghchR5yq9zmX0C",
+        "subject": "Required: Review updated policy document",
+        "message_id": "queue-id-4ghchR5yq9zmX0C@no-message-id",
+        "from": "hr@networkshark.com",
+        "alert_uuids": [
+            "82c15ede-87de-4bdf-a5ed-de6d2ba845be"
+        ],
+        "queue_id": "4ghchR5yq9zmX0C"
+    },
+    {
+        "completed_at": "2026-06-19T12:30:58",
+        "email_uuid": "2b37268f-1822-4e18-b762-382515067cb1",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcQ64jjwzmWyK",
+        "subject": "Account Alert: Unusual Sign‑in Activity",
+        "message_id": "queue-id-4ghcQ64jjwzmWyK@no-message-id",
+        "from": "security1@networkshark.com",
+        "alert_uuids": [
+            "b40cec38-0bee-4e33-92c3-a6c58b6e567d"
+        ],
+        "queue_id": "4ghcQ64jjwzmWyK"
+    },
+    {
+        "completed_at": "2026-06-19T12:30:57",
+        "email_uuid": "59a1c4dd-3a9a-4036-b1cd-fd8a2254ccdc",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcQ44chBzmWy9",
+        "subject": "Invoice Payment Due",
+        "message_id": "queue-id-4ghcQ44chBzmWy9@no-message-id",
+        "from": "billing1@networkshark.com",
+        "alert_uuids": [
+            "7ca30cec-5efb-4c51-984d-0ba1dba9e174",
+            "0b7d399e-1abe-4ee6-bdcf-95bdba2ba670"
+        ],
+        "queue_id": "4ghcQ44chBzmWy9"
+    },
+    {
+        "completed_at": "2026-06-19T12:32:17",
+        "email_uuid": "c5828171-8e98-4057-a742-656e09225cc2",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcQ04JrZzmWy2",
+        "subject": "Limited-Time HeliosGuard Savings",
+        "message_id": "queue-id-4ghcQ04JrZzmWy2@no-message-id",
+        "from": "sales@networkshark.com",
+        "alert_uuids": [
+            "c2e54b43-54c3-440a-9439-abdffad2a933",
+            "a2ad8bcf-0343-4743-92ae-95e6b383a0dd",
+            "261aad20-1926-4344-b7d4-d132f84a61ca",
+            "7fdfc228-a0fa-4928-baa4-8869f1c3c5db"
+        ],
+        "queue_id": "4ghcQ04JrZzmWy2"
+    },
+    {
+        "completed_at": "2026-06-19T12:32:22",
+        "email_uuid": "f8a6ae3b-c2a5-4f8e-a822-49038067eb35",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcQ74m93zmWyN",
+        "subject": "Required: Review updated policy document",
+        "message_id": "queue-id-4ghcQ74m93zmWyN@no-message-id",
+        "from": "hr@networkshark.com",
+        "alert_uuids": [
+            "1ab41ca8-0966-4396-8d00-55306a8a6a96"
+        ],
+        "queue_id": "4ghcQ74m93zmWyN"
+    },
+    {
+        "completed_at": "2026-06-19T12:32:28",
+        "email_uuid": "aed381ea-4f68-4b1a-b8b2-e36914db340c",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcQ84rrlzmWyR",
+        "subject": "Action required: encrypted PDF for your review",
+        "message_id": "queue-id-4ghcQ84rrlzmWyR@no-message-id",
+        "from": "it-support@networkshark.com",
+        "alert_uuids": [
+            "b85708e3-155b-4360-859a-3d36aece8594"
+        ],
+        "queue_id": "4ghcQ84rrlzmWyR"
+    },
+    {
+        "completed_at": "2026-06-19T12:45:23",
+        "email_uuid": "fe61811b-c251-461c-8fea-4cdcf80b6115",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghchL5hX2zmX03",
+        "subject": "NetworkShark Security Update",
+        "message_id": "queue-id-4ghchL5hX2zmX03@no-message-id",
+        "from": "secops1@networkshark.com",
+        "alert_uuids": [
+            "ea0f5daf-3d91-4be5-9871-9eab2862b22f"
+        ],
+        "queue_id": "4ghchL5hX2zmX03"
+    },
+    {
+        "completed_at": "2026-06-19T12:32:59",
+        "email_uuid": "3cf3c63a-06cd-4204-b1a3-e45e51504089",
+        "quarantine_path": "/data/email-analysis/riskware-alerts/2026-06-19/12/4ghcQ24WFVzmWyG",
+        "subject": "NetworkShark Security Update",
+        "message_id": "queue-id-4ghcQ24WFVzmWyG@no-message-id",
+        "from": "secops1@networkshark.com",
+        "alert_uuids": [
+            "9e838b40-2951-4c41-9f5d-d234aa74db46"
+        ],
+        "queue_id": "4ghcQ24WFVzmWyG"
+    },
+    {
+        "completed_at": "2026-06-19T12:33:27",
+        "email_uuid": "9ba1da6b-603c-4db6-b940-25c11673e01e",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcPz3kFCzmWxS",
+        "subject": "An Exclusive Offer from HeliosGuard",
+        "message_id": "queue-id-4ghcPz3kFCzmWxS@no-message-id",
+        "from": "john.f@heliosguard.com",
+        "alert_uuids": [
+            "94d6fe6c-f75c-459c-9c85-7fe3f79e2e55",
+            "2c1b160f-9196-4aac-be78-0736f8e6c863"
+        ],
+        "queue_id": "4ghcPz3kFCzmWxS"
+    },
+    {
+        "completed_at": "2026-06-19T12:51:02",
+        "email_uuid": "8b5b9cc2-0076-47e1-8c95-ae5b6909bee5",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcsG0H7CzmX0x",
+        "subject": "Account Alert: Unusual Sign‑in Activity",
+        "message_id": "queue-id-4ghcsG0H7CzmX0x@no-message-id",
+        "from": "security1@networkshark.com",
+        "alert_uuids": [
+            "95ea0829-47f4-4483-bdc5-4b6088068983"
+        ],
+        "queue_id": "4ghcsG0H7CzmX0x"
+    },
+    {
+        "completed_at": "2026-06-19T12:37:22",
+        "email_uuid": "f9d3db9e-f390-4b7c-a514-72807f2e3666",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcYV1JjJzmWyT",
+        "subject": "Account Alert: Unusual Sign‑in Activity",
+        "message_id": "queue-id-4ghcYV1JjJzmWyT@no-message-id",
+        "from": "security1@networkshark.com",
+        "alert_uuids": [
+            "179e893f-4851-4594-bba5-d2710d3ae761"
+        ],
+        "queue_id": "4ghcYV1JjJzmWyT"
+    },
+    {
+        "completed_at": "2026-06-19T12:37:21",
+        "email_uuid": "d5b441b3-0cfa-40f1-b088-bc0e201f52fd",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcYS1CgvzmWyb",
+        "subject": "Invoice Payment Due",
+        "message_id": "queue-id-4ghcYS1CgvzmWyb@no-message-id",
+        "from": "billing1@networkshark.com",
+        "alert_uuids": [
+            "87c278a5-0677-4385-8339-80bd9dfcf419",
+            "d18b4463-3337-4513-999d-6e9ae87948ab"
+        ],
+        "queue_id": "4ghcYS1CgvzmWyb"
+    },
+    {
+        "completed_at": "2026-06-19T12:47:05",
+        "email_uuid": "c6a5bf0a-55d6-48b4-b1ce-3984f3f57e34",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcjR5PNpzmX02",
+        "subject": "An Exclusive Offer from HeliosGuard",
+        "message_id": "queue-id-4ghcjR5PNpzmX02@no-message-id",
+        "from": "john.f@heliosguard.com",
+        "alert_uuids": [
+            "f93d8a0d-e3ff-4202-bdbc-284143dee459",
+            "38f85e9b-032e-4910-a394-996150f5cf8b"
+        ],
+        "queue_id": "4ghcjR5PNpzmX02"
+    },
+    {
+        "completed_at": "2026-06-19T12:38:22",
+        "email_uuid": "bd64781d-8667-4b7e-ae4b-3c141342e497",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcZd70HtzmWyr",
+        "subject": "Account Alert: Unusual Sign‑in Activity",
+        "message_id": "queue-id-4ghcZd70HtzmWyr@no-message-id",
+        "from": "security1@networkshark.com",
+        "alert_uuids": [
+            "0d1f6c5b-5659-46f7-88a7-efc901586399"
+        ],
+        "queue_id": "4ghcZd70HtzmWyr"
+    },
+    {
+        "completed_at": "2026-06-19T12:38:21",
+        "email_uuid": "6e3cb30c-abfc-4432-81a9-3f88e242f261",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcZb6vz0zmWyy",
+        "subject": "Invoice Payment Due",
+        "message_id": "queue-id-4ghcZb6vz0zmWyy@no-message-id",
+        "from": "billing1@networkshark.com",
+        "alert_uuids": [
+            "642f313e-333f-40b0-90f5-9b9fc0ede5e5",
+            "c429aeb9-a7ed-49ba-bd80-4c4b6fab32bc"
+        ],
+        "queue_id": "4ghcZb6vz0zmWyy"
+    },
+    {
+        "completed_at": "2026-06-19T12:38:39",
+        "email_uuid": "6db34683-0390-41aa-9415-e86bef5e9398",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcYN0vZpzmWyJ",
+        "subject": "Limited-Time HeliosGuard Savings",
+        "message_id": "queue-id-4ghcYN0vZpzmWyJ@no-message-id",
+        "from": "sales@networkshark.com",
+        "alert_uuids": [
+            "645f1246-8bfb-47ff-810c-7a99e69f1503",
+            "852dfb3e-0065-4ceb-931b-1f13df13191f",
+            "cb44ebac-c26a-4064-85f8-40700a80a47b",
+            "7dba28da-7bec-49bb-8647-92b27db6f278"
+        ],
+        "queue_id": "4ghcYN0vZpzmWyJ"
+    },
+    {
+        "completed_at": "2026-06-19T12:38:51",
+        "email_uuid": "e4734c40-5fa2-4f44-b267-c1e48bb18450",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcYX1SyrzmWyj",
+        "subject": "Action required: encrypted PDF for your review",
+        "message_id": "queue-id-4ghcYX1SyrzmWyj@no-message-id",
+        "from": "it-support@networkshark.com",
+        "alert_uuids": [
+            "5f74b3e6-95ba-466f-8189-d401cbc0a71a"
+        ],
+        "queue_id": "4ghcYX1SyrzmWyj"
+    },
+    {
+        "completed_at": "2026-06-19T12:38:49",
+        "email_uuid": "92030fc0-0e93-49ee-babf-a152f8561245",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcYW1MPRzmWyf",
+        "subject": "Required: Review updated policy document",
+        "message_id": "queue-id-4ghcYW1MPRzmWyf@no-message-id",
+        "from": "hr@networkshark.com",
+        "alert_uuids": [
+            "fd1d8940-bbb3-45c3-9bf6-3ddd9ea28732"
+        ],
+        "queue_id": "4ghcYW1MPRzmWyf"
+    },
+    {
+        "completed_at": "2026-06-19T12:45:53",
+        "email_uuid": "ecf66ba0-e60b-417e-aa61-35e673052b7b",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcjS64l4zmX0B",
+        "subject": "Limited-Time HeliosGuard Savings",
+        "message_id": "queue-id-4ghcjS64l4zmX0B@no-message-id",
+        "from": "sales@networkshark.com",
+        "alert_uuids": [
+            "f5aa3e06-e06d-4bb2-84bc-f805f86a2a8c",
+            "74b32bb3-eb66-4141-bf3f-45a8cc829b89",
+            "16d31ca9-469d-499e-a920-58e284a1d7f7",
+            "48339043-73dd-4e9f-8e2c-dfbd13d2758b"
+        ],
+        "queue_id": "4ghcjS64l4zmX0B"
+    },
+    {
+        "completed_at": "2026-06-19T12:39:24",
+        "email_uuid": "be76d8be-4bb4-46bc-a03b-52d2dd677fb4",
+        "quarantine_path": "/data/email-analysis/riskware-alerts/2026-06-19/12/4ghcYQ15XWzmWyX",
+        "subject": "NetworkShark Security Update",
+        "message_id": "queue-id-4ghcYQ15XWzmWyX@no-message-id",
+        "from": "secops1@networkshark.com",
+        "alert_uuids": [
+            "bf15d83d-c27a-44c7-b17c-a54b1d659aec"
+        ],
+        "queue_id": "4ghcYQ15XWzmWyX"
+    },
+    {
+        "completed_at": "2026-06-19T12:39:50",
+        "email_uuid": "4ad425dc-9186-46cf-9fa9-51ba539ab438",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcYM0JYKzmWxS",
+        "subject": "An Exclusive Offer from HeliosGuard",
+        "message_id": "queue-id-4ghcYM0JYKzmWxS@no-message-id",
+        "from": "john.f@heliosguard.com",
+        "alert_uuids": [
+            "dc538391-f785-4b7a-a68c-36f74280710a",
+            "fb928bad-0c13-4485-ae06-6f52d07db23e"
+        ],
+        "queue_id": "4ghcYM0JYKzmWxS"
+    },
+    {
+        "completed_at": "2026-06-19T12:39:52",
+        "email_uuid": "6aab2f24-e79e-476f-b514-7d1ff0eac34b",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcZW6c79zmWyd",
+        "subject": "Limited-Time HeliosGuard Savings",
+        "message_id": "queue-id-4ghcZW6c79zmWyd@no-message-id",
+        "from": "sales@networkshark.com",
+        "alert_uuids": [
+            "c1653e2c-f7ef-4a84-b9e1-a10a2aca773c",
+            "1a7287a7-8139-4baf-a43d-b1aa630154a3",
+            "0094311a-db30-4629-a522-1447c1e80dee",
+            "271a7d79-b33d-4515-8e41-48dda81caf59"
+        ],
+        "queue_id": "4ghcZW6c79zmWyd"
+    },
+    {
+        "completed_at": "2026-06-19T12:40:07",
+        "email_uuid": "3b8b0315-5790-4bc1-8c38-c2f39c33502b",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcZf74JYzmX02",
+        "subject": "Required: Review updated policy document",
+        "message_id": "queue-id-4ghcZf74JYzmX02@no-message-id",
+        "from": "hr@networkshark.com",
+        "alert_uuids": [
+            "7c762d30-3bfe-4b9b-b7e3-910b4fa36551"
+        ],
+        "queue_id": "4ghcZf74JYzmX02"
+    },
+    {
+        "completed_at": "2026-06-19T12:40:24",
+        "email_uuid": "eb52fb5a-393f-4b45-a809-0a4619ebe38e",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcZh03QqzmX05",
+        "subject": "Action required: encrypted PDF for your review",
+        "message_id": "queue-id-4ghcZh03QqzmX05@no-message-id",
+        "from": "it-support@networkshark.com",
+        "alert_uuids": [
+            "75c44736-7ee9-43ee-b609-609cfec1e9b1"
+        ],
+        "queue_id": "4ghcZh03QqzmX05"
+    },
+    {
+        "completed_at": "2026-06-19T12:40:38",
+        "email_uuid": "1e5b22a1-bda2-4d7a-9068-0ab9b3b6e5ce",
+        "quarantine_path": "/data/email-analysis/riskware-alerts/2026-06-19/12/4ghcZY6ncQzmWyv",
+        "subject": "NetworkShark Security Update",
+        "message_id": "queue-id-4ghcZY6ncQzmWyv@no-message-id",
+        "from": "secops1@networkshark.com",
+        "alert_uuids": [
+            "d5702b83-df27-4319-8017-1934fbca2300"
+        ],
+        "queue_id": "4ghcZY6ncQzmWyv"
+    },
+    {
+        "completed_at": "2026-06-19T12:46:05",
+        "email_uuid": "5221375a-27ae-4880-91a4-764b3643f4df",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcjb6b9mzmX0Z",
+        "subject": "Required: Review updated policy document",
+        "message_id": "queue-id-4ghcjb6b9mzmX0Z@no-message-id",
+        "from": "hr@networkshark.com",
+        "alert_uuids": [
+            "80828c12-e7c1-44d5-b7bd-5dc78d21e684"
+        ],
+        "queue_id": "4ghcjb6b9mzmX0Z"
+    },
+    {
+        "completed_at": "2026-06-19T12:41:00",
+        "email_uuid": "8871cf7d-5bec-476f-a734-64ec846e666a",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcZV61XbzmWyR",
+        "subject": "An Exclusive Offer from HeliosGuard",
+        "message_id": "queue-id-4ghcZV61XbzmWyR@no-message-id",
+        "from": "john.f@heliosguard.com",
+        "alert_uuids": [
+            "06963492-52d0-407e-851b-a7a8ae7f9269",
+            "ea13fbf8-1d62-458a-a456-8785d33c448e"
+        ],
+        "queue_id": "4ghcZV61XbzmWyR"
+    },
+    {
+        "completed_at": "2026-06-19T12:50:19",
+        "email_uuid": "1d2a08b6-dfed-4921-ac72-f50b1aff28fb",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcrM2F2yzmX0f",
+        "subject": "Invoice Payment Due",
+        "message_id": "queue-id-4ghcrM2F2yzmX0f@no-message-id",
+        "from": "billing1@networkshark.com",
+        "alert_uuids": [
+            "473aadde-f7e1-4eec-a530-87ae60987cbd",
+            "d92172df-97cb-42f1-a956-430ef29bf4e0"
+        ],
+        "queue_id": "4ghcrM2F2yzmX0f"
+    },
+    {
+        "completed_at": "2026-06-19T12:51:01",
+        "email_uuid": "459485c8-40b7-4cff-b1c1-bcf001253512",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcsD0By2zmX14",
+        "subject": "Invoice Payment Due",
+        "message_id": "queue-id-4ghcsD0By2zmX14@no-message-id",
+        "from": "billing1@networkshark.com",
+        "alert_uuids": [
+            "b3421aab-2a87-4e1b-a6a8-d358cb742b98",
+            "51733c97-cd9a-4165-b61b-4bf9047b01ab"
+        ],
+        "queue_id": "4ghcsD0By2zmX14"
+    },
+    {
+        "completed_at": "2026-06-19T17:27:59",
+        "email_uuid": "5ef3c365-5eea-49bb-9c48-86ec60eb1f7f",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/17/4ghl0s26LLzmX3g",
+        "subject": "An Exclusive Offer from HeliosGuard",
+        "message_id": "queue-id-4ghl0s26LLzmX3g@no-message-id",
+        "from": "john.f@heliosguard.com",
+        "alert_uuids": [
+            "2d83ad55-cbba-4edf-8d33-5d250b45d9ec"
+        ],
+        "queue_id": "4ghl0s26LLzmX3g"
+    },
+    {
+        "completed_at": "2026-06-19T12:51:35",
+        "email_uuid": "25469830-6618-46b8-934c-e89a2fac4bb8",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcrH1xYRzmX0S",
+        "subject": "Limited-Time HeliosGuard Savings",
+        "message_id": "queue-id-4ghcrH1xYRzmX0S@no-message-id",
+        "from": "sales@networkshark.com",
+        "alert_uuids": [
+            "59a62660-35f5-4cee-b1a1-2aa93be97d79",
+            "c2603e15-4178-4b43-b346-8448261d1f8e",
+            "6ff32f83-997f-437f-bdc4-0d1883fd9d1a",
+            "5b1dcc1d-aa95-4627-98a9-1241123790b0"
+        ],
+        "queue_id": "4ghcrH1xYRzmX0S"
+    },
+    {
+        "completed_at": "2026-06-19T12:51:37",
+        "email_uuid": "de9950c1-ce49-4c7c-b13c-1e82ec2c98b0",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcs771SMzmX0k",
+        "subject": "Limited-Time HeliosGuard Savings",
+        "message_id": "queue-id-4ghcs771SMzmX0k@no-message-id",
+        "from": "sales@networkshark.com",
+        "alert_uuids": [
+            "88b8e1ba-065e-4fdc-8777-7560919abf9b",
+            "ad4d84e9-326b-4071-a365-ccdde4519bef",
+            "1d8c397b-e7e2-4815-86ca-3a5de2318254",
+            "e1845fd0-131e-42e6-ab2b-a9b18fc188ec"
+        ],
+        "queue_id": "4ghcs771SMzmX0k"
+    },
+    {
+        "completed_at": "2026-06-19T12:51:38",
+        "email_uuid": "f4f3853d-dd35-4311-94b2-75c3134dbbae",
+        "quarantine_path": "/data/email-analysis/riskware-alerts/2026-06-19/12/4ghcsB040kzmX11",
+        "subject": "NetworkShark Security Update",
+        "message_id": "queue-id-4ghcsB040kzmX11@no-message-id",
+        "from": "secops1@networkshark.com",
+        "alert_uuids": [
+            "af1ad5a1-f857-4ee7-b43b-9be419c509ca"
+        ],
+        "queue_id": "4ghcsB040kzmX11"
+    },
+    {
+        "completed_at": "2026-06-19T12:51:38",
+        "email_uuid": "ff3b704b-9148-40fb-973e-d9ae10aabaf2",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcrQ2NbLzmX0l",
+        "subject": "Required: Review updated policy document",
+        "message_id": "queue-id-4ghcrQ2NbLzmX0l@no-message-id",
+        "from": "hr@networkshark.com",
+        "alert_uuids": [
+            "f5197549-a1e8-4dc8-a77c-c7299a98c05f"
+        ],
+        "queue_id": "4ghcrQ2NbLzmX0l"
+    },
+    {
+        "completed_at": "2026-06-19T12:51:42",
+        "email_uuid": "e5901031-5e21-4a20-a946-7bc174c99c33",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcrG1KrLzmX02",
+        "subject": "An Exclusive Offer from HeliosGuard",
+        "message_id": "queue-id-4ghcrG1KrLzmX02@no-message-id",
+        "from": "john.f@heliosguard.com",
+        "alert_uuids": [
+            "6e8b467b-0c26-477c-8583-6dde67b046ba",
+            "092972ab-bfe7-4d2a-b5fc-58fb87281e78"
+        ],
+        "queue_id": "4ghcrG1KrLzmX02"
+    },
+    {
+        "completed_at": "2026-06-19T12:51:38",
+        "email_uuid": "bc92b43f-8ae2-41f2-9165-bb59c662d5cf",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcrR2TQ4zmX0p",
+        "subject": "Action required: encrypted PDF for your review",
+        "message_id": "queue-id-4ghcrR2TQ4zmX0p@no-message-id",
+        "from": "it-support@networkshark.com",
+        "alert_uuids": [
+            "1c9c1ce3-1448-41f2-9195-1844432929d4"
+        ],
+        "queue_id": "4ghcrR2TQ4zmX0p"
+    },
+    {
+        "completed_at": "2026-06-19T12:51:39",
+        "email_uuid": "9cd8efe6-802f-4594-a650-5d3741f8bda0",
+        "quarantine_path": "/data/email-analysis/riskware-alerts/2026-06-19/12/4ghcrK271mzmX0b",
+        "subject": "NetworkShark Security Update",
+        "message_id": "queue-id-4ghcrK271mzmX0b@no-message-id",
+        "from": "secops1@networkshark.com",
+        "alert_uuids": [
+            "f228b8e3-87f6-4865-9e26-13854dded1f8"
+        ],
+        "queue_id": "4ghcrK271mzmX0b"
+    },
+    {
+        "completed_at": "2026-06-19T12:51:41",
+        "email_uuid": "10e138b5-6648-4708-a78a-d5609977a01d",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcs66JgdzmX0Z",
+        "subject": "An Exclusive Offer from HeliosGuard",
+        "message_id": "queue-id-4ghcs66JgdzmX0Z@no-message-id",
+        "from": "john.f@heliosguard.com",
+        "alert_uuids": [
+            "26ea7fef-f72a-4670-98ff-d8dd39e8b868",
+            "c30dd874-c12c-49c7-96c7-516d35663b3c"
+        ],
+        "queue_id": "4ghcs66JgdzmX0Z"
+    },
+    {
+        "completed_at": "2026-06-19T17:28:00",
+        "email_uuid": "080ce4c9-76b1-4be8-9dfa-4d4298e8b0b4",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/17/4ghl0t2k6YzmX3t",
+        "subject": "Limited-Time HeliosGuard Savings",
+        "message_id": "queue-id-4ghl0t2k6YzmX3t@no-message-id",
+        "from": "sales@networkshark.com",
+        "alert_uuids": [
+            "392f4d74-ef05-4287-88c5-3b587da55b29"
+        ],
+        "queue_id": "4ghl0t2k6YzmX3t"
+    },
+    {
+        "completed_at": "2026-06-19T12:52:59",
+        "email_uuid": "c54e109a-8d52-4c55-ac8f-717efe12d1a2",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcsH0M6HzmX17",
+        "subject": "Required: Review updated policy document",
+        "message_id": "queue-id-4ghcsH0M6HzmX17@no-message-id",
+        "from": "hr@networkshark.com",
+        "alert_uuids": [
+            "c6664b41-49af-4541-9d44-2014cb3a866b"
+        ],
+        "queue_id": "4ghcsH0M6HzmX17"
+    },
+    {
+        "completed_at": "2026-06-19T12:53:10",
+        "email_uuid": "3b37a11b-f1da-4d6d-8493-d8d514983931",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcvm1S76zmX11",
+        "subject": "Limited-Time HeliosGuard Savings",
+        "message_id": "queue-id-4ghcvm1S76zmX11@no-message-id",
+        "from": "sales@networkshark.com",
+        "alert_uuids": [
+            "26c86f5e-055a-4bcd-8d14-0d44ffcc756a"
+        ],
+        "queue_id": "4ghcvm1S76zmX11"
+    },
+    {
+        "completed_at": "2026-06-19T12:53:01",
+        "email_uuid": "31e5ae0d-396b-477f-90a5-7e9e6711e6f1",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcsJ0TQwzmX1B",
+        "subject": "Action required: encrypted PDF for your review",
+        "message_id": "queue-id-4ghcsJ0TQwzmX1B@no-message-id",
+        "from": "it-support@networkshark.com",
+        "alert_uuids": [
+            "f7c7e523-c708-412c-95b2-4e50afdcc34d"
+        ],
+        "queue_id": "4ghcsJ0TQwzmX1B"
+    },
+    {
+        "completed_at": "2026-06-19T17:28:02",
+        "email_uuid": "f1019a7d-c535-4872-9396-81041c3525f7",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/17/4ghl0w2wFzzmX46",
+        "subject": "NetworkShark Security Update",
+        "message_id": "queue-id-4ghl0w2wFzzmX46@no-message-id",
+        "from": "secops1@networkshark.com",
+        "alert_uuids": [
+            "e0fff10e-a8d2-4be3-b13c-70d0ae22434c"
+        ],
+        "queue_id": "4ghl0w2wFzzmX46"
+    },
+    {
+        "completed_at": "2026-06-19T12:53:09",
+        "email_uuid": "029277c6-9f76-46e2-a425-f172f984e9e3",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcvl0sHczmX0g",
+        "subject": "An Exclusive Offer from HeliosGuard",
+        "message_id": "queue-id-4ghcvl0sHczmX0g@no-message-id",
+        "from": "john.f@heliosguard.com",
+        "alert_uuids": [
+            "3dec3259-543b-4ff4-9311-4a67d32be35a"
+        ],
+        "queue_id": "4ghcvl0sHczmX0g"
+    },
+    {
+        "completed_at": "2026-06-19T12:53:12",
+        "email_uuid": "cb8c27fb-e69f-4ea4-b606-95d5f1214583",
+        "quarantine_path": "/data/email-analysis/riskware-alerts/2026-06-19/12/4ghcvp1f3BzmX18",
+        "subject": "NetworkShark Security Update",
+        "message_id": "queue-id-4ghcvp1f3BzmX18@no-message-id",
+        "from": "secops1@networkshark.com",
+        "alert_uuids": [
+            "f78a7e6b-0588-40c6-a2ea-b5d284f83f97"
+        ],
+        "queue_id": "4ghcvp1f3BzmX18"
+    },
+    {
+        "completed_at": "2026-06-19T12:53:18",
+        "email_uuid": "9df6bf6b-765e-4271-8dd3-6a4e0d331983",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcvr1nQCzmX1C",
+        "subject": "Invoice Payment Due",
+        "message_id": "queue-id-4ghcvr1nQCzmX1C@no-message-id",
+        "from": "billing1@networkshark.com",
+        "alert_uuids": [
+            "fd68a710-bc25-4728-895a-cd9035616e76",
+            "a0adaf14-0fae-4b19-b49d-12a99d859a34"
+        ],
+        "queue_id": "4ghcvr1nQCzmX1C"
+    },
+    {
+        "completed_at": "2026-06-19T12:56:10",
+        "email_uuid": "32e248b1-ee61-4201-be2a-30d3405a4e3d",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghczD6ggJzmX1B",
+        "subject": "Limited-Time HeliosGuard Savings",
+        "message_id": "queue-id-4ghczD6ggJzmX1B@no-message-id",
+        "from": "sales@networkshark.com",
+        "alert_uuids": [
+            "2db46742-fc02-4361-91b6-0706aae0bdec"
+        ],
+        "queue_id": "4ghczD6ggJzmX1B"
+    },
+    {
+        "completed_at": "2026-06-19T12:53:19",
+        "email_uuid": "b4817b82-d81a-4237-8855-808bc96c26bb",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcvt1svHzmX0w",
+        "subject": "Account Alert: Unusual Sign‑in Activity",
+        "message_id": "queue-id-4ghcvt1svHzmX0w@no-message-id",
+        "from": "security1@networkshark.com",
+        "alert_uuids": [
+            "b0a34001-2867-41d7-8721-edaceac4696d"
+        ],
+        "queue_id": "4ghcvt1svHzmX0w"
+    },
+    {
+        "completed_at": "2026-06-19T12:54:43",
+        "email_uuid": "6aa29eb5-ba76-4293-8edd-a0921c5c9768",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcvw21BtzmX19",
+        "subject": "Action required: encrypted PDF for your review",
+        "message_id": "queue-id-4ghcvw21BtzmX19@no-message-id",
+        "from": "it-support@networkshark.com",
+        "alert_uuids": [
+            "33ce5f30-5d99-47f8-860c-f9cb067cb3ec"
+        ],
+        "queue_id": "4ghcvw21BtzmX19"
+    },
+    {
+        "completed_at": "2026-06-19T12:54:45",
+        "email_uuid": "496f0f57-a68c-4cc0-bce8-90271afaca64",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghcvv1wpTzmX16",
+        "subject": "Required: Review updated policy document",
+        "message_id": "queue-id-4ghcvv1wpTzmX16@no-message-id",
+        "from": "hr@networkshark.com",
+        "alert_uuids": [
+            "1d6023bb-f2b8-49a2-9c49-d9c1c0e52d86"
+        ],
+        "queue_id": "4ghcvv1wpTzmX16"
+    },
+    {
+        "completed_at": "2026-06-19T12:56:09",
+        "email_uuid": "8c19fbbe-4e09-47be-a3de-4a60788aa855",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghczC627kzmX16",
+        "subject": "An Exclusive Offer from HeliosGuard",
+        "message_id": "queue-id-4ghczC627kzmX16@no-message-id",
+        "from": "john.f@heliosguard.com",
+        "alert_uuids": [
+            "04069033-d6cb-4f95-ba31-7d19ef44b309"
+        ],
+        "queue_id": "4ghczC627kzmX16"
+    },
+    {
+        "completed_at": "2026-06-19T12:56:12",
+        "email_uuid": "c7a5332b-309c-4bc0-8ba3-66607eabeea2",
+        "quarantine_path": "/data/email-analysis/riskware-alerts/2026-06-19/12/4ghczG6tHCzmX1S",
+        "subject": "NetworkShark Security Update",
+        "message_id": "queue-id-4ghczG6tHCzmX1S@no-message-id",
+        "from": "secops1@networkshark.com",
+        "alert_uuids": [
+            "1be9dccf-c7ec-4f00-8ff6-e1c32e9f8ca3"
+        ],
+        "queue_id": "4ghczG6tHCzmX1S"
+    },
+    {
+        "completed_at": "2026-06-19T12:56:19",
+        "email_uuid": "c13793d6-6616-4878-9d92-26a4bed2a9fe",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghczL74RCzmX1Q",
+        "subject": "Account Alert: Unusual Sign‑in Activity",
+        "message_id": "queue-id-4ghczL74RCzmX1Q@no-message-id",
+        "from": "security1@networkshark.com",
+        "alert_uuids": [
+            "aa106170-1b7c-4ef6-a92b-709594765d07"
+        ],
+        "queue_id": "4ghczL74RCzmX1Q"
+    },
+    {
+        "completed_at": "2026-06-19T12:56:18",
+        "email_uuid": "6ecf4ac6-dea0-4eb7-80ff-e62e33889b25",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghczJ6zm2zmX16",
+        "subject": "Invoice Payment Due",
+        "message_id": "queue-id-4ghczJ6zm2zmX16@no-message-id",
+        "from": "billing1@networkshark.com",
+        "alert_uuids": [
+            "da33ab00-bf35-4a72-8015-455d47aba4ca",
+            "e698f6c3-788d-456d-b306-a1d00bedaf4a"
+        ],
+        "queue_id": "4ghczJ6zm2zmX16"
+    },
+    {
+        "completed_at": "2026-06-19T12:57:43",
+        "email_uuid": "ed517bff-765d-4ecf-8751-d87fefc59470",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghczP064pzmX1Z",
+        "subject": "Action required: encrypted PDF for your review",
+        "message_id": "queue-id-4ghczP064pzmX1Z@no-message-id",
+        "from": "it-support@networkshark.com",
+        "alert_uuids": [
+            "ba110819-dd85-4c84-8a58-82ac1f804266"
+        ],
+        "queue_id": "4ghczP064pzmX1Z"
+    },
+    {
+        "completed_at": "2026-06-19T13:15:34",
+        "email_uuid": "4faaf8b2-ed44-4b69-b975-80771d2f8008",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/13/4ghdPb3SPwzmX1t",
+        "subject": "Limited-Time HeliosGuard Savings",
+        "message_id": "queue-id-4ghdPb3SPwzmX1t@no-message-id",
+        "from": "sales@networkshark.com",
+        "alert_uuids": [
+            "e794e106-8263-4f45-a24a-5a597f20716a"
+        ],
+        "queue_id": "4ghdPb3SPwzmX1t"
+    },
+    {
+        "completed_at": "2026-06-19T13:15:43",
+        "email_uuid": "c16c1f2b-1459-45ba-a60a-2cdd24e3352f",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/13/4ghdPj3pzMzmX1t",
+        "subject": "Account Alert: Unusual Sign‑in Activity",
+        "message_id": "queue-id-4ghdPj3pzMzmX1t@no-message-id",
+        "from": "security1@networkshark.com",
+        "alert_uuids": [
+            "f7fd5236-4bec-482c-b6bc-efa8f0231172"
+        ],
+        "queue_id": "4ghdPj3pzMzmX1t"
+    },
+    {
+        "completed_at": "2026-06-19T12:57:44",
+        "email_uuid": "c12ff1b9-3a90-4506-91de-899545089640",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/12/4ghczN01QGzmX1T",
+        "subject": "Required: Review updated policy document",
+        "message_id": "queue-id-4ghczN01QGzmX1T@no-message-id",
+        "from": "hr@networkshark.com",
+        "alert_uuids": [
+            "325101ac-53f0-48eb-ab99-0d259e01c2bb"
+        ],
+        "queue_id": "4ghczN01QGzmX1T"
+    },
+    {
+        "completed_at": "2026-06-19T13:03:25",
+        "email_uuid": "6965b9fd-1317-42e3-8ef3-f373bc3cec7f",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/13/4ghd7c2rBBzmX1T",
+        "subject": "An Exclusive Offer from HeliosGuard",
+        "message_id": "queue-id-4ghd7c2rBBzmX1T@no-message-id",
+        "from": "john.f@heliosguard.com",
+        "alert_uuids": [
+            "993f9b8a-ddfe-4e83-80c8-29c007cbd77d"
+        ],
+        "queue_id": "4ghd7c2rBBzmX1T"
+    },
+    {
+        "completed_at": "2026-06-19T13:03:26",
+        "email_uuid": "03454ff6-c048-4d74-b62c-475bbf61c861",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/13/4ghd7d3PKhzmX1Z",
+        "subject": "Limited-Time HeliosGuard Savings",
+        "message_id": "queue-id-4ghd7d3PKhzmX1Z@no-message-id",
+        "from": "sales@networkshark.com",
+        "alert_uuids": [
+            "9695f99d-989d-4254-938f-602a7943fc45"
+        ],
+        "queue_id": "4ghd7d3PKhzmX1Z"
+    },
+    {
+        "completed_at": "2026-06-19T13:03:28",
+        "email_uuid": "6de782fc-c40d-41ae-817f-525b56f0b2d2",
+        "quarantine_path": "/data/email-analysis/riskware-alerts/2026-06-19/13/4ghd7g3ZLKzmX1k",
+        "subject": "NetworkShark Security Update",
+        "message_id": "queue-id-4ghd7g3ZLKzmX1k@no-message-id",
+        "from": "secops1@networkshark.com",
+        "alert_uuids": [
+            "241e8b7e-6826-4aa7-af6b-33b9dc6f6623"
+        ],
+        "queue_id": "4ghd7g3ZLKzmX1k"
+    },
+    {
+        "completed_at": "2026-06-19T13:03:35",
+        "email_uuid": "0a0eca3d-abda-4052-a532-f54632bf7d71",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/13/4ghd7j3gQ0zmX1W",
+        "subject": "Invoice Payment Due",
+        "message_id": "queue-id-4ghd7j3gQ0zmX1W@no-message-id",
+        "from": "billing1@networkshark.com",
+        "alert_uuids": [
+            "510a31ba-ee7b-47d2-909a-f50ada9bcf87",
+            "47980051-50b9-43b7-91b1-5ee39113e67b"
+        ],
+        "queue_id": "4ghd7j3gQ0zmX1W"
+    },
+    {
+        "completed_at": "2026-06-19T13:03:36",
+        "email_uuid": "8f8ff875-a067-4716-b66a-d3df92c4e6da",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/13/4ghd7l3lfXzmX1c",
+        "subject": "Account Alert: Unusual Sign‑in Activity",
+        "message_id": "queue-id-4ghd7l3lfXzmX1c@no-message-id",
+        "from": "security1@networkshark.com",
+        "alert_uuids": [
+            "ce986e1f-0c3e-4312-8498-e6fc10c0a833"
+        ],
+        "queue_id": "4ghd7l3lfXzmX1c"
+    },
+    {
+        "completed_at": "2026-06-19T13:04:58",
+        "email_uuid": "7d1c4d98-d468-4ef1-a075-22c5765c1ffb",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/13/4ghd7m3pW9zmX1m",
+        "subject": "Required: Review updated policy document",
+        "message_id": "queue-id-4ghd7m3pW9zmX1m@no-message-id",
+        "from": "hr@networkshark.com",
+        "alert_uuids": [
+            "7c57d40e-a911-4c9b-a28a-f8873094e06b"
+        ],
+        "queue_id": "4ghd7m3pW9zmX1m"
+    },
+    {
+        "completed_at": "2026-06-19T13:05:00",
+        "email_uuid": "590e2c66-8f26-4b4c-802f-e37bdd8829f6",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/13/4ghd7n3vRDzmX1t",
+        "subject": "Action required: encrypted PDF for your review",
+        "message_id": "queue-id-4ghd7n3vRDzmX1t@no-message-id",
+        "from": "it-support@networkshark.com",
+        "alert_uuids": [
+            "84108686-059e-459d-a1ca-ac0177fb3bba"
+        ],
+        "queue_id": "4ghd7n3vRDzmX1t"
+    },
+    {
+        "completed_at": "2026-06-19T13:15:33",
+        "email_uuid": "cd8a45c7-6245-4a33-8331-b8b13726e699",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/13/4ghdPZ2sCFzmX1m",
+        "subject": "An Exclusive Offer from HeliosGuard",
+        "message_id": "queue-id-4ghdPZ2sCFzmX1m@no-message-id",
+        "from": "john.f@heliosguard.com",
+        "alert_uuids": [
+            "4d307635-dc34-4631-949a-8ee15e87d263"
+        ],
+        "queue_id": "4ghdPZ2sCFzmX1m"
+    },
+    {
+        "completed_at": "2026-06-19T13:15:36",
+        "email_uuid": "9fee898d-702b-4d88-a1fd-a42c193738a1",
+        "quarantine_path": "/data/email-analysis/riskware-alerts/2026-06-19/13/4ghdPd3dPFzmX23",
+        "subject": "NetworkShark Security Update",
+        "message_id": "queue-id-4ghdPd3dPFzmX23@no-message-id",
+        "from": "secops1@networkshark.com",
+        "alert_uuids": [
+            "bbad6fec-a4f9-424d-86c0-ea1da9213036"
+        ],
+        "queue_id": "4ghdPd3dPFzmX23"
+    },
+    {
+        "completed_at": "2026-06-19T13:15:42",
+        "email_uuid": "7c0e8d8f-33c5-4662-9882-6183f2db17fc",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/13/4ghdPg3kDRzmX26",
+        "subject": "Invoice Payment Due",
+        "message_id": "queue-id-4ghdPg3kDRzmX26@no-message-id",
+        "from": "billing1@networkshark.com",
+        "alert_uuids": [
+            "0b5ee2b0-177e-464b-94e9-ede07be5ef6f",
+            "e4a71674-02da-4b9f-bda7-1ade2e9692d4"
+        ],
+        "queue_id": "4ghdPg3kDRzmX26"
+    },
+    {
+        "completed_at": "2026-06-19T17:29:40",
+        "email_uuid": "3f30c0da-3cd3-4d4b-9a75-2bd62dc1fe73",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/17/4ghl1038VkzmX3g",
+        "subject": "Account Alert: Unusual Sign‑in Activity",
+        "message_id": "queue-id-4ghl1038VkzmX3g@no-message-id",
+        "from": "security1@networkshark.com",
+        "alert_uuids": [
+            "6cb3f1bf-b79f-4656-b4f6-6f10f6886c7d"
+        ],
+        "queue_id": "4ghl1038VkzmX3g"
+    },
+    {
+        "completed_at": "2026-06-19T13:17:05",
+        "email_uuid": "5d5268c9-3a4b-43b7-97c1-3fcfc17e829d",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/13/4ghdPl3y7dzmX25",
+        "subject": "Action required: encrypted PDF for your review",
+        "message_id": "queue-id-4ghdPl3y7dzmX25@no-message-id",
+        "from": "it-support@networkshark.com",
+        "alert_uuids": [
+            "aa75a0ce-343b-4bd1-a228-b76f69ebebbd"
+        ],
+        "queue_id": "4ghdPl3y7dzmX25"
+    },
+    {
+        "completed_at": "2026-06-19T13:17:05",
+        "email_uuid": "8f602072-c1e0-4a6e-a9dc-12c42a93bc78",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/13/4ghdPk3sCqzmX22",
+        "subject": "Required: Review updated policy document",
+        "message_id": "queue-id-4ghdPk3sCqzmX22@no-message-id",
+        "from": "hr@networkshark.com",
+        "alert_uuids": [
+            "d474f5f7-ab36-452b-ba4f-41e419ad4d81"
+        ],
+        "queue_id": "4ghdPk3sCqzmX22"
+    },
+    {
+        "completed_at": "2026-06-19T14:05:13",
+        "email_uuid": "6cc8acdf-9c74-4591-bfc6-47a67f19ceff",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghfVv3F1JzmX24",
+        "subject": "An Exclusive Offer from HeliosGuard",
+        "message_id": "queue-id-4ghfVv3F1JzmX24@no-message-id",
+        "from": "john.f@heliosguard.com",
+        "alert_uuids": [
+            "c6454888-1e88-4b38-aed8-a303bc14314e"
+        ],
+        "queue_id": "4ghfVv3F1JzmX24"
+    },
+    {
+        "completed_at": "2026-06-19T14:05:14",
+        "email_uuid": "f2e67289-d24b-48e8-86c4-30e2faf0f917",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghfVw3s39zmX2C",
+        "subject": "Limited-Time HeliosGuard Savings",
+        "message_id": "queue-id-4ghfVw3s39zmX2C@no-message-id",
+        "from": "sales@networkshark.com",
+        "alert_uuids": [
+            "19bf8808-1581-47d9-bb5f-14a178e261a5"
+        ],
+        "queue_id": "4ghfVw3s39zmX2C"
+    },
+    {
+        "completed_at": "2026-06-19T14:44:20",
+        "email_uuid": "87ff16a5-e7a5-49e9-aa0d-f189dc34a9ce",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghgN22CZZzmX36",
+        "subject": "Limited-Time HeliosGuard Savings",
+        "message_id": "queue-id-4ghgN22CZZzmX36@no-message-id",
+        "from": "sales@networkshark.com",
+        "alert_uuids": [
+            "3f3fb4ff-f4d3-4ac0-9645-2536075b8982"
+        ],
+        "queue_id": "4ghgN22CZZzmX36"
+    },
+    {
+        "completed_at": "2026-06-19T14:05:16",
+        "email_uuid": "0497f65b-ba31-4cce-a83e-14a9c6f2c988",
+        "quarantine_path": "/data/email-analysis/riskware-alerts/2026-06-19/14/4ghfVy42xDzmX2M",
+        "subject": "NetworkShark Security Update",
+        "message_id": "queue-id-4ghfVy42xDzmX2M@no-message-id",
+        "from": "secops1@networkshark.com",
+        "alert_uuids": [
+            "2410aaa7-ccf7-42b0-88a7-6c8265b9db5c"
+        ],
+        "queue_id": "4ghfVy42xDzmX2M"
+    },
+    {
+        "completed_at": "2026-06-19T14:05:23",
+        "email_uuid": "9449d156-279c-48cf-b3ce-e12e181f4bb6",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghfW24G94zmX2C",
+        "subject": "Account Alert: Unusual Sign‑in Activity",
+        "message_id": "queue-id-4ghfW24G94zmX2C@no-message-id",
+        "from": "security1@networkshark.com",
+        "alert_uuids": [
+            "749e824f-bba2-46b8-8bc5-09f4a5491dfc"
+        ],
+        "queue_id": "4ghfW24G94zmX2C"
+    },
+    {
+        "completed_at": "2026-06-19T14:05:22",
+        "email_uuid": "e932e098-d542-47e6-bd7e-815911871871",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghfW048h1zmX24",
+        "subject": "Invoice Payment Due",
+        "message_id": "queue-id-4ghfW048h1zmX24@no-message-id",
+        "from": "billing1@networkshark.com",
+        "alert_uuids": [
+            "c4f49cd6-39cd-4cd6-8f21-30b86e5a344a",
+            "c08ab424-1b3e-4a67-8cbc-6a210877bd34"
+        ],
+        "queue_id": "4ghfW048h1zmX24"
+    },
+    {
+        "completed_at": "2026-06-19T14:06:48",
+        "email_uuid": "9a66bb5b-fe37-447b-a6ab-963c433c5eaf",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghfW34K1mzmX2M",
+        "subject": "Required: Review updated policy document",
+        "message_id": "queue-id-4ghfW34K1mzmX2M@no-message-id",
+        "from": "hr@networkshark.com",
+        "alert_uuids": [
+            "54d391a5-3660-4b16-a24d-1ee04b89b26c"
+        ],
+        "queue_id": "4ghfW34K1mzmX2M"
+    },
+    {
+        "completed_at": "2026-06-19T17:21:42",
+        "email_uuid": "169af00c-0c9f-47d9-bdc3-aad123ee6e6e",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/17/4ghknX5SBJzmX3r",
+        "subject": "NetworkShark Security Update",
+        "message_id": "queue-id-4ghknX5SBJzmX3r@no-message-id",
+        "from": "secops1@networkshark.com",
+        "alert_uuids": [
+            "bf2b18bc-6757-46c5-80c4-8e3388ece8ec"
+        ],
+        "queue_id": "4ghknX5SBJzmX3r"
+    },
+    {
+        "completed_at": "2026-06-19T14:06:48",
+        "email_uuid": "ad41eb41-fba0-4999-97c9-91f2fa49f190",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghfW44SkJzmX2W",
+        "subject": "Action required: encrypted PDF for your review",
+        "message_id": "queue-id-4ghfW44SkJzmX2W@no-message-id",
+        "from": "it-support@networkshark.com",
+        "alert_uuids": [
+            "4490889b-1e6e-425a-8288-b32f7d0ff2ce"
+        ],
+        "queue_id": "4ghfW44SkJzmX2W"
+    },
+    {
+        "completed_at": "2026-06-19T17:29:42",
+        "email_uuid": "d0c4a731-2fd1-4d69-95cb-2641845b1db3",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/17/4ghl123JK7zmX4K",
+        "subject": "Action required: encrypted PDF for your review",
+        "message_id": "queue-id-4ghl123JK7zmX4K@no-message-id",
+        "from": "it-support@networkshark.com",
+        "alert_uuids": [
+            "3d19e62a-206d-4e37-bc3d-dae968483f8f"
+        ],
+        "queue_id": "4ghl123JK7zmX4K"
+    },
+    {
+        "completed_at": "2026-06-19T14:31:54",
+        "email_uuid": "cd7256e0-853c-4d04-9e56-ff948fa4d7c8",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghg5h741pzmX2M",
+        "subject": "An Exclusive Offer from HeliosGuard",
+        "message_id": "queue-id-4ghg5h741pzmX2M@no-message-id",
+        "from": "john.f@heliosguard.com",
+        "alert_uuids": [
+            "20d694ee-c87a-4998-b9a6-38a407c5471a"
+        ],
+        "queue_id": "4ghg5h741pzmX2M"
+    },
+    {
+        "completed_at": "2026-06-19T14:31:55",
+        "email_uuid": "6b311039-114e-462c-90dc-01afd13b2cb0",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghg5k0Z4CzmX2W",
+        "subject": "Limited-Time HeliosGuard Savings",
+        "message_id": "queue-id-4ghg5k0Z4CzmX2W@no-message-id",
+        "from": "sales@networkshark.com",
+        "alert_uuids": [
+            "d3edb059-e16d-4292-aecd-b667d38c23a7"
+        ],
+        "queue_id": "4ghg5k0Z4CzmX2W"
+    },
+    {
+        "completed_at": "2026-06-19T14:31:57",
+        "email_uuid": "8bed8285-0f8d-4ebb-b3a2-01e34186c745",
+        "quarantine_path": "/data/email-analysis/riskware-alerts/2026-06-19/14/4ghg5m0nf0zmX2g",
+        "subject": "NetworkShark Security Update",
+        "message_id": "queue-id-4ghg5m0nf0zmX2g@no-message-id",
+        "from": "secops1@networkshark.com",
+        "alert_uuids": [
+            "2aaf5347-87c5-48c0-a639-b84adac08d05"
+        ],
+        "queue_id": "4ghg5m0nf0zmX2g"
+    },
+    {
+        "completed_at": "2026-06-19T14:32:04",
+        "email_uuid": "2941a6b5-3c8d-4ddd-ba16-4302f949b7c4",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghg5p0v9yzmX2M",
+        "subject": "Invoice Payment Due",
+        "message_id": "queue-id-4ghg5p0v9yzmX2M@no-message-id",
+        "from": "billing1@networkshark.com",
+        "alert_uuids": [
+            "9c4f6a70-3ccc-4985-89bd-38cc16b336a2",
+            "e02fe578-62d0-4be8-ae4f-8490e93cbcea"
+        ],
+        "queue_id": "4ghg5p0v9yzmX2M"
+    },
+    {
+        "completed_at": "2026-06-19T14:32:05",
+        "email_uuid": "bf97d838-e8cc-4ae4-8979-765e78494805",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghg5r0zY5zmX2Y",
+        "subject": "Account Alert: Unusual Sign‑in Activity",
+        "message_id": "queue-id-4ghg5r0zY5zmX2Y@no-message-id",
+        "from": "security1@networkshark.com",
+        "alert_uuids": [
+            "472e133a-23dd-445f-a5cc-e1cd477d0a3c"
+        ],
+        "queue_id": "4ghg5r0zY5zmX2Y"
+    },
+    {
+        "completed_at": "2026-06-19T17:29:39",
+        "email_uuid": "ede7cd17-61f0-4910-9efa-9fde19ca2ac8",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/17/4ghl0y32JFzmX4C",
+        "subject": "Invoice Payment Due",
+        "message_id": "queue-id-4ghl0y32JFzmX4C@no-message-id",
+        "from": "billing1@networkshark.com",
+        "alert_uuids": [
+            "74892217-2d9c-4710-8501-ff4f6f9502ef",
+            "74e86f8f-6a7e-4c34-80da-b25a4b06c8ab"
+        ],
+        "queue_id": "4ghl0y32JFzmX4C"
+    },
+    {
+        "completed_at": "2026-06-19T14:33:28",
+        "email_uuid": "a6bbfa0e-0f2c-44e0-9c8d-0c1c2165a2a4",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghg5s14BNzmX2h",
+        "subject": "Required: Review updated policy document",
+        "message_id": "queue-id-4ghg5s14BNzmX2h@no-message-id",
+        "from": "hr@networkshark.com",
+        "alert_uuids": [
+            "b2597045-99ed-40e8-bcd4-747bee42768c"
+        ],
+        "queue_id": "4ghg5s14BNzmX2h"
+    },
+    {
+        "completed_at": "2026-06-19T14:33:30",
+        "email_uuid": "98c4f890-14a7-46f0-8244-3ae100e69784",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghg5t192hzmX2n",
+        "subject": "Action required: encrypted PDF for your review",
+        "message_id": "queue-id-4ghg5t192hzmX2n@no-message-id",
+        "from": "it-support@networkshark.com",
+        "alert_uuids": [
+            "9ca6c107-752a-4223-bf72-aad3f0561887"
+        ],
+        "queue_id": "4ghg5t192hzmX2n"
+    },
+    {
+        "completed_at": "2026-06-19T14:34:57",
+        "email_uuid": "d96b8db7-398b-4e55-ae55-44d301c7a22d",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghg9C3rjkzmX2h",
+        "subject": "An Exclusive Offer from HeliosGuard",
+        "message_id": "queue-id-4ghg9C3rjkzmX2h@no-message-id",
+        "from": "john.f@heliosguard.com",
+        "alert_uuids": [
+            "43703cbf-b450-4bd3-bf81-41244efddc1b"
+        ],
+        "queue_id": "4ghg9C3rjkzmX2h"
+    },
+    {
+        "completed_at": "2026-06-19T14:35:00",
+        "email_uuid": "91ba9aaf-0c9e-472d-bbcf-8c445a0005eb",
+        "quarantine_path": "/data/email-analysis/riskware-alerts/2026-06-19/14/4ghg9G4kSvzmX2x",
+        "subject": "NetworkShark Security Update",
+        "message_id": "queue-id-4ghg9G4kSvzmX2x@no-message-id",
+        "from": "secops1@networkshark.com",
+        "alert_uuids": [
+            "37464ab1-6fc9-4de6-bb71-76d193143bec"
+        ],
+        "queue_id": "4ghg9G4kSvzmX2x"
+    },
+    {
+        "completed_at": "2026-06-19T14:34:58",
+        "email_uuid": "97d4a0cf-ccf9-4df6-8dc8-598af252db30",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghg9D4QdYzmX2n",
+        "subject": "Limited-Time HeliosGuard Savings",
+        "message_id": "queue-id-4ghg9D4QdYzmX2n@no-message-id",
+        "from": "sales@networkshark.com",
+        "alert_uuids": [
+            "f2b40f17-166c-4176-a5c4-f0d03b92f5d2"
+        ],
+        "queue_id": "4ghg9D4QdYzmX2n"
+    },
+    {
+        "completed_at": "2026-06-19T17:29:43",
+        "email_uuid": "c923739a-f4a4-467c-8edc-ee0da4f8a189",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/17/4ghl113CCZzmX46",
+        "subject": "Required: Review updated policy document",
+        "message_id": "queue-id-4ghl113CCZzmX46@no-message-id",
+        "from": "hr@networkshark.com",
+        "alert_uuids": [
+            "7a91adde-bd9c-4495-91e3-c4daa08f3d75"
+        ],
+        "queue_id": "4ghl113CCZzmX46"
+    },
+    {
+        "completed_at": "2026-06-19T14:35:06",
+        "email_uuid": "d4ca4982-94fc-4f86-a933-fc9b1619ec0d",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghg9L4wCyzmX2n",
+        "subject": "Account Alert: Unusual Sign‑in Activity",
+        "message_id": "queue-id-4ghg9L4wCyzmX2n@no-message-id",
+        "from": "security1@networkshark.com",
+        "alert_uuids": [
+            "94cfd701-2701-4258-a298-c1ddfd4b5efe"
+        ],
+        "queue_id": "4ghg9L4wCyzmX2n"
+    },
+    {
+        "completed_at": "2026-06-19T14:35:05",
+        "email_uuid": "751d7b9b-bba9-4d62-acaa-7018a4232112",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghg9J4rKHzmX2h",
+        "subject": "Invoice Payment Due",
+        "message_id": "queue-id-4ghg9J4rKHzmX2h@no-message-id",
+        "from": "billing1@networkshark.com",
+        "alert_uuids": [
+            "0ec135fa-2126-4e11-811c-6cfdaf9c9c83",
+            "6503e213-661e-495b-9b2f-3f6a5a385634"
+        ],
+        "queue_id": "4ghg9J4rKHzmX2h"
+    },
+    {
+        "completed_at": "2026-06-19T14:36:33",
+        "email_uuid": "cc675ace-f34b-4656-a7c7-e536b8e166b1",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghg9M4yl7zmX2w",
+        "subject": "Required: Review updated policy document",
+        "message_id": "queue-id-4ghg9M4yl7zmX2w@no-message-id",
+        "from": "hr@networkshark.com",
+        "alert_uuids": [
+            "d2543c10-7bd5-44e8-add7-4e32a2a097e8"
+        ],
+        "queue_id": "4ghg9M4yl7zmX2w"
+    },
+    {
+        "completed_at": "2026-06-19T14:36:34",
+        "email_uuid": "bc5e335f-7891-4f18-a5ea-d902d3d288d1",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghg9N5696zmX30",
+        "subject": "Action required: encrypted PDF for your review",
+        "message_id": "queue-id-4ghg9N5696zmX30@no-message-id",
+        "from": "it-support@networkshark.com",
+        "alert_uuids": [
+            "0451710d-b30e-41d9-9800-a90ffd5e690e"
+        ],
+        "queue_id": "4ghg9N5696zmX30"
+    },
+    {
+        "completed_at": "2026-06-19T14:44:19",
+        "email_uuid": "3d2cb1fc-65fd-4a58-b06c-77e25b2af12f",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghgN11XQTzmX2y",
+        "subject": "An Exclusive Offer from HeliosGuard",
+        "message_id": "queue-id-4ghgN11XQTzmX2y@no-message-id",
+        "from": "john.f@heliosguard.com",
+        "alert_uuids": [
+            "09cc5574-4638-471d-b9c4-973794bc3a8a"
+        ],
+        "queue_id": "4ghgN11XQTzmX2y"
+    },
+    {
+        "completed_at": "2026-06-19T14:44:23",
+        "email_uuid": "c7e17e50-212d-437b-8b4f-0cddc06e7f20",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghgN42QVMzmX3G",
+        "subject": "NetworkShark Security Update",
+        "message_id": "queue-id-4ghgN42QVMzmX3G@no-message-id",
+        "from": "secops1@networkshark.com",
+        "alert_uuids": [
+            "5df3a61f-856e-4923-9dd7-198b234dc04e"
+        ],
+        "queue_id": "4ghgN42QVMzmX3G"
+    },
+    {
+        "completed_at": "2026-06-19T17:50:49",
+        "email_uuid": "fa09e53f-d689-4cbd-a68a-c18c3a7a5728",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/17/4ghlW83P6xzmX4J",
+        "subject": "Account Alert: Unusual Sign‑in Activity",
+        "message_id": "queue-id-4ghlW83P6xzmX4J@no-message-id",
+        "from": "security1@networkshark.com",
+        "alert_uuids": [
+            "b3638cb8-ffe4-4d30-81cf-03b10e333366"
+        ],
+        "queue_id": "4ghlW83P6xzmX4J"
+    },
+    {
+        "completed_at": "2026-06-19T14:44:30",
+        "email_uuid": "78012bd5-4093-4c76-bcaf-5c688e2754b1",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghgN82gGhzmX3B",
+        "subject": "Account Alert: Unusual Sign‑in Activity",
+        "message_id": "queue-id-4ghgN82gGhzmX3B@no-message-id",
+        "from": "security1@networkshark.com",
+        "alert_uuids": [
+            "72930dd2-ddba-44d3-a3d7-02b58764649a"
+        ],
+        "queue_id": "4ghgN82gGhzmX3B"
+    },
+    {
+        "completed_at": "2026-06-19T14:44:29",
+        "email_uuid": "791a7ff5-b064-4e16-bb26-819a0e167378",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghgN62XjvzmX2y",
+        "subject": "Invoice Payment Due",
+        "message_id": "queue-id-4ghgN62XjvzmX2y@no-message-id",
+        "from": "billing1@networkshark.com",
+        "alert_uuids": [
+            "42eb4566-29eb-43e7-ae1a-e68ee6b0b85e",
+            "b41e6b73-e20e-49df-85da-b2b9eb45ea83"
+        ],
+        "queue_id": "4ghgN62XjvzmX2y"
+    },
+    {
+        "completed_at": "2026-06-19T14:45:56",
+        "email_uuid": "13d03d7e-1861-48b5-9fc7-392199dbde10",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghgNB2rd8zmX3J",
+        "subject": "Action required: encrypted PDF for your review",
+        "message_id": "queue-id-4ghgNB2rd8zmX3J@no-message-id",
+        "from": "it-support@networkshark.com",
+        "alert_uuids": [
+            "cf1058bc-074c-4b82-a859-6a13ae71be71"
+        ],
+        "queue_id": "4ghgNB2rd8zmX3J"
+    },
+    {
+        "completed_at": "2026-06-19T14:45:53",
+        "email_uuid": "1bca1ab0-51f6-424b-9d87-3e38da31ce0f",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghgN92jq6zmX3F",
+        "subject": "Required: Review updated policy document",
+        "message_id": "queue-id-4ghgN92jq6zmX3F@no-message-id",
+        "from": "hr@networkshark.com",
+        "alert_uuids": [
+            "556e7724-0bd9-4731-a101-1ee9f0480516"
+        ],
+        "queue_id": "4ghgN92jq6zmX3F"
+    },
+    {
+        "completed_at": "2026-06-19T17:48:04",
+        "email_uuid": "54eb71de-431c-46b4-9fa7-955ad1bd8eb4",
+        "quarantine_path": null,
+        "subject": "Action required: encrypted PDF for your review",
+        "message_id": "queue-id-4ghl123JK7zmX4K_RA@no-message-id",
+        "from": "it-support@networkshark.com",
+        "alert_uuids": [
+            "21d6a185-230c-4525-996c-4cf9e511eb7c"
+        ],
+        "queue_id": "4ghl123JK7zmX4K_RA"
+    },
+    {
+        "completed_at": "2026-06-19T14:57:24",
+        "email_uuid": "7cc82fa7-d0d3-46f9-913d-a820fef846b0",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghgg362fnzmX3T",
+        "subject": "Account Alert: Unusual Sign‑in Activity",
+        "message_id": "queue-id-4ghgg362fnzmX3T@no-message-id",
+        "from": "security1@networkshark.com",
+        "alert_uuids": [
+            "118702e9-ce80-4dc0-80f1-66177d7304cc"
+        ],
+        "queue_id": "4ghgg362fnzmX3T"
+    },
+    {
+        "completed_at": "2026-06-19T14:57:23",
+        "email_uuid": "9dbe037d-7126-40dd-ba3e-89e3730b179d",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghgg15xVnzmX3b",
+        "subject": "Invoice Payment Due",
+        "message_id": "queue-id-4ghgg15xVnzmX3b@no-message-id",
+        "from": "billing1@networkshark.com",
+        "alert_uuids": [
+            "24318341-d6c4-42f6-b8e7-b78b8ddffb85",
+            "45184382-da3a-4dfc-b96d-221ca287b598"
+        ],
+        "queue_id": "4ghgg15xVnzmX3b"
+    },
+    {
+        "completed_at": "2026-06-19T14:58:41",
+        "email_uuid": "eeb871ff-e303-46b3-a282-6eb8671cd861",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghgfx5dfMzmX3J",
+        "subject": "Limited-Time HeliosGuard Savings",
+        "message_id": "queue-id-4ghgfx5dfMzmX3J@no-message-id",
+        "from": "sales@networkshark.com",
+        "alert_uuids": [
+            "f9a96d6d-fe3d-4c98-ba6c-690abcf6a62d",
+            "74565490-1c20-41e5-82db-02f8300885f6",
+            "c19f18ca-82bb-44d4-af87-6270d12941fd",
+            "bdad452e-74a0-4a7e-b379-57f5d448776f"
+        ],
+        "queue_id": "4ghgfx5dfMzmX3J"
+    },
+    {
+        "completed_at": "2026-06-19T14:58:50",
+        "email_uuid": "ba1f298e-403e-47c1-8774-efec4a5149f1",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghgg466LRzmX3f",
+        "subject": "Required: Review updated policy document",
+        "message_id": "queue-id-4ghgg466LRzmX3f@no-message-id",
+        "from": "hr@networkshark.com",
+        "alert_uuids": [
+            "e3f5bf6a-d10b-4321-a336-d69cbad53f7b"
+        ],
+        "queue_id": "4ghgg466LRzmX3f"
+    },
+    {
+        "completed_at": "2026-06-19T14:58:54",
+        "email_uuid": "63a3cb6f-e5b9-4d24-848e-ae5f43b4dc33",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghgg56FSVzmX3j",
+        "subject": "Action required: encrypted PDF for your review",
+        "message_id": "queue-id-4ghgg56FSVzmX3j@no-message-id",
+        "from": "it-support@networkshark.com",
+        "alert_uuids": [
+            "33ec6fe4-38d0-484a-8ad8-2c148523e032"
+        ],
+        "queue_id": "4ghgg56FSVzmX3j"
+    },
+    {
+        "completed_at": "2026-06-19T14:59:51",
+        "email_uuid": "9a760dd5-ea8b-4c0c-b862-5ee70da4ed95",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghgfw4zghzmX3F",
+        "subject": "An Exclusive Offer from HeliosGuard",
+        "message_id": "queue-id-4ghgfw4zghzmX3F@no-message-id",
+        "from": "john.f@heliosguard.com",
+        "alert_uuids": [
+            "47a5654b-13dd-429a-b553-2637ba40478c",
+            "6c5dc6d5-b547-462c-ac42-d4916751c922"
+        ],
+        "queue_id": "4ghgfw4zghzmX3F"
+    },
+    {
+        "completed_at": "2026-06-19T15:00:52",
+        "email_uuid": "364d505d-d247-4723-9dc9-71f68550ad3f",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/14/4ghgfz5qBHzmX3X",
+        "subject": "NetworkShark Security Update",
+        "message_id": "queue-id-4ghgfz5qBHzmX3X@no-message-id",
+        "from": "secops1@networkshark.com",
+        "alert_uuids": [
+            "dfd574ee-1d9e-40ff-878d-61a1601e5c5a"
+        ],
+        "queue_id": "4ghgfz5qBHzmX3X"
+    },
+    {
+        "completed_at": "2026-06-19T17:50:42",
+        "email_uuid": "9f3cd4cc-c1c0-4a97-ad71-38cdd67f596d",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/17/4ghlW4391fzmX4Q",
+        "subject": "NetworkShark Security Update",
+        "message_id": "queue-id-4ghlW4391fzmX4Q@no-message-id",
+        "from": "secops1@networkshark.com",
+        "alert_uuids": [
+            "a4db5b9f-845a-494f-8de5-c43286add148"
+        ],
+        "queue_id": "4ghlW4391fzmX4Q"
+    },
+    {
+        "completed_at": "2026-06-19T17:50:48",
+        "email_uuid": "22f24f22-93b7-49bc-905a-9ded7fd4c058",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/17/4ghlW63H3qzmX4T",
+        "subject": "Invoice Payment Due",
+        "message_id": "queue-id-4ghlW63H3qzmX4T@no-message-id",
+        "from": "billing1@networkshark.com",
+        "alert_uuids": [
+            "df07e0cd-787a-4051-8ae2-ad1bd881e2ce",
+            "30f8dc42-8115-4fb8-a60a-03dbc9ea8a3f"
+        ],
+        "queue_id": "4ghlW63H3qzmX4T"
+    },
+    {
+        "completed_at": "2026-06-19T17:18:17",
+        "email_uuid": "f7eda2ed-87a5-4233-bc29-4cbab5515aa4",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/17/4ghknc5g0QzmX3l",
+        "subject": "Account Alert: Unusual Sign‑in Activity",
+        "message_id": "queue-id-4ghknc5g0QzmX3l@no-message-id",
+        "from": "security1@networkshark.com",
+        "alert_uuids": [
+            "3d4c2d18-9630-4b10-8b3c-a0367a8e008c"
+        ],
+        "queue_id": "4ghknc5g0QzmX3l"
+    },
+    {
+        "completed_at": "2026-06-19T17:18:16",
+        "email_uuid": "795b29e5-6db6-4c15-bc62-2813d9a2db37",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/17/4ghknZ5Z81zmX3v",
+        "subject": "Invoice Payment Due",
+        "message_id": "queue-id-4ghknZ5Z81zmX3v@no-message-id",
+        "from": "billing1@networkshark.com",
+        "alert_uuids": [
+            "06223261-f396-47aa-8733-31eda9955f14",
+            "9af43ec4-3b78-4ce2-a72e-2d80559d6911"
+        ],
+        "queue_id": "4ghknZ5Z81zmX3v"
+    },
+    {
+        "completed_at": "2026-06-19T17:50:39",
+        "email_uuid": "da133ead-45ee-4424-9105-e1cc8a3381b3",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/17/4ghlW12NjlzmX3g",
+        "subject": "An Exclusive Offer from HeliosGuard",
+        "message_id": "queue-id-4ghlW12NjlzmX3g@no-message-id",
+        "from": "john.f@heliosguard.com",
+        "alert_uuids": [
+            "5e6e38b7-ab12-4961-b867-5aac4a3849bc"
+        ],
+        "queue_id": "4ghlW12NjlzmX3g"
+    },
+    {
+        "completed_at": "2026-06-19T17:19:32",
+        "email_uuid": "c8c67314-5d10-4040-840e-163e64058399",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/17/4ghknV5GBPzmX3h",
+        "subject": "Limited-Time HeliosGuard Savings",
+        "message_id": "queue-id-4ghknV5GBPzmX3h@no-message-id",
+        "from": "sales@networkshark.com",
+        "alert_uuids": [
+            "e34ac027-2c29-4307-a3ca-cf37964d5941",
+            "cf55a27c-44e1-470c-b0db-b02e414c672d",
+            "76373315-216c-4e01-98ba-c6dbce864180",
+            "360e3bd1-a1b7-45cd-a0c8-1b060ee5b0d4"
+        ],
+        "queue_id": "4ghknV5GBPzmX3h"
+    },
+    {
+        "completed_at": "2026-06-19T17:19:39",
+        "email_uuid": "78c353bd-fbff-4de2-b371-d7f97aca4987",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/17/4ghknd5jnhzmX42",
+        "subject": "Required: Review updated policy document",
+        "message_id": "queue-id-4ghknd5jnhzmX42@no-message-id",
+        "from": "hr@networkshark.com",
+        "alert_uuids": [
+            "6abb3008-83e0-4ef9-9302-ec6a2f5bfe6e"
+        ],
+        "queue_id": "4ghknd5jnhzmX42"
+    },
+    {
+        "completed_at": "2026-06-19T17:19:42",
+        "email_uuid": "4383ad09-e037-49c1-9075-92b6edc123ed",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/17/4ghknf5pZRzmX45",
+        "subject": "Action required: encrypted PDF for your review",
+        "message_id": "queue-id-4ghknf5pZRzmX45@no-message-id",
+        "from": "it-support@networkshark.com",
+        "alert_uuids": [
+            "e9cce878-9bc3-4938-b45c-d192c05200bd"
+        ],
+        "queue_id": "4ghknf5pZRzmX45"
+    },
+    {
+        "completed_at": "2026-06-19T17:20:41",
+        "email_uuid": "30b8f3af-f789-4295-9f10-6c3ef48b776f",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/17/4ghknT4ct7zmX3Y",
+        "subject": "An Exclusive Offer from HeliosGuard",
+        "message_id": "queue-id-4ghknT4ct7zmX3Y@no-message-id",
+        "from": "john.f@heliosguard.com",
+        "alert_uuids": [
+            "25b22866-7fb3-4619-b35c-cd5a5cc66382",
+            "b48c9050-65b9-40db-ace9-bc0de7e5b8e4"
+        ],
+        "queue_id": "4ghknT4ct7zmX3Y"
+    },
+    {
+        "completed_at": "2026-06-19T17:52:12",
+        "email_uuid": "2f94d9d2-042e-4bad-bb60-45cc4c2b7b4f",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/17/4ghlW93RgszmX4N",
+        "subject": "Required: Review updated policy document",
+        "message_id": "queue-id-4ghlW93RgszmX4N@no-message-id",
+        "from": "hr@networkshark.com",
+        "alert_uuids": [
+            "9a43589c-1984-4e2a-890c-c527bfa83c91"
+        ],
+        "queue_id": "4ghlW93RgszmX4N"
+    },
+    {
+        "completed_at": "2026-06-19T17:52:14",
+        "email_uuid": "a33544d5-4386-45aa-ab6d-d3b0b7c8c9c1",
+        "quarantine_path": "/data/email-analysis/quarantine2/2026-06-19/17/4ghlWB3XPvzmX4X",
+        "subject": "Action required: encrypted PDF for your review",
+        "message_id": "queue-id-4ghlWB3XPvzmX4X@no-message-id",
+        "from": "it-support@networkshark.com",
+        "alert_uuids": [
+            "c7ec2720-6b23-411f-9cf3-51b7c1a1da32"
+        ],
+        "queue_id": "4ghlWB3XPvzmX4X"
+    },
+    {
+        "completed_at": "2026-06-19T18:01:06",
+        "email_uuid": "3f49e2d1-b92c-4e5a-a89e-fa029853d01e",
+        "quarantine_path": null,
+        "subject": "Action required: encrypted PDF for your review",
+        "message_id": "queue-id-4ghlWB3XPvzmX4X_RA@no-message-id",
+        "from": "it-support@networkshark.com",
+        "alert_uuids": [
+            "4c1f5259-714b-4fad-90bd-e242c63385c4"
+        ],
+        "queue_id": "4ghlWB3XPvzmX4X_RA"
+    }
+]

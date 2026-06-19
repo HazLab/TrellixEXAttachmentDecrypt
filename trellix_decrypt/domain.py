@@ -204,8 +204,15 @@ class FlowEngine:
         except Exception:  # noqa: BLE001 — unreadable (e.g. SECRET_KEY changed)
             self.repo.set_state(case, FlowState.RESUBMIT_FAILED, "stored password unreadable")
             return
-        ids = await self.ex.quarantine_ids(case.queue_id)  # (queue_id, email_uuid)
-        target = (ids[1] if self.settings.ex_rescan_id_field == "email_uuid" else ids[0]) or case.queue_id
+        # Rescan the entry that actually holds a quarantined file (_RA re-analysis
+        # records have a null path and can't be rescanned).
+        queue_id, email_uuid = await self.ex.rescan_target(case.queue_id, case.sender, case.subject)
+        if queue_id is None:
+            log.warning("no rescannable quarantine entry for case %s (queue %s)", case.id, case.queue_id)
+            self.repo.increment_resubmit_attempts(case)
+            self.repo.set_state(case, FlowState.RESUBMIT_FAILED, "no rescannable quarantine entry found")
+            return
+        target = email_uuid if self.settings.ex_rescan_id_field == "email_uuid" else queue_id
         try:
             await self.ex.rescan(target, [password])
         except Exception as exc:  # noqa: BLE001 — record + count for the retry cap, don't crash
@@ -231,7 +238,7 @@ class FlowEngine:
             return True
         self.repo.set_state(case, FlowState.RECHECKING, "rechecking quarantine")
 
-        outcome = await self.ex.classify_resubmission(case.queue_id, case.recipient, self.rules)
+        outcome = await self.ex.classify_resubmission(case.queue_id, case.sender, case.subject, self.rules)
         if outcome is QuarantineOutcome.MALICIOUS:
             self.repo.set_state(case, FlowState.DONE_MALICIOUS, "re-quarantined: malicious")
             return True

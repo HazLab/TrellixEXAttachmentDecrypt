@@ -35,7 +35,7 @@ class FakeEX:
         self.outcomes = list(outcomes or [])
         self.rescan_fail = False
 
-    async def quarantine_ids(self, queue_id):
+    async def rescan_target(self, queue_id, sender=None, subject=None):
         return queue_id, f"uuid-{queue_id}"
 
     async def rescan(self, target_id, passwords):
@@ -44,7 +44,7 @@ class FakeEX:
         self.rescanned.append((target_id, passwords))
         return {}
 
-    async def classify_resubmission(self, queue_id, recipient, rules):
+    async def classify_resubmission(self, queue_id, sender, subject, rules):
         return self.outcomes.pop(0) if self.outcomes else QuarantineOutcome.NOT_QUARANTINED
 
     async def aclose(self):

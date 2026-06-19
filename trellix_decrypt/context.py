@@ -12,7 +12,8 @@ from .mailer import SMTPMailer
 
 
 def _build_components(s):
-    ex = EXClient(s.ex_base_url, s.ex_username, s.ex_password, s.ex_verify_tls, s.ex_client_token)
+    ex = EXClient(s.ex_base_url, s.ex_username, s.ex_password, s.ex_verify_tls,
+                  s.ex_client_token, s.ex_timeout)
     mailer = SMTPMailer(s)
     tokens = TokenService(s.secret_key, s.token_ttl)
     rules = RiskwareRules(s.trigger_malware_names, s.trigger_alert_name)

@@ -7,9 +7,13 @@ at the top of this file — the single place to adjust for another appliance.
 
 from __future__ import annotations
 
+import logging
+
 import httpx
 
 from .domain import QuarantineOutcome, RiskwareRules, iter_alerts, parse_alert
+
+log = logging.getLogger(__name__)
 
 # --- Endpoints (Trellix WSAPI v2.0.0) ---------------------------------------
 API_VERSION = "v2.0.0"
@@ -17,6 +21,7 @@ _BASE = f"/wsapis/{API_VERSION}"
 EP_LOGIN = f"{_BASE}/auth/login"
 EP_LOGOUT = f"{_BASE}/auth/logout"
 EP_ALERTS = f"{_BASE}/alerts"
+EP_ALERT_DETAILS = f"{_BASE}/alerts/alert"  # + /<uuid>
 EP_QUARANTINE = f"{_BASE}/emailmgmt/quarantine"
 EP_QUARANTINE_RELEASE = f"{_BASE}/emailmgmt/quarantine/release"
 EP_QUARANTINE_DELETE = f"{_BASE}/emailmgmt/quarantine/delete"
@@ -38,10 +43,10 @@ class EXClient:
     """Async client handling the auth-token lifecycle and the operations we need."""
 
     def __init__(self, base_url: str, username: str, password: str,
-                 verify_tls: bool = True, client_token: str = ""):
+                 verify_tls: bool = True, client_token: str = "", timeout: float = 60.0):
         self._auth = httpx.BasicAuth(username, password)
         self._client_token = client_token
-        self._client = httpx.AsyncClient(base_url=base_url.rstrip("/"), verify=verify_tls, timeout=30.0)
+        self._client = httpx.AsyncClient(base_url=base_url.rstrip("/"), verify=verify_tls, timeout=timeout)
         self._token: str | None = None
 
     async def aclose(self):
@@ -79,27 +84,40 @@ class EXClient:
         resp = await self._request("GET", EP_ALERTS, params=params)
         return resp.json()
 
+    async def get_alert_by_uuid(self, uuid: str):
+        """Fetch a single alert's details by UUID (quarantine objects reference
+        alert_uuids; this is how we learn the malware type/maliciousness)."""
+        try:
+            resp = await self._request("GET", f"{EP_ALERT_DETAILS}/{uuid}")
+        except EXApiError:
+            return None
+        alerts = iter_alerts(resp.json())
+        return parse_alert(alerts[0]) if alerts else None
+
     # --- quarantine ---------------------------------------------------------
-    async def list_quarantine(self, **params) -> list[dict]:
+    async def list_quarantine(self, sender: str | None = None, subject: str | None = None, **params) -> list[dict]:
+        # The EX list filters are `from` and `subject`; narrow by the email when known.
+        if sender:
+            params["from"] = sender
+        if subject:
+            params["subject"] = subject
         resp = await self._request("GET", EP_QUARANTINE, params=params)
         return _as_quarantine_list(resp.json())
 
-    async def quarantine_ids(self, queue_id: str) -> tuple[str | None, str | None]:
-        """Return (queue_id, email_uuid) for the email currently quarantined under
-        `queue_id`. After a failed resubmission EX re-quarantines under the original
-        id plus a suffix it appends (e.g. `_RA`); we read that back (exact match
-        wins, otherwise the prefixed re-quarantine entry) rather than constructing it.
-        """
-        entries = await self.list_quarantine()
-        exact = [e for e in entries if _qid(e) == queue_id]
-        prefixed = [e for e in entries if _qid(e) != queue_id and _qid(e).startswith(queue_id)]
-        for entry in exact or prefixed:
+    async def rescan_target(self, queue_id: str, sender: str | None = None, subject: str | None = None):
+        """Return (queue_id, email_uuid) of the RESCANNABLE quarantine entry for this
+        email — i.e. one with an actual quarantined file (`quarantine_path` set).
+        `_RA` re-analysis records have a null path and are NOT rescannable."""
+        entries = await self.list_quarantine(sender=sender, subject=subject)
+        rescannable = [e for e in entries if e.get("quarantine_path")]
+        exact = [e for e in rescannable if _qid(e) == queue_id]
+        for entry in exact or rescannable:
             return _qid(entry), (entry.get("email_uuid") or entry.get("emailUuid"))
         return None, None
 
-    async def rescan(self, queue_id: str, passwords: list[str]) -> dict:
-        """Rescan a quarantined email by queue id, supplying decryption password(s)."""
-        url = f"{EP_QUARANTINE_RESCAN}/{queue_id}"
+    async def rescan(self, target_id: str, passwords: list[str]) -> dict:
+        """Rescan a quarantined email (by queue id or email_uuid), supplying password(s)."""
+        url = f"{EP_QUARANTINE_RESCAN}/{target_id}"
         payload = {"rescan_properties": {"pwd_list": passwords}}
         resp = await self._request("POST", url, json=payload, headers={"Content-Type": "application/json"})
         return resp.json() if resp.content else {}
@@ -113,25 +131,30 @@ class EXClient:
         return resp.json() if resp.content else {}
 
     # --- recheck classification --------------------------------------------
-    async def classify_resubmission(self, queue_id: str, recipient: str, rules: RiskwareRules) -> QuarantineOutcome:
-        """Classify a resubmitted email by reading EX state for the re-quarantine.
+    async def classify_resubmission(self, queue_id: str, sender: str, subject: str,
+                                    rules: RiskwareRules) -> QuarantineOutcome:
+        """Classify a resubmitted email by reading EX state.
 
-        EX re-quarantines a failed resubmission under the original queue id plus a
-        suffix it appends (e.g. `_RA`). We detect it in the quarantine list by
-        prefix (never fabricating the suffix), then read the reason from alerts:
-          not re-quarantined         -> NOT_QUARANTINED (delivered / clean)
-          MALWARE_OBJECT / malicious -> MALICIOUS (stop)
-          still a riskware trigger   -> FAILED_EXTRACTION (wrong password, retry)
+        EX re-quarantines a failed resubmission under the original queue id + a
+        suffix (e.g. `_RA`). We find that re-analysis record in the quarantine list
+        (matched by from/subject) and read its reason from the referenced alert
+        (quarantine objects themselves carry no malware details, only alert_uuids):
+          no re-analysis record      -> NOT_QUARANTINED (delivered / clean)
+          alert is MALWARE/malicious -> MALICIOUS (stop)
+          alert still riskware       -> FAILED_EXTRACTION (wrong password, retry)
         """
-        requarantined = [e for e in await self.list_quarantine()
-                         if _qid(e) != queue_id and _qid(e).startswith(queue_id)]
-        if not requarantined:
+        entries = await self.list_quarantine(sender=sender, subject=subject)
+        redetections = [e for e in entries if _qid(e) != queue_id and _qid(e).startswith(queue_id)]
+        if not redetections:
             return QuarantineOutcome.NOT_QUARANTINED
 
-        events = [parse_alert(a) for a in iter_alerts(await self.get_alerts(recipient_email=recipient))]
-        redetections = [e for e in events if e.queue_id and e.queue_id != queue_id and e.queue_id.startswith(queue_id)]
-        if any(e.malicious or (e.alert_name or "").upper() == "MALWARE_OBJECT" for e in redetections):
-            return QuarantineOutcome.MALICIOUS
+        for entry in redetections:
+            for uuid in entry.get("alert_uuids") or []:
+                alert = await self.get_alert_by_uuid(uuid)
+                if alert is None:
+                    continue
+                if alert.malicious or (alert.alert_name or "").upper() == "MALWARE_OBJECT":
+                    return QuarantineOutcome.MALICIOUS
         return QuarantineOutcome.FAILED_EXTRACTION
 
 

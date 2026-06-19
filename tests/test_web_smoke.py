@@ -5,25 +5,21 @@ from __future__ import annotations
 import pytest
 from starlette.testclient import TestClient
 
-from trellix_decrypt.domain import FlowEngine, FlowState, RiskwareRules, TokenService
-from trellix_decrypt.storage import CaseRepository, build_session_factory
+from trellix_decrypt.domain import FlowState
 from trellix_decrypt.web import create_app
 
-from .conftest import TRIGGER_MALWARE_NAME, FakeEX, FakeMailer, FakeScheduler, make_settings
+from .conftest import TRIGGER_MALWARE_NAME, make_context
 
 
 @pytest.fixture
-def app_engine():
-    settings = make_settings()
-    repo = CaseRepository(build_session_factory(settings.db_url))
-    engine = FlowEngine(repo, FakeEX(), FakeMailer(), TokenService(settings.secret_key, settings.token_ttl),
-                        RiskwareRules(settings.trigger_malware_names, settings.trigger_alert_name), settings, FakeScheduler())
-    engine.scheduler.bind(engine)
-    return create_app(engine, settings), engine, settings
+def app_ctx():
+    ctx = make_context()
+    return create_app(ctx), ctx
 
 
-def test_full_webhook_to_resubmit(app_engine):
-    app, engine, settings = app_engine
+def test_full_webhook_to_resubmit(app_ctx):
+    app, ctx = app_ctx
+    engine, settings = ctx.engine, ctx.env
     with TestClient(app) as client:
         # 1. Bad secret rejected.
         assert client.post("/webhook/ex-alert", json={}).status_code == 401
@@ -51,6 +47,6 @@ def test_full_webhook_to_resubmit(app_engine):
         # 4. Replaying the link is rejected.
         assert client.post(f"/p/{token}", data={"password": "secret"}).status_code == 400
 
-        case = engine.repo.get_case(token and engine.tokens.verify(token))
+        case = engine.repo.get_case(engine.tokens.verify(token))
         assert case.state == FlowState.RESUBMITTED
         assert engine.scheduler.scheduled == [case.id]

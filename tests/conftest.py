@@ -5,7 +5,9 @@ from __future__ import annotations
 import pytest
 
 from trellix_decrypt.config import Settings
+from trellix_decrypt.context import AppContext
 from trellix_decrypt.domain import FlowEngine, QuarantineOutcome, RiskwareRules, TokenService
+from trellix_decrypt.settings_store import SettingsStore
 from trellix_decrypt.storage import CaseRepository, build_session_factory
 
 # Encrypted-attachment custom-policy malware name.
@@ -81,3 +83,17 @@ def engine(settings):
                      RiskwareRules(settings.trigger_malware_names, settings.trigger_alert_name), settings, scheduler)
     scheduler.bind(eng)
     return eng
+
+
+def make_context(ex=None, **setting_overrides):
+    """Build an AppContext wired with fakes, for web-layer tests."""
+    settings = make_settings(**setting_overrides)
+    session_factory = build_session_factory(settings.db_url)
+    repo = CaseRepository(session_factory)
+    store = SettingsStore(settings, session_factory)
+    scheduler = FakeScheduler()
+    engine = FlowEngine(repo, ex or FakeEX(), FakeMailer(),
+                        TokenService(settings.secret_key, settings.token_ttl),
+                        RiskwareRules(settings.trigger_malware_names, settings.trigger_alert_name),
+                        settings, scheduler)
+    return AppContext(settings, store, repo, scheduler, engine=engine)

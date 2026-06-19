@@ -49,8 +49,12 @@ A web UI may be layered on later — keep layers cleanly separable.
 ```
 trellix_decrypt/
   __main__.py     Entrypoint (python -m trellix_decrypt).
-  app.py          Composition root: build Settings, wire deps, start web+scheduler.
+  app.py          Composition root: build Settings + AppContext, return the app.
+  context.py      AppContext: owns the live FlowEngine; reload() re-wires the EX
+                  client/mailer/rules/tokens from current settings (no restart).
   config.py       Settings (pydantic-settings; env vars / real .env created by user).
+  settings_store.py  UI-editable config: env defaults + DB overrides, secrets
+                  encrypted (Fernet keyed by SECRET_KEY). effective_settings()/masked()/update().
   domain.py       AlertEvent, FlowState enum, RiskwareRules, one-time tokens,
                   FlowEngine (the state machine / orchestrator) + the pure alert
                   parser (parse_alert / iter_alerts). NO I/O.
@@ -62,12 +66,25 @@ trellix_decrypt/
   ingest.py       AlertSource base + EX-alert JSON parser + FastAPI webhook router.
   mailer.py       SMTPMailer + Jinja2 email rendering.
   storage.py      SQLAlchemy engine/session, ORM models (AttachmentCase carries the
-                  recipient; PasswordAttempt, EventLog), CaseRepository.
-  web.py          FastAPI app factory + password form routes + health.
-  recheck.py      Scheduler wrapper + recheck job (poll for {queue_id}_RA, classify).
-  templates/      Jinja2: password-request email + web form/result pages.
+                  recipient; PasswordAttempt, EventLog, Setting), CaseRepository
+                  (+ list_cases/case_detail read models).
+  web/            FastAPI package: server.py (app factory), auth.py (shared-password
+                  session), routes_password.py (public form), routes_dashboard.py
+                  (dashboard/settings/login pages), routes_api.py (auth JSON API).
+  recheck.py      Scheduler wrapper + recheck job (reads timing live from engine).
+  templates/      Jinja2: recipient email + form/result; base/dashboard/settings/login.
+  static/         style.css (light/dark), app.js (dashboard), settings.js.
 tests/            pytest; respx mocks the EX API.
 ```
+
+## Admin UI
+
+Auth-gated (shared `UI_PASSWORD`, signed session cookie) dashboard at `/`: live
+searchable case list + detail drawer (lifecycle stepper + EventLog timeline),
+dark/light. `/settings` edits EX/SMTP/trigger/retry config via `/api/settings`;
+saving persists to the `Setting` table (secrets encrypted) and calls
+`AppContext.reload()` to apply live. Public, ungated: `/p/<token>`, the webhook,
+`/healthz`.
 
 ## Flow states (`domain.py`)
 

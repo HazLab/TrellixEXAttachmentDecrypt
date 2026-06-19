@@ -10,11 +10,15 @@ from __future__ import annotations
 import base64
 import binascii
 import hmac
+import json
+import logging
 from abc import ABC, abstractmethod
 
 from fastapi import APIRouter, HTTPException, Request
 
 from .domain import iter_alerts, parse_alert
+
+log = logging.getLogger(__name__)
 
 
 class AlertSource(ABC):
@@ -62,13 +66,33 @@ def build_webhook_router(ctx) -> APIRouter:
                 raise HTTPException(status_code=403, detail="ip not allowed")
 
         payload = await request.json()
+        alerts = iter_alerts(payload)
+        rules = ctx.engine.rules
+        log.info("webhook: received %d alert(s)", len(alerts))
         handled = 0
-        for raw in iter_alerts(payload):
+        for raw in alerts:
             event = parse_alert(raw)
+            log.info("webhook: alert queue_id=%r recipient=%r name=%r malware=%r",
+                     event.queue_id, event.recipient, event.alert_name, event.malware_names)
             if not event.queue_id or not event.recipient:
+                log.warning("webhook: SKIPPED — missing queue_id/recipient. raw alert: %s",
+                            _dump(raw))
                 continue
             if await ctx.engine.handle_alert(event) is not None:
                 handled += 1
+                log.info("webhook: HANDLED queue_id=%s (case created/updated)", event.queue_id)
+            else:
+                log.info("webhook: IGNORED (no trigger match) — need alert name==%r AND a malware "
+                         "name in %r. raw alert: %s",
+                         rules._alert_name, sorted(rules._names), _dump(raw))
         return {"received": True, "handled": handled}
 
     return router
+
+
+def _dump(obj, limit: int = 4000) -> str:
+    try:
+        text = json.dumps(obj, default=str)
+    except (TypeError, ValueError):
+        text = repr(obj)
+    return text if len(text) <= limit else text[:limit] + "…(truncated)"

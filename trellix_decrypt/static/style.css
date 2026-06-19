@@ -39,7 +39,7 @@ a { color: var(--brand); text-decoration: none; }
   cursor: pointer; font-size: 15px; padding: 5px 9px; color: var(--text); }
 .icon-btn:hover { background: var(--border); }
 
-.content { max-width: 1180px; margin: 0 auto; padding: 24px; }
+.content { max-width: 1480px; margin: 0 auto; padding: 24px; }
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
 h1 { font-size: 22px; margin: 0 0 2px; }
 .muted { color: var(--muted); font-size: 13px; margin: 0; }
@@ -49,16 +49,19 @@ h1 { font-size: 22px; margin: 0 0 2px; }
 .search:focus { outline: 2px solid var(--brand); border-color: var(--brand); }
 
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); }
-.table-card { overflow-x: auto; }   /* scroll horizontally instead of clipping columns */
+.table-card { overflow-x: auto; }   /* only scrolls on very narrow viewports */
 
-table.cases { width: 100%; min-width: 940px; border-collapse: collapse; font-size: 13.5px; }
-table.cases th, table.cases td { padding: 11px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+table.cases { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+table.cases th, table.cases td { padding: 11px 14px; text-align: left; border-bottom: 1px solid var(--border);
+  white-space: nowrap; }   /* keep every value on one line */
 table.cases th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
 table.cases tbody tr { cursor: pointer; }
 table.cases tbody tr:hover { background: var(--surface-2); }
 table.cases tr:last-child td { border-bottom: none; }
 .num { text-align: right; }
-td.subject, td.attach { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Truncate long free-text columns with an ellipsis (full value on hover) so the
+   table fits without horizontal scroll or wrapping to two lines. */
+td.subject, td.attach, td.recipient, td.sender { max-width: 230px; overflow: hidden; text-overflow: ellipsis; }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; color: var(--muted); }
 .empty { text-align: center; color: var(--muted); padding: 28px; }
 

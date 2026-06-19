@@ -52,6 +52,7 @@ class SMTPMailer:
                 username=self._s.smtp_username or None,
                 password=self._s.smtp_password or None,
                 start_tls=self._s.smtp_starttls,
+                local_hostname=self._s.smtp_helo_hostname or None,
             )
         except SMTPException as exc:
             # Surface the server's actual response so "recipient refused" vs

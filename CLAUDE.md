@@ -98,10 +98,13 @@ and `BOUNCED` (accepted then DSN'd back — detected by `bounce.py`, resendable)
 
 ## Security
 
-- Passwords are used immediately for resubmission and **never stored in
-  plaintext**; `PasswordAttempt` keeps only a hash (dedupes wrong tries + counts).
-- One-time tokens (`secrets`/`itsdangerous`): single-use, TTL-expiring, stored
-  hashed.
+- The attachment password is held **encrypted at rest** (Fernet via `SECRET_KEY`,
+  `AttachmentCase.pwd_enc`) only until the EX rescan succeeds, then purged — this
+  is what lets the rescan auto-retry without re-asking the recipient. Never stored
+  in plaintext; `PasswordAttempt` keeps a hash for audit. Changing `SECRET_KEY`
+  makes any held password (and stored settings secrets) unreadable.
+- One-time links: signed (`itsdangerous`), TTL-expiring; opening an expired link
+  auto-reissues a fresh one. Single use is enforced by case state, not the token.
 - Webhook requires HTTP Basic auth (EX's notification creds) and/or a source-IP
   allowlist — at least one must be configured or it rejects. The password
   form is rate-limited. HTTPS is expected to be terminated by a reverse proxy.

@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     # it "email_uuid"; some appliances accept the queue id. Flip if rescan returns
     # an authorization/EMLMGR_RESCAN error despite valid permissions.
     ex_rescan_id_field: str = "queue_id"  # "queue_id" | "email_uuid"
+    ex_timeout: int = 60  # HTTP timeout (s) for EX API calls — EX can be slow
 
     # An alert triggers the flow only when its top-level "name" equals
     # trigger_alert_name AND one of its malware names exactly equals one of

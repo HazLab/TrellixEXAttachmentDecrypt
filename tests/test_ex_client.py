@@ -34,24 +34,33 @@ def _alert(queue_id, name, malware, malicious="no"):
 
 
 @respx.mock
-async def test_quarantine_ids_and_rescan():
+async def test_rescan_target_picks_rescannable_entry_not_RA():
     router = respx.mock
     _mock_login(router)
-    # On a retry the email is re-quarantined under the original id + suffix.
+    # Both the rescannable original (has quarantine_path) and the _RA re-analysis
+    # record (null path) are present; only the original is rescannable.
     router.get(BASE + ex.EP_QUARANTINE).mock(return_value=httpx.Response(200, json=[
-        {"email_uuid": "uuid-xyz", "queue_id": "Q1_RA", "from": "x@y.test", "subject": "s"},
+        {"email_uuid": "uuid-RA", "queue_id": "Q1_RA", "quarantine_path": None},
+        {"email_uuid": "uuid-orig", "queue_id": "Q1", "quarantine_path": "/data/.../Q1"},
     ]))
     rescan = router.post(url__regex=rf"{BASE}{ex.EP_QUARANTINE_RESCAN}/.*").mock(
         return_value=httpx.Response(200, json={"ok": True}))
 
     client = _client()
-    assert await client.quarantine_ids("Q1") == ("Q1_RA", "uuid-xyz")  # reads suffix + email_uuid
+    assert await client.rescan_target("Q1", "s@x", "subj") == ("Q1", "uuid-orig")  # not the _RA
+    await client.rescan("Q1", ["pw1"])
+    assert rescan.calls.last.request.url.path.endswith("/rescan/Q1")
+    await client.aclose()
 
-    await client.rescan("Q1_RA", ["pw1", "pw2"])
-    sent = rescan.calls.last.request
-    assert sent.url.path.endswith("/rescan/Q1_RA")
-    import json
-    assert json.loads(sent.content) == {"rescan_properties": {"pwd_list": ["pw1", "pw2"]}}
+
+@respx.mock
+async def test_rescan_target_none_when_only_RA():
+    router = respx.mock
+    _mock_login(router)
+    router.get(BASE + ex.EP_QUARANTINE).mock(return_value=httpx.Response(200, json=[
+        {"email_uuid": "uuid-RA", "queue_id": "Q1_RA", "quarantine_path": None}]))
+    client = _client()
+    assert await client.rescan_target("Q1", "s@x", "subj") == (None, None)  # nothing rescannable
     await client.aclose()
 
 
@@ -59,37 +68,38 @@ async def test_quarantine_ids_and_rescan():
 async def test_classify_not_quarantined():
     router = respx.mock
     _mock_login(router)
-    # Quarantine has only the original (no _RA re-quarantine) -> delivered/clean.
+    # Only the original remains (no _RA re-analysis record) -> delivered/clean.
     router.get(BASE + ex.EP_QUARANTINE).mock(return_value=httpx.Response(200, json=[
-        {"email_uuid": "u", "queue_id": "Q1"}]))
+        {"email_uuid": "u", "queue_id": "Q1", "quarantine_path": "/p"}]))
     client = _client()
-    assert await client.classify_resubmission("Q1", RECIPIENT, RULES) is QuarantineOutcome.NOT_QUARANTINED
+    assert await client.classify_resubmission("Q1", "s@x", "subj", RULES) is QuarantineOutcome.NOT_QUARANTINED
     await client.aclose()
 
 
 @respx.mock
-async def test_classify_failed_extraction():
+async def test_classify_failed_extraction_via_alert_uuid():
     router = respx.mock
     _mock_login(router)
+    # _RA re-analysis record present; its alert is still a riskware trigger.
     router.get(BASE + ex.EP_QUARANTINE).mock(return_value=httpx.Response(200, json=[
-        {"email_uuid": "u", "queue_id": "Q1_RA"}]))  # re-quarantined (EX appended _RA)
-    router.get(BASE + ex.EP_ALERTS).mock(return_value=httpx.Response(200, json={"alert": [
+        {"queue_id": "Q1_RA", "quarantine_path": None, "alert_uuids": ["a-1"]}]))
+    router.get(BASE + ex.EP_ALERT_DETAILS + "/a-1").mock(return_value=httpx.Response(200, json={"alert": [
         _alert("Q1_RA", "RISKWARE_OBJECT", TRIGGER_MALWARE_NAME)]}))
     client = _client()
-    assert await client.classify_resubmission("Q1", RECIPIENT, RULES) is QuarantineOutcome.FAILED_EXTRACTION
+    assert await client.classify_resubmission("Q1", "s@x", "subj", RULES) is QuarantineOutcome.FAILED_EXTRACTION
     await client.aclose()
 
 
 @respx.mock
-async def test_classify_malicious():
+async def test_classify_malicious_via_alert_uuid():
     router = respx.mock
     _mock_login(router)
     router.get(BASE + ex.EP_QUARANTINE).mock(return_value=httpx.Response(200, json=[
-        {"email_uuid": "u", "queue_id": "Q1_RA"}]))
-    router.get(BASE + ex.EP_ALERTS).mock(return_value=httpx.Response(200, json={"alert": [
+        {"queue_id": "Q1_RA", "quarantine_path": None, "alert_uuids": ["a-2"]}]))
+    router.get(BASE + ex.EP_ALERT_DETAILS + "/a-2").mock(return_value=httpx.Response(200, json={"alert": [
         _alert("Q1_RA", "MALWARE_OBJECT", "FE_Backdoor_Go_Sandcat_1", malicious="yes")]}))
     client = _client()
-    assert await client.classify_resubmission("Q1", RECIPIENT, RULES) is QuarantineOutcome.MALICIOUS
+    assert await client.classify_resubmission("Q1", "s@x", "subj", RULES) is QuarantineOutcome.MALICIOUS
     await client.aclose()
 
 

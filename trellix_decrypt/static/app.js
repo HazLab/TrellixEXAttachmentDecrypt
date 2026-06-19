@@ -93,8 +93,10 @@ async function openDrawer(id) {
       <dt>Email attempts</dt><dd>${c.notify_attempts || 0}</dd>
       <dt>Created</dt><dd class="mono">${esc(fmtTime(c.created_at))}</dd>
     </dl>
-    ${["notify_failed", "awaiting_password", "bounced", "resubmit_failed"].includes(c.state)
+    ${["notify_failed", "awaiting_password", "bounced"].includes(c.state)
       ? `<button id="resend-btn" class="btn" data-id="${esc(c.id)}">Resend email</button>` : ""}
+    ${c.state === "resubmit_failed"
+      ? `<button id="rescan-btn" class="btn" data-id="${esc(c.id)}">Retry rescan</button>` : ""}
     <h3 style="font-size:14px;margin:18px 0 0;">Timeline</h3>
     <ul class="timeline">${(c.events || []).map((e) => `
       <li><div class="t-state">${esc((e.state || "").replace(/_/g, " "))}</div>
@@ -106,6 +108,12 @@ async function openDrawer(id) {
     resend.disabled = true; resend.textContent = "Sending…";
     try { await post("/api/cases/" + encodeURIComponent(id) + "/resend"); await openDrawer(id); refresh(); }
     catch (e) { resend.disabled = false; resend.textContent = "Resend failed — try again"; }
+  });
+  const rescan = document.getElementById("rescan-btn");
+  if (rescan) rescan.addEventListener("click", async () => {
+    rescan.disabled = true; rescan.textContent = "Rescanning…";
+    try { await post("/api/cases/" + encodeURIComponent(id) + "/rescan"); await openDrawer(id); refresh(); }
+    catch (e) { rescan.disabled = false; rescan.textContent = "Rescan failed — try again"; }
   });
   $("drawer").hidden = false;
 }

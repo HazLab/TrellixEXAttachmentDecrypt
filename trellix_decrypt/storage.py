@@ -43,6 +43,8 @@ class AttachmentCase(Base):
     state: Mapped[FlowState] = mapped_column(SAEnum(FlowState), default=FlowState.RECEIVED)
     attempts: Mapped[int] = mapped_column(default=0)
     notify_attempts: Mapped[int] = mapped_column(default=0)
+    resubmit_attempts: Mapped[int] = mapped_column(default=0)
+    pwd_enc: Mapped[str | None] = mapped_column(default=None)  # encrypted; held only until resubmitted
     created_at: Mapped[datetime] = mapped_column(default=_now)
     updated_at: Mapped[datetime] = mapped_column(default=_now, onupdate=_now)
 
@@ -155,6 +157,36 @@ class CaseRepository:
             return list(s.scalars(select(AttachmentCase.id).where(
                 AttachmentCase.state == FlowState.NOTIFY_FAILED,
                 AttachmentCase.notify_attempts < max_attempts)))
+
+    def store_password(self, case: AttachmentCase, pwd_enc: str) -> None:
+        with self._sf() as s:
+            db_case = s.get(AttachmentCase, case.id)
+            db_case.pwd_enc = pwd_enc
+            s.commit()
+            case.pwd_enc = pwd_enc
+
+    def clear_password(self, case: AttachmentCase) -> None:
+        with self._sf() as s:
+            db_case = s.get(AttachmentCase, case.id)
+            db_case.pwd_enc = None
+            s.commit()
+            case.pwd_enc = None
+
+    def increment_resubmit_attempts(self, case: AttachmentCase) -> None:
+        with self._sf() as s:
+            db_case = s.get(AttachmentCase, case.id)
+            db_case.resubmit_attempts += 1
+            s.commit()
+            case.resubmit_attempts = db_case.resubmit_attempts
+
+    def list_resubmit_pending_ids(self, max_attempts: int) -> list[str]:
+        """Cases awaiting/failed EX resubmission that still hold the password and
+        are under the retry cap."""
+        with self._sf() as s:
+            return list(s.scalars(select(AttachmentCase.id).where(
+                AttachmentCase.state.in_((FlowState.PASSWORD_SUBMITTED, FlowState.RESUBMIT_FAILED)),
+                AttachmentCase.pwd_enc.is_not(None),
+                AttachmentCase.resubmit_attempts < max_attempts)))
 
     def find_open_case_by_recipient(self, recipient: str) -> AttachmentCase | None:
         """Most-recent non-terminal case for a recipient (bounce-correlation fallback)."""

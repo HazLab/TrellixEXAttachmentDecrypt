@@ -73,8 +73,11 @@ class FakeScheduler:
     def schedule_recheck(self, case_id):
         self.scheduled.append(case_id)
 
-    def schedule_resubmit(self, case_id, password):
-        self.resubmits.append((case_id, password))
+    def schedule_resubmit(self, case_id):
+        self.resubmits.append(case_id)
+
+    def start_resubmit_retrier(self):
+        pass
 
     def start_notify_retrier(self):
         pass

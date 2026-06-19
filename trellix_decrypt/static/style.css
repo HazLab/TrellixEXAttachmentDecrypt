@@ -17,7 +17,6 @@
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }  /* keep the hidden attr working over display:flex etc. */
-[hidden] { display: none !important; }  /* keep the hidden attr working over display:flex etc. */
 body {
   margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background: var(--bg); color: var(--text); line-height: 1.5;

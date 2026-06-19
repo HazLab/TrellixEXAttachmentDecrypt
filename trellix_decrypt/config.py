@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from: str = "attachment-help@example.com"
     smtp_starttls: bool = True
+    # HELO/EHLO name announced to the server. Some servers require a FQDN here
+    # and reject the OS hostname (504 5.5.2). Set to a fully-qualified name.
+    smtp_helo_hostname: str = ""
 
     # --- Web / links ---
     public_base_url: str = "http://localhost:8080"

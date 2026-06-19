@@ -34,9 +34,11 @@ def _format_smtp_error(exc: Exception) -> str:
         return "recipient(s) refused by mail server — " + "; ".join(parts)
     code = getattr(exc, "code", None)
     message = getattr(exc, "message", None)
-    if code or message:
-        return f"SMTP {code or ''} {message or ''}".strip()
-    return f"{type(exc).__name__}: {exc}"
+    text = f"SMTP {code or ''} {message or ''}".strip() if (code or message) else f"{type(exc).__name__}: {exc}"
+    low = text.lower()
+    if "auth" in low and "not supported" in low:
+        text += " — this relay offers no SMTP AUTH; clear SMTP_USERNAME to send unauthenticated"
+    return text
 
 
 class SMTPMailer:

@@ -6,7 +6,7 @@ import pytest
 
 from trellix_decrypt.config import Settings
 from trellix_decrypt.context import AppContext
-from trellix_decrypt.domain import FlowEngine, QuarantineOutcome, RiskwareRules, TokenService
+from trellix_decrypt.domain import FlowEngine, RiskwareRules, TokenService
 from trellix_decrypt.settings_store import SettingsStore
 from trellix_decrypt.storage import CaseRepository, build_session_factory
 
@@ -30,22 +30,27 @@ def make_settings(**overrides) -> Settings:
 
 
 class FakeEX:
-    def __init__(self, outcomes=None):
+    def __init__(self, ra_quarantined=False):
         self.rescanned = []
-        self.outcomes = list(outcomes or [])
         self.rescan_fail = False
+        self.rescan_not_found = False  # simulate EX "email not quarantined" (400)
+        self.ra_quarantined = ra_quarantined  # backstop: an _RA entry still in quarantine
 
     async def rescan_target(self, queue_id, sender=None, subject=None):
         return queue_id, f"uuid-{queue_id}"
 
     async def rescan(self, target_id, passwords):
+        if self.rescan_not_found:
+            exc = RuntimeError("EX 400: Could not find quarantined email")
+            exc.not_found = True
+            raise exc
         if self.rescan_fail:
             raise RuntimeError("EX 400: insufficient authorization")
         self.rescanned.append((target_id, passwords))
         return {}
 
-    async def classify_resubmission(self, queue_id, sender, subject, rules):
-        return self.outcomes.pop(0) if self.outcomes else QuarantineOutcome.NOT_QUARANTINED
+    async def has_resubmission_quarantine(self, queue_id, sender=None, subject=None):
+        return self.ra_quarantined
 
     async def aclose(self):
         pass

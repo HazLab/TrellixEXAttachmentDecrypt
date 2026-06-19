@@ -23,13 +23,26 @@ Pipeline:
 4. We call the EX **rescan** API (`POST /emailmgmt/quarantine/rescan/<queue_id>`
    with `{"rescan_properties": {"pwd_list": [...]}}`) to re-analyze with the
    password. (The doc names the path param `email_uuid`, but it is the queue id.)
-5. EX re-detects a failed resubmission under the **same queue id + `_RA`
-   suffix**. A background recheck queries the **alerts API** for `<queueId>_RA`
-   (`ex_client.classify_resubmission`) and decides:
+5. EX re-analyzes the resubmission and re-detects it under the **same queue id +
+   `_RA` suffix**, then **pushes** that re-detection to our webhook (the same HTTP
+   notification consumer as the original). We classify it straight from the pushed
+   alert in `domain.FlowEngine._classify_resubmission` — **no API lookup**: the
+   `/alerts` query returns no `uuid` to join the quarantine record's `alert_uuids`
+   on, and there is no GET-by-uuid we can rely on, so pulling alert details is
+   unworkable. From the pushed alert:
+   - `MALWARE_OBJECT` / `malicious: yes` → decrypted & malicious → stop
+     (`DONE_MALICIOUS`); this is final and always wins (ingest sorts malicious
+     alerts first within a single push so they beat a same-batch riskware retry);
    - still a riskware trigger (`RISKWARE_OBJECT` + `CustomPolicy.MVX.<ext>`) →
      wrong password → email the user again, up to `max_password_attempts`
-     (default 3, cap 5);
-   - a `MALWARE_OBJECT` / `malicious: yes` alert, or no `_RA` alert at all → stop.
+     (default 3, cap 5).
+   The `_RA` alert is **correlated** to the original case by stripping the `_RA`
+   suffix(es) and matching the queue id (`repo.find_case_by_queue_id`) — it is
+   never added as a new case. `recheck` is now only a **fail-closed timeout
+   backstop** (`ex_client.has_resubmission_quarantine`): if no verdict was pushed,
+   it concludes `DONE_CLEAN` *only* when the email is genuinely no longer
+   (re-)quarantined; if it is still re-quarantined it treats it as a wrong password
+   rather than release a held email.
 6. Every recipient / email / attempt / state transition is tracked.
 
 A web UI may be layered on later — keep layers cleanly separable.
@@ -60,8 +73,10 @@ trellix_decrypt/
                   parser (parse_alert / iter_alerts). NO I/O.
   ex_client.py    EXClient: auth (X-FeApi-Token + optional X-FeClient-Token, auto
                   re-auth), get_alerts, quarantine list/release/delete,
-                  current_queue_id, rescan(queue_id, passwords),
-                  classify_resubmission. Verified against docs/*.pdf (Release 2025.1).
+                  rescan_target (picks the path-bearing rescannable entry),
+                  rescan(target_id, passwords), has_resubmission_quarantine (recheck
+                  backstop). EXApiError carries status_code/body (+ .not_found).
+                  Verified against docs/*.pdf (Release 2025.1).
                   *** ALL wsapis paths live at the top — the single place to adjust. ***
   ingest.py       AlertSource base + EX-alert JSON parser + FastAPI webhook router.
   mailer.py       SMTPMailer + Jinja2 email rendering.
@@ -132,9 +147,14 @@ pytest                         # unit + respx-mocked EX client tests
 ## Caveats
 
 - Endpoints/auth/rescan are verified against `docs/*.pdf` (Trellix API Reference
-  Release 2025.1). Two appliance-specific points to confirm on a live box:
+  Release 2025.1). Appliance-specific points to confirm on a live box:
   - The re-quarantine of a resubmitted email appears under the original
-    `queue_id` plus a suffix EX appends (e.g. `_RA`). We **read** that back from
-    quarantine/alerts by prefix-match and never construct the suffix ourselves
-    (`ex_client.classify_resubmission`).
+    `queue_id` plus a suffix EX appends (e.g. `_RA`). We only ever **read** that
+    by prefix-match and never construct the suffix ourselves (correlation in
+    `domain.handle_alert`; backstop in `ex_client.has_resubmission_quarantine`).
+  - Classification relies on EX **pushing** the `_RA` re-detection to the webhook
+    (confirmed for both riskware and malware on the lab box). If a deployment's
+    notification policy does NOT push malware re-detections, the
+    `has_resubmission_quarantine` backstop still fails closed (keeps the mail
+    quarantined / re-asks) but won't label it `DONE_MALICIOUS`.
 ```

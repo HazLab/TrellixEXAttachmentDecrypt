@@ -21,7 +21,11 @@ def build_context(settings: Settings) -> AppContext:
 
 
 def build(settings: Settings | None = None):
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     settings = settings or Settings()
+    logging.basicConfig(level=getattr(logging, settings.log_level.upper(), logging.INFO),
+                        format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     ctx = build_context(settings)
+    eff = ctx.engine.settings
+    logging.getLogger(__name__).info(
+        "trigger config: alert_name=%r malware_names=%r", eff.trigger_alert_name, eff.trigger_malware_names)
     return create_app(ctx), settings

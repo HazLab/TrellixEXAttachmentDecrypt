@@ -61,6 +61,9 @@ class Settings(BaseSettings):
     # --- Storage ---
     db_url: str = "sqlite:///trellix_decrypt.sqlite3"
 
+    # --- Logging ---
+    log_level: str = "INFO"  # DEBUG for verbose troubleshooting
+
     @field_validator("trigger_malware_names", "webhook_ip_allowlist", mode="before")
     @classmethod
     def _split_csv(cls, v):

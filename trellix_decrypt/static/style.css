@@ -49,9 +49,9 @@ h1 { font-size: 22px; margin: 0 0 2px; }
 .search:focus { outline: 2px solid var(--brand); border-color: var(--brand); }
 
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); }
-.table-card { overflow: hidden; }
+.table-card { overflow-x: auto; }   /* scroll horizontally instead of clipping columns */
 
-table.cases { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+table.cases { width: 100%; min-width: 940px; border-collapse: collapse; font-size: 13.5px; }
 table.cases th, table.cases td { padding: 11px 14px; text-align: left; border-bottom: 1px solid var(--border); }
 table.cases th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
 table.cases tbody tr { cursor: pointer; }

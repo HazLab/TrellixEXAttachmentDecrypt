@@ -6,9 +6,22 @@ from email.message import EmailMessage
 from pathlib import Path
 
 import aiosmtplib
+from aiosmtplib.errors import SMTPException, SMTPRecipientsRefused
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
+
+
+def _format_smtp_error(exc: Exception) -> str:
+    """Turn an aiosmtplib error into the server's actual reason (code + message)."""
+    if isinstance(exc, SMTPRecipientsRefused):
+        parts = [f"{addr}: {resp.code} {resp.message}".strip() for addr, resp in exc.recipients.items()]
+        return "recipient(s) refused by mail server — " + "; ".join(parts)
+    code = getattr(exc, "code", None)
+    message = getattr(exc, "message", None)
+    if code or message:
+        return f"SMTP {code or ''} {message or ''}".strip()
+    return f"{type(exc).__name__}: {exc}"
 
 
 class SMTPMailer:
@@ -31,11 +44,16 @@ class SMTPMailer:
         msg.set_content(text)
         msg.add_alternative(html, subtype="html")
 
-        await aiosmtplib.send(
-            msg,
-            hostname=self._s.smtp_host,
-            port=self._s.smtp_port,
-            username=self._s.smtp_username or None,
-            password=self._s.smtp_password or None,
-            start_tls=self._s.smtp_starttls,
-        )
+        try:
+            await aiosmtplib.send(
+                msg,
+                hostname=self._s.smtp_host,
+                port=self._s.smtp_port,
+                username=self._s.smtp_username or None,
+                password=self._s.smtp_password or None,
+                start_tls=self._s.smtp_starttls,
+            )
+        except SMTPException as exc:
+            # Surface the server's actual response so "recipient refused" vs
+            # "relay denied" / "auth required" is distinguishable.
+            raise RuntimeError(_format_smtp_error(exc)) from exc

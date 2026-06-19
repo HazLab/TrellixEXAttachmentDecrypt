@@ -20,8 +20,9 @@ def app_ctx():
 def test_full_webhook_to_resubmit(app_ctx):
     app, ctx = app_ctx
     engine, settings = ctx.engine, ctx.env
+    auth = (settings.webhook_username, settings.webhook_password)
     with TestClient(app) as client:
-        # 1. Bad secret rejected.
+        # 1. Missing/!bad credentials rejected.
         assert client.post("/webhook/ex-alert", json={}).status_code == 401
 
         # 2. Trigger alert (real EX envelope) -> email sent, case awaiting.
@@ -31,7 +32,7 @@ def test_full_webhook_to_resubmit(app_ctx):
             "smtpMessage": {"queueId": "Q-77", "subject": "Invoice"},
             "explanation": {"malwareDetected": {"malware": [{"name": TRIGGER_MALWARE_NAME}]}},
         }]}
-        resp = client.post("/webhook/ex-alert", json=payload, headers={"X-Webhook-Secret": settings.webhook_secret})
+        resp = client.post("/webhook/ex-alert", json=payload, auth=auth)
         assert resp.status_code == 200 and resp.json()["handled"] == 1
         assert len(engine.mailer.sent) == 1
 

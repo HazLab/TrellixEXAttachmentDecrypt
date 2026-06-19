@@ -98,7 +98,8 @@ Wrong password loops `RECHECKING → AWAITING_PASSWORD` with `attempt += 1`.
   plaintext**; `PasswordAttempt` keeps only a hash (dedupes wrong tries + counts).
 - One-time tokens (`secrets`/`itsdangerous`): single-use, TTL-expiring, stored
   hashed.
-- Webhook requires a shared secret (+ optional source-IP allowlist); the password
+- Webhook requires HTTP Basic auth (EX's notification creds) and/or a source-IP
+  allowlist — at least one must be configured or it rejects. The password
   form is rate-limited. HTTPS is expected to be terminated by a reverse proxy.
 - `.claude/settings.json` denies reading/writing `.env*` and `*.sqlite3` — never
   commit secrets or the DB.
@@ -109,7 +110,7 @@ Read from environment variables (and an optional `.env` the operator creates;
 Claude must not write `.env*`). See `README.md` for the full list. Key groups:
 EX (`EX_BASE_URL`, `EX_USERNAME`, `EX_PASSWORD`, `EX_VERIFY_TLS`),
 `TRIGGER_ALERT_NAME` + `TRIGGER_MALWARE_NAMES`, SMTP (`SMTP_*`), web (`PUBLIC_BASE_URL`, `SECRET_KEY`,
-`TOKEN_TTL`), webhook (`WEBHOOK_SECRET`, `WEBHOOK_IP_ALLOWLIST`),
+`TOKEN_TTL`), webhook (`WEBHOOK_USERNAME`/`WEBHOOK_PASSWORD`, `WEBHOOK_IP_ALLOWLIST`),
 flow (`MAX_PASSWORD_ATTEMPTS`, `RECHECK_DELAY`, `RECHECK_INTERVAL`,
 `RECHECK_MAX_ATTEMPTS`), `DB_URL`.
 

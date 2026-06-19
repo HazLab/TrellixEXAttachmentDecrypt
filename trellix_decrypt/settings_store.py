@@ -23,9 +23,9 @@ EDITABLE = (
     "smtp_host", "smtp_port", "smtp_username", "smtp_password", "smtp_from", "smtp_starttls",
     "trigger_alert_name", "trigger_malware_names",
     "max_password_attempts", "recheck_delay", "recheck_interval", "recheck_max_attempts",
-    "public_base_url", "webhook_secret", "token_ttl",
+    "public_base_url", "webhook_username", "webhook_password", "token_ttl",
 )
-SECRET_KEYS = frozenset({"ex_password", "smtp_password", "ex_client_token", "webhook_secret"})
+SECRET_KEYS = frozenset({"ex_password", "smtp_password", "ex_client_token", "webhook_password"})
 LIST_KEYS = frozenset({"trigger_malware_names"})
 
 

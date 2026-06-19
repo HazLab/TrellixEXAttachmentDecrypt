@@ -18,7 +18,7 @@ def make_settings(**overrides) -> Settings:
     base = dict(
         ex_base_url="https://ex.test", ex_username="u", ex_password="p",
         smtp_host="smtp.test", public_base_url="https://decrypt.test",
-        secret_key="test-secret", webhook_secret="hook-secret",
+        secret_key="test-secret", webhook_username="exuser", webhook_password="expass",
         trigger_alert_name="RISKWARE_OBJECT",
         trigger_malware_names=[TRIGGER_MALWARE_NAME],
         max_password_attempts=3,

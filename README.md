@@ -68,8 +68,10 @@ PUBLIC_BASE_URL=https://decrypt.example.com   # used to build the one-time link
 SECRET_KEY=change-me                          # signs tokens
 TOKEN_TTL=86400                               # seconds
 
-# Webhook auth
-WEBHOOK_SECRET=change-me
+# Webhook auth — EX posts alerts via HTTP Basic auth; set the same creds on the
+# EX HTTP notification consumer. Optionally also restrict by source IP.
+WEBHOOK_USERNAME=ex-webhook
+WEBHOOK_PASSWORD=change-me
 WEBHOOK_IP_ALLOWLIST=                          # optional, comma-separated
 
 # Flow tuning

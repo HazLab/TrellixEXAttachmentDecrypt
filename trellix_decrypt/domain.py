@@ -252,6 +252,12 @@ class FlowEngine:
             self.repo.set_state(case, FlowState.RESUBMIT_FAILED, "no rescannable quarantine entry found")
             return
         target = email_uuid if self.settings.ex_rescan_id_field == "email_uuid" else queue_id
+        # Diagnostic (no plaintext): lets us verify the exact bytes we hand EX match the
+        # password that works typed into the appliance. A len != stripped_len means a
+        # stray space/newline slipped in; compare sha8 with `printf %s 'pw' | sha256sum`.
+        fp = hashlib.sha256(password.encode()).hexdigest()[:8]
+        log.info("rescan case %s target=%s pwd(len=%d stripped_len=%d sha8=%s)",
+                 case.id, target, len(password), len(password.strip()), fp)
         try:
             await self.ex.rescan(target, [password])
         except Exception as exc:  # noqa: BLE001 — record + count for the retry cap, don't crash

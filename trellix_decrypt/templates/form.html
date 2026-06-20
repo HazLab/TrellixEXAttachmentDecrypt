@@ -9,10 +9,12 @@
     .card { background:#fff; padding:32px; border-radius:10px; box-shadow:0 2px 12px rgba(0,0,0,.08); width:360px; }
     h1 { font-size:18px; margin:0 0 8px; }
     p { color:#555; font-size:14px; }
-    input[type=password], input[type=text] { width:100%; padding:10px 40px 10px 10px; margin:12px 0; border:1px solid #ccc; border-radius:6px; box-sizing:border-box; }
+    input[type=password], input[type=text] { display:block; width:100%; padding:10px 40px 10px 10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box; }
     button.submit { width:100%; padding:11px; background:#1a73e8; color:#fff; border:0; border-radius:6px; font-size:15px; cursor:pointer; }
-    .pwd-wrap { position:relative; }
-    .reveal-btn { position:absolute; right:6px; top:50%; transform:translateY(-50%); background:none; border:0; padding:4px; cursor:pointer; font-size:15px; opacity:.65; }
+    /* wrap must be block so the absolute toggle centers on the input, not on the
+       inline line-box (which is what dropped the button below the field). */
+    .pwd-wrap { position:relative; display:block; margin:12px 0; }
+    .reveal-btn { position:absolute; right:6px; top:50%; transform:translateY(-50%); background:none; border:0; padding:4px; cursor:pointer; font-size:15px; line-height:1; opacity:.65; }
     .reveal-btn:hover { opacity:1; }
   </style>
 </head>

@@ -49,14 +49,20 @@ class SMTPMailer:
             autoescape=select_autoescape(["html", "j2"]),
         )
 
-    async def send_password_request(self, recipient: str, link: str, case, retry: bool = False) -> None:
+    async def send_password_request(self, recipients, link: str, case, retry: bool = False) -> None:
+        # Accept a single address or a list; one email carries every To recipient and
+        # the same one-time link. aiosmtplib delivers to each address in the To header.
+        if isinstance(recipients, str):
+            recipients = [recipients]
+        recipients = [r.strip() for r in recipients if r and r.strip()]
+        to_header = ", ".join(recipients)
         ctx = {"link": link, "case": case, "retry": retry}
         html = self._env.get_template("password_request.html.j2").render(**ctx)
         text = self._env.get_template("password_request.txt.j2").render(**ctx)
 
         msg = EmailMessage()
         msg["From"] = self._s.smtp_from
-        msg["To"] = recipient
+        msg["To"] = to_header
         msg["X-Case-Id"] = case.id  # lets the bounce monitor correlate a DSN back to this case
         msg["Subject"] = ("Reminder: " if retry else "") + "Password needed for your quarantined attachment"
         msg.set_content(text)
@@ -84,6 +90,6 @@ class SMTPMailer:
         # Success path: log the server's final response (often "250 ... queued as
         # <id>"), which is the handle to trace the message in the mail server logs.
         log.info("SMTP accepted message for %s via %s:%s — %s",
-                 recipient, self._s.smtp_host, self._s.smtp_port, response)
+                 to_header, self._s.smtp_host, self._s.smtp_port, response)
         if errors:
-            log.warning("SMTP reported per-recipient issues for %s: %s", recipient, errors)
+            log.warning("SMTP reported per-recipient issues for %s: %s", to_header, errors)

@@ -56,16 +56,21 @@ def _canon_name(value) -> str:
 
 @dataclasses.dataclass
 class AlertEvent:
-    """Normalized EX alert."""
+    """Normalized EX alert. One quarantined email can list several recipients."""
 
     queue_id: str
-    recipient: str
+    recipients: list[str] = dataclasses.field(default_factory=list)
     alert_name: str | None = None   # top-level alert "name", e.g. "RISKWARE_OBJECT"
     malicious: bool = False          # alert "malicious" == "yes"
     sender: str | None = None
     subject: str | None = None
     malware_names: list[str] = dataclasses.field(default_factory=list)
     raw: dict = dataclasses.field(default_factory=dict)
+
+    @property
+    def recipient(self) -> str:
+        """Primary recipient (first To); the full set is ``recipients``."""
+        return self.recipients[0] if self.recipients else ""
 
 
 class RiskwareRules:
@@ -359,8 +364,11 @@ class FlowEngine:
     async def _send_password_request(self, case, retry: bool = False) -> bool:
         token = self.tokens.mint(case.id)
         link = f"{self.settings.public_base_url.rstrip('/')}/p/{token}"
+        # One email lists all recipients (the case holds them comma-joined); every
+        # To recipient gets the same one-time link — whoever has the password submits.
+        recipients = split_addrs(case.recipient)
         try:
-            await self.mailer.send_password_request(case.recipient, link, case, retry=retry)
+            await self.mailer.send_password_request(recipients, link, case, retry=retry)
         except Exception as exc:  # noqa: BLE001 — record send failures instead of crashing
             log.exception("failed to email %s for case %s", case.recipient, case.id)
             self.repo.increment_notify_attempts(case)
@@ -409,6 +417,34 @@ def _text(value):
     return None if value in (None, "") else str(value)
 
 
+def split_addrs(value) -> list[str]:
+    """Split a recipients string ('a@x, b@x; c@x') into a de-duplicated list,
+    order preserved. Used to unpack the stored, comma-joined recipient column."""
+    out, seen = [], set()
+    for part in str(value or "").replace(";", ",").split(","):
+        addr = part.strip()
+        if addr and addr not in seen:
+            seen.add(addr)
+            out.append(addr)
+    return out
+
+
+def _text_list(value) -> list[str]:
+    """Normalize an EX recipient field to a list of addresses. Handles a scalar, a
+    {"value": ...} wrapper, a list of either, and a single string carrying several
+    comma/semicolon-separated addresses — covering both wire formats."""
+    items = value if isinstance(value, list) else [value]
+    out, seen = [], set()
+    for item in items:
+        if isinstance(item, dict):
+            item = item.get("value")
+        for addr in split_addrs(item):
+            if addr not in seen:
+                seen.add(addr)
+                out.append(addr)
+    return out
+
+
 def _is_yes(value) -> bool:
     return str(value or "").strip().lower() in ("yes", "true", "1")
 
@@ -442,10 +478,10 @@ def parse_alert(alert: dict) -> AlertEvent:
             alert.get("queue-id"), alert.get("queueId"), alert.get("queue_id"),
             _dig(alert, "smtp-message", "queue-id"), _dig(alert, "smtpMessage", "queueId"),
         )) or "",
-        recipient=_text(_first(
+        recipients=_text_list(_first(
             _dig(alert, "dst", "smtp-to"), _dig(alert, "dst", "smtpTo"),
             _dig(alert, "smtpMessage", "rcptTo"), alert.get("recipient"), alert.get("rcpt_to"),
-        )) or "",
+        )),
         alert_name=_text(_first(alert.get("name"), alert.get("alert_name"))),
         malicious=_is_yes(_text(alert.get("malicious"))),
         sender=_text(_first(

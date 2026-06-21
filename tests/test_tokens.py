@@ -22,7 +22,7 @@ async def test_expired_link_reissues_when_awaiting(engine):
     # Force an already-expired token service on the engine.
     engine.tokens = TokenService(engine.settings.secret_key, ttl=-1)
     case = engine.repo.get_or_create_case(AlertEvent(
-        queue_id="Q1", recipient="u@corp.test", alert_name="RISKWARE_OBJECT",
+        queue_id="Q1", recipients=["u@corp.test"], alert_name="RISKWARE_OBJECT",
         malware_names=["CustomPolicy.MVX.zip"]))
     engine.repo.set_state(case, FlowState.AWAITING_PASSWORD, "sent")
     token = engine.tokens.mint(case.id)
@@ -35,7 +35,7 @@ async def test_expired_link_reissues_when_awaiting(engine):
 async def test_expired_link_not_reissued_when_not_awaiting(engine):
     engine.tokens = TokenService(engine.settings.secret_key, ttl=-1)
     case = engine.repo.get_or_create_case(AlertEvent(
-        queue_id="Q2", recipient="u@corp.test", alert_name="RISKWARE_OBJECT",
+        queue_id="Q2", recipients=["u@corp.test"], alert_name="RISKWARE_OBJECT",
         malware_names=["CustomPolicy.MVX.zip"]))
     engine.repo.set_state(case, FlowState.DONE_CLEAN, "done")
     token = engine.tokens.mint(case.id)
@@ -45,7 +45,7 @@ async def test_expired_link_not_reissued_when_not_awaiting(engine):
 async def test_submission_tolerates_just_expired_token(engine):
     engine.tokens = TokenService(engine.settings.secret_key, ttl=-1)
     case = await engine.handle_alert(AlertEvent(
-        queue_id="Q3", recipient="u@corp.test", alert_name="RISKWARE_OBJECT",
+        queue_id="Q3", recipients=["u@corp.test"], alert_name="RISKWARE_OBJECT",
         malware_names=["CustomPolicy.MVX.zip"]))
     token = engine.tokens.mint(case.id)
     _, status = await engine.handle_password(token, "pw")  # token already expired

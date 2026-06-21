@@ -61,10 +61,10 @@ class FakeMailer:
         self.sent = []
         self.fail = False
 
-    async def send_password_request(self, recipient, link, case, retry=False):
+    async def send_password_request(self, recipients, link, case, retry=False):
         if self.fail:
             raise RuntimeError("smtp boom")
-        self.sent.append((recipient, link, retry))
+        self.sent.append((recipients, link, retry))
 
 
 class FakeScheduler:

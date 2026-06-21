@@ -103,8 +103,8 @@ class CaseRepository:
             case = s.scalar(select(AttachmentCase).where(AttachmentCase.queue_id == event.queue_id))
             if case is None:
                 case = AttachmentCase(
-                    queue_id=event.queue_id, recipient=event.recipient, sender=event.sender,
-                    subject=event.subject, alert_name=event.alert_name,
+                    queue_id=event.queue_id, recipient=", ".join(event.recipients),
+                    sender=event.sender, subject=event.subject, alert_name=event.alert_name,
                     malware_name=(event.malware_names[0] if event.malware_names else None),
                     state=FlowState.RECEIVED,
                 )
@@ -112,6 +112,13 @@ class CaseRepository:
                 s.flush()
                 s.add(EventLog(case_id=case.id, state=FlowState.RECEIVED, detail="alert received"))
                 s.commit()
+            else:
+                # Same email re-notified (e.g. one alert per recipient): merge any new
+                # To addresses so the one case holds the full recipient set.
+                merged = _merge_recipients(case.recipient, event.recipients)
+                if merged != case.recipient:
+                    case.recipient = merged
+                    s.commit()
             return case
 
     def get_case(self, case_id: str) -> AttachmentCase | None:
@@ -193,12 +200,18 @@ class CaseRepository:
                 AttachmentCase.resubmit_attempts < max_attempts)))
 
     def find_open_case_by_recipient(self, recipient: str) -> AttachmentCase | None:
-        """Most-recent non-terminal case for a recipient (bounce-correlation fallback)."""
+        """Most-recent non-terminal case that lists this recipient (bounce-correlation
+        fallback). A case may hold several recipients, so match by membership."""
+        addr = (recipient or "").strip().lower()
         with self._sf() as s:
-            return s.scalars(
+            rows = s.scalars(
                 select(AttachmentCase)
-                .where(AttachmentCase.recipient == recipient, AttachmentCase.state.not_in(TERMINAL))
-                .order_by(AttachmentCase.updated_at.desc())).first()
+                .where(AttachmentCase.state.not_in(TERMINAL))
+                .order_by(AttachmentCase.updated_at.desc()))
+            for case in rows:
+                if addr in [r.strip().lower() for r in (case.recipient or "").split(",")]:
+                    return case
+            return None
 
     # --- read models for the dashboard/API ---------------------------------
     def list_cases(self, limit: int = 300) -> list[dict]:
@@ -217,6 +230,16 @@ class CaseRepository:
                 for e in sorted(case.events, key=lambda e: e.created_at)
             ]
             return data
+
+
+def _merge_recipients(existing: str | None, new: list[str]) -> str:
+    """Union the stored comma-joined recipients with newly-seen ones, order preserved."""
+    out, seen = [], set()
+    for addr in [r.strip() for r in (existing or "").split(",")] + list(new):
+        if addr and addr not in seen:
+            seen.add(addr)
+            out.append(addr)
+    return ", ".join(out)
 
 
 def _case_dict(c: AttachmentCase) -> dict:

@@ -47,7 +47,7 @@ def test_cases_listed_after_login(client_ctx):
     client, ctx = client_ctx
     # Seed a case directly via the repo (sync), then move it to AWAITING_PASSWORD.
     case = ctx.repo.get_or_create_case(AlertEvent(
-        queue_id="Q9", recipient="u@corp.test", alert_name="RISKWARE_OBJECT",
+        queue_id="Q9", recipients=["u@corp.test"], alert_name="RISKWARE_OBJECT",
         malware_names=["CustomPolicy.MVX.zip"], subject="Hi"))
     ctx.repo.set_state(case, FlowState.AWAITING_PASSWORD, "link sent")
 

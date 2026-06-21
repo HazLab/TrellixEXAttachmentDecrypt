@@ -10,14 +10,14 @@ from .conftest import TRIGGER_MALWARE_NAME
 
 
 def _alert(name=TRIGGER_MALWARE_NAME, alert_name="RISKWARE_OBJECT", queue_id="Q1"):
-    return AlertEvent(queue_id=queue_id, recipient="user@corp.test", subject="Invoice",
+    return AlertEvent(queue_id=queue_id, recipients=["user@corp.test"], subject="Invoice",
                       alert_name=alert_name, malware_names=[name])
 
 
 def _malware_ra(queue_id="Q1_RA", names=("FE_Backdoor_Go_Sandcat_1",)):
     """A pushed _RA re-detection as EX really sends it: hyphenated lowercase alert name
     and no top-level `malicious` field (the verdict is the MALWARE_OBJECT name itself)."""
-    return AlertEvent(queue_id=queue_id, recipient="user@corp.test", subject="Invoice",
+    return AlertEvent(queue_id=queue_id, recipients=["user@corp.test"], subject="Invoice",
                       alert_name="malware-object", malware_names=list(names))
 
 
@@ -65,6 +65,27 @@ async def test_duplicate_alert_does_not_resend(engine):
     await engine.handle_alert(_alert())
     await engine.handle_alert(_alert())  # same queue_id
     assert len(engine.mailer.sent) == 1
+
+
+async def test_multi_recipient_email_goes_to_all(engine):
+    ev = AlertEvent(queue_id="QM", recipients=["alice@corp.test", "bob@corp.test"],
+                    alert_name="RISKWARE_OBJECT", malware_names=[TRIGGER_MALWARE_NAME], subject="Invoice")
+    case = await engine.handle_alert(ev)
+    assert case.state == FlowState.AWAITING_PASSWORD
+    assert engine.repo.get_case(case.id).recipient == "alice@corp.test, bob@corp.test"  # both stored on one case
+    recipients, _link, _retry = engine.mailer.sent[0]
+    assert recipients == ["alice@corp.test", "bob@corp.test"]  # link emailed to all To recipients
+
+
+async def test_separate_alerts_same_queue_merge_recipients(engine):
+    # If EX emits one alert per recipient for the same email, the recipients accumulate
+    # onto the single case (keyed by queue_id) rather than creating duplicates.
+    await engine.handle_alert(AlertEvent(queue_id="QS", recipients=["a@corp.test"],
+                                         alert_name="RISKWARE_OBJECT", malware_names=[TRIGGER_MALWARE_NAME]))
+    case = await engine.handle_alert(AlertEvent(queue_id="QS", recipients=["b@corp.test"],
+                                                alert_name="RISKWARE_OBJECT", malware_names=[TRIGGER_MALWARE_NAME]))
+    assert len(engine.repo.list_cases()) == 1
+    assert engine.repo.get_case(case.id).recipient == "a@corp.test, b@corp.test"
 
 
 async def test_ra_realert_folds_into_existing_case(engine):

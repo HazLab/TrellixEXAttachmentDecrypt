@@ -18,8 +18,11 @@ Pipeline:
    `CustomPolicy.MVX.pdf` / `.zip` / `.docx` (other CustomPolicy.MVX rules like
    `...qrCodePresent` are unrelated and must not match — hence exact-name match).
    Empty `TRIGGER_MALWARE_NAMES` disables triggering.
-2. We look up the recipient and email them a **one-time randomized link**.
-3. The recipient submits the attachment password on that link.
+2. We email a **one-time randomized link** to the email's recipient(s). One
+   quarantined email can list several To recipients; they're all kept on the one
+   case (`AttachmentCase.recipient`, comma-joined) and all receive the same link —
+   whoever holds the password submits it.
+3. A recipient submits the attachment password on that link.
 4. We call the EX **rescan** API (`POST /emailmgmt/quarantine/rescan/<queue_id>`
    with `{"rescan_properties": {"pwd_list": [...]}}`) to re-analyze with the
    password. (The doc names the path param `email_uuid`, but it is the queue id.)

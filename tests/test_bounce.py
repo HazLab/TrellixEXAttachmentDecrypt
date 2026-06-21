@@ -47,7 +47,7 @@ def test_parse_bounce_ignores_non_failures():
 def test_handle_bounce_marks_case_by_case_id():
     ctx = make_context()
     case = ctx.repo.get_or_create_case(AlertEvent(
-        queue_id="Q1", recipient="head.sales@networkshark.com", alert_name="RISKWARE_OBJECT",
+        queue_id="Q1", recipients=["head.sales@networkshark.com"], alert_name="RISKWARE_OBJECT",
         malware_names=["CustomPolicy.MVX.zip"]))
     ctx.repo.set_state(case, FlowState.AWAITING_PASSWORD, "sent")
 
@@ -58,7 +58,7 @@ def test_handle_bounce_marks_case_by_case_id():
 def test_handle_bounce_falls_back_to_recipient():
     ctx = make_context()
     case = ctx.repo.get_or_create_case(AlertEvent(
-        queue_id="Q2", recipient="bob@corp.test", alert_name="RISKWARE_OBJECT",
+        queue_id="Q2", recipients=["bob@corp.test"], alert_name="RISKWARE_OBJECT",
         malware_names=["CustomPolicy.MVX.zip"]))
     ctx.repo.set_state(case, FlowState.AWAITING_PASSWORD, "sent")
 
@@ -69,7 +69,7 @@ def test_handle_bounce_falls_back_to_recipient():
 def test_handle_bounce_does_not_override_terminal():
     ctx = make_context()
     case = ctx.repo.get_or_create_case(AlertEvent(
-        queue_id="Q3", recipient="x@corp.test", alert_name="RISKWARE_OBJECT",
+        queue_id="Q3", recipients=["x@corp.test"], alert_name="RISKWARE_OBJECT",
         malware_names=["CustomPolicy.MVX.zip"]))
     ctx.repo.set_state(case, FlowState.DONE_MALICIOUS, "malicious")
     assert ctx.engine.handle_bounce({"case_id": case.id, "reason": "late bounce"}) is False

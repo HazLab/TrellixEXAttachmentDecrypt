@@ -15,7 +15,10 @@ def main() -> None:
     from .app import build
 
     app, settings = build()
-    uvicorn.run(app, host=settings.web_host, port=settings.web_port)
+    # log_config=None: don't let uvicorn install its own isolated loggers, so its
+    # access log (every HTTP request) propagates to the root handlers configured in
+    # build() — i.e. it lands in the log file too, not just the console.
+    uvicorn.run(app, host=settings.web_host, port=settings.web_port, log_config=None)
 
 
 if __name__ == "__main__":

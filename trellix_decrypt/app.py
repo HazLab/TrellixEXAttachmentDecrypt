@@ -11,6 +11,23 @@ from .settings_store import SettingsStore
 from .storage import CaseRepository, build_session_factory
 from .web import create_app
 
+_LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s: %(message)s"
+
+
+def _configure_logging(settings: Settings) -> None:
+    """Console + optional rotating file, both capturing EVERYTHING — including every
+    HTTP request (uvicorn's access log reaches the root handlers because we start
+    uvicorn with log_config=None; see __main__). Useful for inspecting raw EX
+    notifications hitting the box, not just our own app events."""
+    level = getattr(logging, settings.log_level.upper(), logging.INFO)
+    handlers: list[logging.Handler] = [logging.StreamHandler()]
+    if settings.log_file:
+        from logging.handlers import RotatingFileHandler
+        handlers.append(RotatingFileHandler(
+            settings.log_file, maxBytes=settings.log_file_max_bytes,
+            backupCount=settings.log_file_backups, encoding="utf-8"))
+    logging.basicConfig(level=level, format=_LOG_FORMAT, handlers=handlers, force=True)
+
 
 def build_context(settings: Settings) -> AppContext:
     session_factory = build_session_factory(settings.db_url)
@@ -22,8 +39,7 @@ def build_context(settings: Settings) -> AppContext:
 
 def build(settings: Settings | None = None):
     settings = settings or Settings()
-    logging.basicConfig(level=getattr(logging, settings.log_level.upper(), logging.INFO),
-                        format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    _configure_logging(settings)
     ctx = build_context(settings)
     eff = ctx.engine.settings
     log = logging.getLogger(__name__)

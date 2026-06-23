@@ -93,6 +93,9 @@ class Settings(BaseSettings):
 
     # --- Logging ---
     log_level: str = "INFO"  # DEBUG for verbose troubleshooting
+    log_file: str = "trellix_decrypt.log"  # also write all logs (incl. every HTTP request) here; "" = console only
+    log_file_max_bytes: int = 10_000_000   # rotate at ~10 MB
+    log_file_backups: int = 5              # keep this many rotated files
 
     @field_validator("trigger_malware_names", "webhook_ip_allowlist", mode="before")
     @classmethod

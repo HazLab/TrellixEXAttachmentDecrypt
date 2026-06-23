@@ -5,6 +5,10 @@ __pycache__/
 *.pyo
 *.mo
 
+# Runtime log files (LOG_FILE + rotated backups)
+*.log
+*.log.*
+
 .env
 .env.*
 !.env.example

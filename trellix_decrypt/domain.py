@@ -40,8 +40,6 @@ RECHECKABLE = (FlowState.RESUBMITTED, FlowState.RECHECKING)
 TERMINAL = (FlowState.DONE_CLEAN, FlowState.DONE_MALICIOUS, FlowState.FAILED_MAX_RETRIES,
             FlowState.EXPIRED, FlowState.BOUNCED)
 
-#: Canonical EX alert name for "malicious after extraction".
-MALWARE_ALERT_NAME = "malware_object"
 #: Malware names EX puts on an `_RA` re-detection when extraction failed again (wrong
 #: password). Authoritative even inside a MALWARE_OBJECT alert, whose other names are
 #: signature hits on the still-encrypted blob rather than extracted content.
@@ -177,28 +175,34 @@ class FlowEngine:
         return case
 
     async def _classify_resubmission(self, case, event: AlertEvent) -> None:
-        """Decide a resubmission outcome from the pushed ``_RA`` alert.
+        """Decide a resubmission outcome from a pushed ``_RA`` alert.
 
-        EX re-detects the resubmitted email and pushes the verdict. Two outcomes:
-        - **Wrong password** — extraction failed again. EX signals this either as a
-          RISKWARE_OBJECT + CustomPolicy.MVX re-detection, or by naming
-          PASSWORD_EXTRACTION_FAILED among the malware (even inside a MALWARE_OBJECT
-          alert, where the other names are signature hits on the still-encrypted blob).
-          This is authoritative — re-ask the recipient.
-        - **Malicious** — a correct password revealed malware: MALWARE_OBJECT /
-          ``malicious: yes`` with no extraction-failure marker → stop (DONE_MALICIOUS).
+        A push means the resubmitted email was re-quarantined, so the only question
+        is *why*:
+        - **Wrong password** — extraction failed again, so the re-detection still
+          carries a "still encrypted" signal: a CustomPolicy.MVX.<ext> match (the
+          encrypted-attachment custom policy — see ``rules.matches``) or a
+          PASSWORD_EXTRACTION_FAILED marker. Re-ask the recipient (up to the cap).
+        - **Malicious** — a correct password decrypted the attachment and its content
+          was flagged, so the re-detection is anything *other* than a still-encrypted
+          signal → stop (DONE_MALICIOUS). This is NOT keyed on the alert being
+          ``malware-object``: depending on the detecting rule's config the decrypted
+          content can re-quarantine as a *riskware-object* too — any re-quarantine
+          push that isn't the encrypted-attachment signal counts as malicious. Clean
+          content is never pushed at all: EX releases it and emits no alert, so
+          DONE_CLEAN is concluded only by the recheck backstop (the ``_RA`` is absent
+          from the quarantine list).
 
-        A single ``_RA`` can arrive as several webhook pushes (one per detected object),
-        so a wrong-password marker must win even if a malware push for the same ``_RA``
-        landed first — hence we reopen DONE_MALICIOUS when a marker arrives."""
-        extraction_failed = (any(_canon_name(n) in PASSWORD_FAILED_MARKERS for n in event.malware_names)
-                             or self.rules.matches(event))
-        if extraction_failed:
+        A single ``_RA`` can arrive as several webhook pushes (one per detected
+        object), so the wrong-password signal wins even if a malicious push for the
+        same ``_RA`` landed first — hence we reopen DONE_MALICIOUS on a later marker."""
+        still_encrypted = (self.rules.matches(event)
+                           or any(_canon_name(n) in PASSWORD_FAILED_MARKERS for n in event.malware_names))
+        if still_encrypted:
             if case.state in RECHECKABLE or case.state == FlowState.DONE_MALICIOUS:
-                await self._fail_extraction(case)  # reopen if a malware push jumped ahead
+                await self._fail_extraction(case)  # reopen if a malicious push jumped ahead
             return
-        if case.state in RECHECKABLE and (event.malicious
-                                          or _canon_name(event.alert_name) == MALWARE_ALERT_NAME):
+        if case.state in RECHECKABLE:  # re-quarantined for real (decrypted) content
             self.repo.clear_password(case)  # purge the held password; we're done
             detail = ", ".join(event.malware_names) or event.alert_name or "malicious"
             self.repo.set_state(case, FlowState.DONE_MALICIOUS,

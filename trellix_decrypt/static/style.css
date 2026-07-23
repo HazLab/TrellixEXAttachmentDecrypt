@@ -72,8 +72,8 @@ td.subject, td.attach, td.recipient, td.sender { max-width: 230px; overflow: hid
 .badge.submitted   { --bb:#e6e6fb; --bf:#3f3fd1; }   /* indigo  */
 .badge.resubmitted { --bb:#d9f2f3; --bf:#0a7b85; }   /* teal    */
 .badge.rechecking  { --bb:#fdf0d3; --bf:#946700; }   /* amber   */
-.badge.clean       { --bb:#e3f5e9; --bf:#1a7f3c; }   /* green   */
-.badge.malicious   { --bb:#fce4e2; --bf:#c5221f; }   /* red     */
+.badge.passed      { --bb:#e3f5e9; --bf:#1a7f3c; }   /* green   */
+.badge.quarantined { --bb:#fce4e2; --bf:#c5221f; }   /* red     */
 .badge.wrongpw     { --bb:#fde6d2; --bf:#b3540c; }   /* orange  */
 .badge.expired     { --bb:#efe9df; --bf:#836a3b; }   /* taupe   */
 .badge.emailfail   { --bb:#fce0ee; --bf:#c12a78; }   /* magenta */
@@ -84,8 +84,8 @@ td.subject, td.attach, td.recipient, td.sender { max-width: 230px; overflow: hid
 [data-theme="dark"] .badge.submitted    { --bb:#1e1e44; --bf:#9b9bff; }
 [data-theme="dark"] .badge.resubmitted  { --bb:#0d2e31; --bf:#5fd0d8; }
 [data-theme="dark"] .badge.rechecking   { --bb:#33290f; --bf:#e6c068; }
-[data-theme="dark"] .badge.clean        { --bb:#10301d; --bf:#7ee2a8; }
-[data-theme="dark"] .badge.malicious    { --bb:#3a1512; --bf:#f3a39b; }
+[data-theme="dark"] .badge.passed       { --bb:#10301d; --bf:#7ee2a8; }
+[data-theme="dark"] .badge.quarantined  { --bb:#3a1512; --bf:#f3a39b; }
 [data-theme="dark"] .badge.wrongpw      { --bb:#37230d; --bf:#f0a667; }
 [data-theme="dark"] .badge.expired      { --bb:#2c2618; --bf:#c7b083; }
 [data-theme="dark"] .badge.emailfail    { --bb:#3a1228; --bf:#f08fc0; }

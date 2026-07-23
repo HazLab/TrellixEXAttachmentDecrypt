@@ -28,13 +28,12 @@ Pipeline:
    password. (The doc names the path param `email_uuid`, but it is the queue id.)
 5. EX re-analyzes the resubmission and re-detects it under the **same queue id +
    `_RA` suffix**, then **pushes** that re-detection to our webhook (the same HTTP
-   notification consumer as the original). We classify it straight from the pushed
-   alert in `domain.FlowEngine._classify_resubmission` — **no API lookup**: the
-   `/alerts` query returns no `uuid` to join the quarantine record's `alert_uuids`
-   on, and there is no GET-by-uuid we can rely on, so pulling alert details is
-   unworkable. A pushed `_RA` means the resubmission was **re-quarantined**; the
-   verdict turns on the *reason*, keyed on one signal — the **still-encrypted
-   marker** (a `CustomPolicy.MVX.<ext>` malware name matching the trigger rule, or a
+   notification consumer as the original). The push *triggers* classification in
+   `domain.FlowEngine._classify_resubmission` — we do **not** join the alert back via
+   an API lookup: the `/alerts` query returns no `uuid` to match the quarantine
+   record's `alert_uuids` on, and there is no reliable GET-by-uuid. Classification
+   keys on one signal off the push — the **still-encrypted marker** (a
+   `CustomPolicy.MVX.<ext>` malware name matching the trigger rule, or a
    `PASSWORD_EXTRACTION_FAILED` name):
    - **Wrong password** (extraction failed again) → email the user again, up to
      `max_password_attempts` (default 3, cap 5). The still-encrypted marker is the
@@ -44,30 +43,30 @@ Pipeline:
      (`Malware.Parent.ZIP`, EICAR, …) are signature hits on the still-encrypted blob,
      not extracted content. This marker is **authoritative** and wins over any
      malware verdict.
-   - **Malicious** — a correct password decrypted the attachment and its content was
-     flagged: **any** re-quarantine push that is *not* the still-encrypted marker →
-     stop (`DONE_MALICIOUS`). This is **not** keyed on the alert being
-     `MALWARE_OBJECT`: depending on the detecting rule's config the decrypted content
-     can re-quarantine as a `RISKWARE_OBJECT` too, so the classifier treats any
-     non-encrypted re-detection as malicious.
-   - **Clean** — benign decrypted content is **released and pushes nothing**. There
-     is no "clean" alert to receive, so `DONE_CLEAN` is concluded *only* by the
-     recheck backstop below (the `_RA` is absent from the quarantine list).
+   - Otherwise the outcome is **not** read off the push — a riskware rule can raise
+     an alert *without* quarantining (alert-but-allow), so a push proves only that
+     re-analysis happened, not that the email is held. We **confirm from the actual
+     quarantine list** (`ex_client.has_resubmission_quarantine`), which is
+     authoritative:
+     - **Quarantined** (`DONE_QUARANTINED`, terminal) — the `_RA` is still held. This
+       is *not* keyed on the alert being `MALWARE_OBJECT`; a decrypted-and-flagged
+       attachment can re-quarantine as a `RISKWARE_OBJECT` too. Whatever the push
+       type, if the `_RA` is in quarantine, the email is held.
+     - **Passed** (`DONE_PASSED`, terminal) — the `_RA` is absent: benign content was
+       released and delivered. Clean content pushes nothing, so this is concluded
+       only from the quarantine list (via a push-triggered confirm, or the recheck
+       timer if no push arrives).
    Wire-format gotchas (lab-verified): pushed alert names are hyphenated lowercase
    (`malware-object`, `riskware-object`) — always compare via `domain._canon_name`,
-   never `== "MALWARE_OBJECT"`; the push carries no top-level `malicious` field for
-   these, so the name itself is the verdict. One `_RA` can arrive as several
-   separate webhook POSTs (one per detected object), so classification is
-   **order-independent**: a later `PASSWORD_EXTRACTION_FAILED` push reopens a case a
-   malicious push had already moved to `DONE_MALICIOUS`, and repeat pushes count as
-   one attempt.
+   never `== "MALWARE_OBJECT"`. One `_RA` can arrive as several separate webhook POSTs
+   (one per detected object), so classification is **order-independent**: a later
+   `PASSWORD_EXTRACTION_FAILED` push reopens a case a re-quarantine confirm had already
+   moved to `DONE_QUARANTINED`, and repeat pushes count as one attempt.
    The `_RA` alert is **correlated** to the original case by stripping the `_RA`
-   suffix(es) and matching the queue id (`repo.find_case_by_queue_id`) — it is
-   never added as a new case. `recheck` is now only a **fail-closed timeout
-   backstop** (`ex_client.has_resubmission_quarantine`): if no verdict was pushed,
-   it concludes `DONE_CLEAN` *only* when the email is genuinely no longer
-   (re-)quarantined; if it is still re-quarantined it treats it as a wrong password
-   rather than release a held email.
+   suffix(es) and matching the queue id (`repo.find_case_by_queue_id`) — it is never
+   added as a new case. The push only *triggers* the decision
+   (`domain.FlowEngine._confirm_outcome`); `recheck` is the timeout backstop that runs
+   the same quarantine-list confirm when no push arrives.
 6. Every recipient / email / attempt / state transition is tracked.
 
 A web UI may be layered on later — keep layers cleanly separable.
@@ -131,7 +130,8 @@ saving persists to the `Setting` table (secrets encrypted) and calls
 ## Flow states (`domain.py`)
 
 `RECEIVED → AWAITING_PASSWORD → PASSWORD_SUBMITTED → RESUBMITTED → RECHECKING →`
-one of `{DONE_CLEAN, DONE_MALICIOUS, FAILED_MAX_RETRIES, EXPIRED}`.
+one of `{DONE_PASSED, DONE_QUARANTINED, FAILED_MAX_RETRIES, EXPIRED}`.
+`DONE_PASSED` = not re-quarantined (delivered); `DONE_QUARANTINED` = still held.
 Wrong password loops `RECHECKING → AWAITING_PASSWORD` with `attempt += 1`.
 Email problems: `NOTIFY_FAILED` (SMTP error handing off — auto-retried + resendable)
 and `BOUNCED` (accepted then DSN'd back — detected by `bounce.py`, resendable).
@@ -177,9 +177,10 @@ pytest                         # unit + respx-mocked EX client tests
     `queue_id` plus a suffix EX appends (e.g. `_RA`). We only ever **read** that
     by prefix-match and never construct the suffix ourselves (correlation in
     `domain.handle_alert`; backstop in `ex_client.has_resubmission_quarantine`).
-  - Classification relies on EX **pushing** the `_RA` re-detection to the webhook
-    (confirmed for both riskware and malware on the lab box). If a deployment's
-    notification policy does NOT push malware re-detections, the
-    `has_resubmission_quarantine` backstop still fails closed (keeps the mail
-    quarantined / re-asks) but won't label it `DONE_MALICIOUS`.
+  - A push only *triggers* the decision; the Quarantined-vs-Passed verdict comes
+    from `has_resubmission_quarantine` (the quarantine list), because a riskware rule
+    can alert without quarantining. If a deployment's notification policy pushes
+    nothing for re-detections, the recheck timer still runs the same quarantine-list
+    confirm, so the verdict is unaffected — only the wrong-password fast-path (the
+    still-encrypted marker) depends on a push.
 ```

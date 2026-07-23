@@ -9,7 +9,7 @@ const FLOW = [
   ["rechecking", "Re-checking"],
   ["__verdict__", "Verdict"],
 ];
-const TERMINAL = { done_clean: "Clean", done_malicious: "Malicious", failed_max_retries: "Wrong password", expired: "Expired", notify_failed: "Email failed", bounced: "Bounced" };
+const TERMINAL = { done_passed: "Passed", done_quarantined: "Quarantined", failed_max_retries: "Wrong password", expired: "Expired", notify_failed: "Email failed", bounced: "Bounced" };
 
 let cases = [];
 const $ = (id) => document.getElementById(id);

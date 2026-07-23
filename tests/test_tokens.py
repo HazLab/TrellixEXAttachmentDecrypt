@@ -37,7 +37,7 @@ async def test_expired_link_not_reissued_when_not_awaiting(engine):
     case = engine.repo.get_or_create_case(AlertEvent(
         queue_id="Q2", recipients=["u@corp.test"], alert_name="RISKWARE_OBJECT",
         malware_names=["CustomPolicy.MVX.zip"]))
-    engine.repo.set_state(case, FlowState.DONE_CLEAN, "done")
+    engine.repo.set_state(case, FlowState.DONE_PASSED, "done")
     token = engine.tokens.mint(case.id)
     assert await engine.reissue_expired_link(token) is None
 

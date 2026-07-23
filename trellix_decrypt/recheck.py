@@ -1,8 +1,8 @@
 """Background recheck scheduling using lightweight asyncio tasks.
 
 After a resubmission we poll EX quarantine for the ``_RA`` re-quarantine. Absence
-only means "clean" once EX has had time to finish analysis, so we poll up to
-``recheck_max_attempts`` times before the FlowEngine concludes DONE_CLEAN.
+only means "passed/delivered" once EX has had time to finish analysis, so we poll
+up to ``recheck_max_attempts`` times before the FlowEngine concludes DONE_PASSED.
 """
 
 from __future__ import annotations

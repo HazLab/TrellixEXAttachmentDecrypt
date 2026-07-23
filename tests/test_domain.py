@@ -214,6 +214,20 @@ async def test_pushed_malicious_ra_stops(engine):
     assert c.pwd_enc is None                               # held password purged
 
 
+async def test_malicious_ra_as_riskware_object_stops(engine):
+    # Decrypted content can re-quarantine as a *riskware-object* (not malware-object),
+    # depending on the detecting rule's config. As long as it isn't the encrypted-
+    # attachment signal (CustomPolicy.MVX / PASSWORD_EXTRACTION_FAILED), it's malicious.
+    case = await engine.handle_alert(_alert())
+    await _submit(engine, case.id)                          # -> RESUBMITTED
+    await engine.handle_alert(AlertEvent(
+        queue_id="Q1_RA", recipients=["user@corp.test"], subject="Invoice",
+        alert_name="riskware-object", malware_names=["CustomPolicy.MVX.SomeOtherRule"]))
+    c = engine.repo.get_case(case.id)
+    assert c.state == FlowState.DONE_MALICIOUS
+    assert c.pwd_enc is None
+
+
 async def test_password_failed_marker_in_malware_alert_is_wrong_password(engine):
     # A wrong-password zip _RA arrives as a MALWARE_OBJECT alert (signature hits on the
     # encrypted blob) but names PASSWORD_EXTRACTION_FAILED — that marker is authoritative.

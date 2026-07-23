@@ -32,25 +32,34 @@ Pipeline:
    alert in `domain.FlowEngine._classify_resubmission` — **no API lookup**: the
    `/alerts` query returns no `uuid` to join the quarantine record's `alert_uuids`
    on, and there is no GET-by-uuid we can rely on, so pulling alert details is
-   unworkable. From the pushed alert:
+   unworkable. A pushed `_RA` means the resubmission was **re-quarantined**; the
+   verdict turns on the *reason*, keyed on one signal — the **still-encrypted
+   marker** (a `CustomPolicy.MVX.<ext>` malware name matching the trigger rule, or a
+   `PASSWORD_EXTRACTION_FAILED` name):
    - **Wrong password** (extraction failed again) → email the user again, up to
-     `max_password_attempts` (default 3, cap 5). EX signals this two ways, both
-     treated as wrong-password: a `RISKWARE_OBJECT` + `CustomPolicy.MVX.<ext>`
-     re-detection (pdf/docx in the lab), **or** a malware name
-     `PASSWORD_EXTRACTION_FAILED` — which can appear *inside* a `MALWARE_OBJECT`
-     alert (the zip case), where the other names (`Malware.Parent.ZIP`, EICAR, …)
-     are signature hits on the still-encrypted blob, not extracted content. This
-     marker is **authoritative** and wins over the malware verdict.
-   - **Malicious** — `MALWARE_OBJECT` / `malicious: yes` with **no**
-     `PASSWORD_EXTRACTION_FAILED` marker → decrypted & malicious → stop
-     (`DONE_MALICIOUS`).
+     `max_password_attempts` (default 3, cap 5). The still-encrypted marker is the
+     signal: a `RISKWARE_OBJECT` + `CustomPolicy.MVX.<ext>` re-detection, **or** a
+     malware name `PASSWORD_EXTRACTION_FAILED` — which can appear *inside* a
+     `MALWARE_OBJECT` alert (the zip case), where the other names
+     (`Malware.Parent.ZIP`, EICAR, …) are signature hits on the still-encrypted blob,
+     not extracted content. This marker is **authoritative** and wins over any
+     malware verdict.
+   - **Malicious** — a correct password decrypted the attachment and its content was
+     flagged: **any** re-quarantine push that is *not* the still-encrypted marker →
+     stop (`DONE_MALICIOUS`). This is **not** keyed on the alert being
+     `MALWARE_OBJECT`: depending on the detecting rule's config the decrypted content
+     can re-quarantine as a `RISKWARE_OBJECT` too, so the classifier treats any
+     non-encrypted re-detection as malicious.
+   - **Clean** — benign decrypted content is **released and pushes nothing**. There
+     is no "clean" alert to receive, so `DONE_CLEAN` is concluded *only* by the
+     recheck backstop below (the `_RA` is absent from the quarantine list).
    Wire-format gotchas (lab-verified): pushed alert names are hyphenated lowercase
    (`malware-object`, `riskware-object`) — always compare via `domain._canon_name`,
    never `== "MALWARE_OBJECT"`; the push carries no top-level `malicious` field for
    these, so the name itself is the verdict. One `_RA` can arrive as several
    separate webhook POSTs (one per detected object), so classification is
    **order-independent**: a later `PASSWORD_EXTRACTION_FAILED` push reopens a case a
-   malware push had already moved to `DONE_MALICIOUS`, and repeat pushes count as
+   malicious push had already moved to `DONE_MALICIOUS`, and repeat pushes count as
    one attempt.
    The `_RA` alert is **correlated** to the original case by stripping the `_RA`
    suffix(es) and matching the queue id (`repo.find_case_by_queue_id`) — it is

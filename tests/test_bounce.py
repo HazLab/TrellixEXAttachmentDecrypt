@@ -71,6 +71,6 @@ def test_handle_bounce_does_not_override_terminal():
     case = ctx.repo.get_or_create_case(AlertEvent(
         queue_id="Q3", recipients=["x@corp.test"], alert_name="RISKWARE_OBJECT",
         malware_names=["CustomPolicy.MVX.zip"]))
-    ctx.repo.set_state(case, FlowState.DONE_MALICIOUS, "malicious")
+    ctx.repo.set_state(case, FlowState.DONE_QUARANTINED, "quarantined")
     assert ctx.engine.handle_bounce({"case_id": case.id, "reason": "late bounce"}) is False
-    assert ctx.repo.get_case(case.id).state == FlowState.DONE_MALICIOUS
+    assert ctx.repo.get_case(case.id).state == FlowState.DONE_QUARANTINED

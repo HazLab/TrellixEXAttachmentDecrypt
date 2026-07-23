@@ -134,11 +134,12 @@ class EXClient:
                                           subject: str | None = None) -> bool:
         """True if EX still holds a re-analysis (``_RA``) quarantine entry for this email.
 
-        The resubmission verdict normally arrives as a pushed ``<queueId>_RA`` alert
-        (handled in the FlowEngine). This is only a fail-closed backstop for the recheck
-        timeout: an email is declared clean *only* when no re-analysis entry remains, so
-        a missed alert push never lets a still-quarantined email be treated as delivered.
-        Matched by sender+subject, then by queue-id prefix (we never build the suffix)."""
+        This is the authoritative resubmission verdict: the FlowEngine decides
+        DONE_QUARANTINED vs DONE_PASSED from it, because a pushed ``_RA`` alert proves
+        only that re-analysis happened, not that the email is held (a riskware rule can
+        alert without quarantining). An email is "passed" *only* when no re-analysis
+        entry remains. Matched by sender+subject, then by queue-id prefix (we never
+        build the suffix)."""
         entries = await self.list_quarantine(sender=sender, subject=subject)
         return any(_qid(e) != queue_id and _qid(e).startswith(queue_id) for e in entries)
 

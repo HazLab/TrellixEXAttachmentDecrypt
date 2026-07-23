@@ -25,8 +25,8 @@ class FlowState(str, enum.Enum):
     PASSWORD_SUBMITTED = "password_submitted"
     RESUBMITTED = "resubmitted"
     RECHECKING = "rechecking"
-    DONE_CLEAN = "done_clean"
-    DONE_MALICIOUS = "done_malicious"
+    DONE_PASSED = "done_passed"           # not re-quarantined after resubmission: delivered
+    DONE_QUARANTINED = "done_quarantined"  # re-quarantined after resubmission: held (terminal)
     FAILED_MAX_RETRIES = "failed_max_retries"
     EXPIRED = "expired"
     NOTIFY_FAILED = "notify_failed"   # couldn't hand the email to the mail server (SMTP error)
@@ -37,7 +37,7 @@ class FlowState(str, enum.Enum):
 #: States from which a recheck poll may still run.
 RECHECKABLE = (FlowState.RESUBMITTED, FlowState.RECHECKING)
 #: Terminal states.
-TERMINAL = (FlowState.DONE_CLEAN, FlowState.DONE_MALICIOUS, FlowState.FAILED_MAX_RETRIES,
+TERMINAL = (FlowState.DONE_PASSED, FlowState.DONE_QUARANTINED, FlowState.FAILED_MAX_RETRIES,
             FlowState.EXPIRED, FlowState.BOUNCED)
 
 #: Malware names EX puts on an `_RA` re-detection when extraction failed again (wrong
@@ -153,10 +153,10 @@ class FlowEngine:
     async def handle_alert(self, event: AlertEvent):
         """Entry point for an incoming EX alert. Returns the case, or None if ignored."""
         # A resubmitted email is re-analyzed and re-detected under the original queue
-        # id + "_RA". EX *pushes* that re-detection here, carrying the verdict — so we
-        # correlate it to the original case and classify it BEFORE the trigger rules:
-        # a decrypted-malicious re-detection is MALWARE_OBJECT and would never pass the
-        # riskware rules. Never create a separate case for an "_RA" alert.
+        # id + "_RA". EX *pushes* that re-detection here — we correlate it to the
+        # original case and classify it BEFORE the trigger rules, since a re-detection
+        # need not match the first-time riskware rules. Never create a separate case
+        # for an "_RA" alert.
         base = event.queue_id
         while base.endswith("_RA"):
             base = base[: -len("_RA")]
@@ -174,39 +174,45 @@ class FlowEngine:
             await self._send_password_request(case)
         return case
 
-    async def _classify_resubmission(self, case, event: AlertEvent) -> None:
-        """Decide a resubmission outcome from a pushed ``_RA`` alert.
+    def _still_encrypted(self, event: AlertEvent) -> bool:
+        """Wrong-password signal: the re-detection shows the attachment is still
+        encrypted — a CustomPolicy.MVX.<ext> match (the encrypted-attachment custom
+        policy, see ``rules.matches``) or a PASSWORD_EXTRACTION_FAILED marker name."""
+        return (self.rules.matches(event)
+                or any(_canon_name(n) in PASSWORD_FAILED_MARKERS for n in event.malware_names))
 
-        A push means the resubmitted email was re-quarantined, so the only question
-        is *why*:
-        - **Wrong password** — extraction failed again, so the re-detection still
-          carries a "still encrypted" signal: a CustomPolicy.MVX.<ext> match (the
-          encrypted-attachment custom policy — see ``rules.matches``) or a
-          PASSWORD_EXTRACTION_FAILED marker. Re-ask the recipient (up to the cap).
-        - **Malicious** — a correct password decrypted the attachment and its content
-          was flagged, so the re-detection is anything *other* than a still-encrypted
-          signal → stop (DONE_MALICIOUS). This is NOT keyed on the alert being
-          ``malware-object``: depending on the detecting rule's config the decrypted
-          content can re-quarantine as a *riskware-object* too — any re-quarantine
-          push that isn't the encrypted-attachment signal counts as malicious. Clean
-          content is never pushed at all: EX releases it and emits no alert, so
-          DONE_CLEAN is concluded only by the recheck backstop (the ``_RA`` is absent
-          from the quarantine list).
+    async def _confirm_outcome(self, case) -> None:
+        """Terminal outcome, decided by the **actual quarantine list** — never by a
+        pushed alert's type. A riskware rule may raise an alert without quarantining
+        (alert-but-allow), so a push proves only that re-analysis happened, not that
+        the email is held. We ask EX whether the ``_RA`` is still quarantined:
+        present → DONE_QUARANTINED (held); absent → DONE_PASSED (delivered)."""
+        self.repo.clear_password(case)  # terminal either way — held password no longer needed
+        if await self.ex.has_resubmission_quarantine(case.queue_id, case.sender, case.subject):
+            self.repo.set_state(case, FlowState.DONE_QUARANTINED, "re-quarantined after resubmission: held")
+        else:
+            self.repo.set_state(case, FlowState.DONE_PASSED, "not re-quarantined after resubmission: delivered")
+
+    async def _classify_resubmission(self, case, event: AlertEvent) -> None:
+        """Handle a pushed ``_RA`` re-detection for a resubmitted case.
+
+        The push only *triggers* a decision; its alert type is not trusted. Order:
+        1. **Wrong password** — a still-encrypted signal (see ``_still_encrypted``)
+           means extraction failed again → re-ask the recipient (up to the cap). This
+           must be checked first: a still-encrypted ``_RA`` is itself quarantined, so
+           without this it would read as "quarantined/held".
+        2. Otherwise **confirm from the quarantine list** (``_confirm_outcome``):
+           present → DONE_QUARANTINED, absent → DONE_PASSED.
 
         A single ``_RA`` can arrive as several webhook pushes (one per detected
-        object), so the wrong-password signal wins even if a malicious push for the
-        same ``_RA`` landed first — hence we reopen DONE_MALICIOUS on a later marker."""
-        still_encrypted = (self.rules.matches(event)
-                           or any(_canon_name(n) in PASSWORD_FAILED_MARKERS for n in event.malware_names))
-        if still_encrypted:
-            if case.state in RECHECKABLE or case.state == FlowState.DONE_MALICIOUS:
-                await self._fail_extraction(case)  # reopen if a malicious push jumped ahead
+        object), so the wrong-password signal wins even if a bare re-quarantine push
+        landed first — hence we reopen DONE_QUARANTINED on a later marker."""
+        if self._still_encrypted(event):
+            if case.state in RECHECKABLE or case.state == FlowState.DONE_QUARANTINED:
+                await self._fail_extraction(case)  # reopen if a quarantine verdict jumped ahead
             return
-        if case.state in RECHECKABLE:  # re-quarantined for real (decrypted) content
-            self.repo.clear_password(case)  # purge the held password; we're done
-            detail = ", ".join(event.malware_names) or event.alert_name or "malicious"
-            self.repo.set_state(case, FlowState.DONE_MALICIOUS,
-                                f"re-detected malicious after extraction: {detail}")
+        if case.state in RECHECKABLE:
+            await self._confirm_outcome(case)
 
     async def reissue_expired_link(self, token: str):
         """If an expired-but-valid link is opened and the case still awaits a
@@ -303,27 +309,20 @@ class FlowEngine:
             await self._send_password_request(case, retry=True)  # re-send the link to retry
 
     async def recheck(self, case_id: str, final: bool = False) -> bool:
-        """Fail-closed timeout backstop for a resubmitted case. Returns True to stop polling.
+        """Timeout backstop for a resubmitted case. Returns True to stop polling.
 
-        The verdict normally arrives via the pushed ``_RA`` alert (see handle_alert), so
-        a resolved case has already left RECHECKABLE and we stop. If none has arrived by
-        the final poll, we consult the quarantine list and only declare DONE_CLEAN when
-        the email is genuinely no longer (re-)quarantined; if it still is, we treat it as
-        a wrong password rather than risk releasing a held email."""
+        A wrong-password push resolves the case early (it leaves RECHECKABLE), so we
+        stop. Otherwise, on the final poll, we confirm the outcome from the quarantine
+        list exactly as a push would (``_confirm_outcome``): the ``_RA`` still held →
+        DONE_QUARANTINED, gone → DONE_PASSED."""
         case = self.repo.get_case(case_id)
         if case is None or case.state not in RECHECKABLE:
-            return True  # already resolved (typically by the pushed _RA alert)
+            return True  # already resolved (typically by a wrong-password _RA push)
         if case.state == FlowState.RESUBMITTED:
             self.repo.set_state(case, FlowState.RECHECKING, "awaiting re-detection")
         if not final:
             return False  # keep waiting for the pushed verdict
-        if await self.ex.has_resubmission_quarantine(case.queue_id, case.sender, case.subject):
-            log.warning("case %s: re-quarantined but no _RA alert received; treating as wrong password",
-                        case.id)
-            await self._fail_extraction(case)
-        else:
-            self.repo.clear_password(case)
-            self.repo.set_state(case, FlowState.DONE_CLEAN, "not re-quarantined: delivered")
+        await self._confirm_outcome(case)
         return True
 
     async def resume_pending(self):

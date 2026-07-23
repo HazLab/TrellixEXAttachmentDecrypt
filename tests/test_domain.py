@@ -202,30 +202,44 @@ async def test_replayed_link_rejected_after_submission(engine):
     assert status == "not_awaiting"
 
 
-async def test_pushed_malicious_ra_stops(engine):
+async def test_pushed_ra_quarantined_stops(engine):
     case = await engine.handle_alert(_alert())
     await _submit(engine, case.id)                          # -> RESUBMITTED
-    # EX re-analyzes, extracts with the correct password, finds malware, pushes _RA
-    # (hyphenated 'malware-object', no extraction-failure marker).
+    # EX re-analyzes with the correct password and re-quarantines the email; the push
+    # (no still-encrypted marker) triggers a decision, confirmed against the quarantine.
+    engine.ex.ra_quarantined = True                        # the _RA is genuinely held
     result = await engine.handle_alert(_malware_ra())
     assert result.id == case.id                            # correlated to the same case
     c = engine.repo.get_case(case.id)
-    assert c.state == FlowState.DONE_MALICIOUS
+    assert c.state == FlowState.DONE_QUARANTINED
     assert c.pwd_enc is None                               # held password purged
 
 
-async def test_malicious_ra_as_riskware_object_stops(engine):
-    # Decrypted content can re-quarantine as a *riskware-object* (not malware-object),
-    # depending on the detecting rule's config. As long as it isn't the encrypted-
-    # attachment signal (CustomPolicy.MVX / PASSWORD_EXTRACTION_FAILED), it's malicious.
+async def test_ra_quarantined_as_riskware_object_stops(engine):
+    # The re-detection type is not trusted: whether it's a riskware- or malware-object,
+    # the verdict is the quarantine list. A non-encrypted _RA that is genuinely held
+    # (ra_quarantined=True) -> DONE_QUARANTINED regardless of the pushed alert name.
     case = await engine.handle_alert(_alert())
     await _submit(engine, case.id)                          # -> RESUBMITTED
+    engine.ex.ra_quarantined = True
     await engine.handle_alert(AlertEvent(
         queue_id="Q1_RA", recipients=["user@corp.test"], subject="Invoice",
         alert_name="riskware-object", malware_names=["CustomPolicy.MVX.SomeOtherRule"]))
     c = engine.repo.get_case(case.id)
-    assert c.state == FlowState.DONE_MALICIOUS
+    assert c.state == FlowState.DONE_QUARANTINED
     assert c.pwd_enc is None
+
+
+async def test_ra_pushed_but_not_actually_quarantined_is_passed(engine):
+    # The bug this flow fixes: a riskware rule can alert *without* quarantining. A push
+    # arrives, but the quarantine list shows no _RA -> the email passed, not "malicious".
+    case = await engine.handle_alert(_alert())
+    await _submit(engine, case.id)                          # -> RESUBMITTED
+    engine.ex.ra_quarantined = False                       # alerted but NOT held
+    await engine.handle_alert(AlertEvent(
+        queue_id="Q1_RA", recipients=["user@corp.test"], subject="Invoice",
+        alert_name="riskware-object", malware_names=["CustomPolicy.MVX.SomeOtherRule"]))
+    assert engine.repo.get_case(case.id).state == FlowState.DONE_PASSED
 
 
 async def test_password_failed_marker_in_malware_alert_is_wrong_password(engine):
@@ -252,39 +266,38 @@ async def test_RA_arriving_as_multiple_pushes_counts_once(engine):
     assert c.attempts == 1                                 # not 3
 
 
-async def test_password_failed_marker_reopens_if_malware_push_first(engine):
-    # If a no-marker malware push lands before the PASSWORD_EXTRACTION_FAILED one, the
-    # marker must still win and reopen the case for another attempt.
+async def test_password_failed_marker_reopens_if_quarantine_push_first(engine):
+    # If a no-marker re-quarantine push lands before the PASSWORD_EXTRACTION_FAILED one,
+    # the marker must still win and reopen the case for another attempt.
     case = await engine.handle_alert(_alert())
     await _submit(engine, case.id)
-    await engine.handle_alert(_malware_ra(names=["Malware.Parent.ZIP"]))   # jumps to malicious
-    assert engine.repo.get_case(case.id).state == FlowState.DONE_MALICIOUS
+    engine.ex.ra_quarantined = True
+    await engine.handle_alert(_malware_ra(names=["Malware.Parent.ZIP"]))   # jumps to quarantined
+    assert engine.repo.get_case(case.id).state == FlowState.DONE_QUARANTINED
     await engine.handle_alert(_malware_ra(names=["Malware.Parent.ZIP", "PASSWORD_EXTRACTION_FAILED"]))
     c = engine.repo.get_case(case.id)
     assert c.state == FlowState.AWAITING_PASSWORD          # reopened
     assert c.attempts == 1
 
 
-async def test_recheck_declares_clean_only_when_not_requarantined(engine):
+async def test_recheck_declares_passed_only_when_not_requarantined(engine):
     case = await engine.handle_alert(_alert())
     await _submit(engine, case.id)                          # -> RESUBMITTED
     engine.ex.ra_quarantined = False                       # no _RA entry remains
     assert await engine.recheck(case.id, final=False) is False   # wait for the pushed verdict
     assert engine.repo.get_case(case.id).state == FlowState.RECHECKING
     assert await engine.recheck(case.id, final=True) is True
-    assert engine.repo.get_case(case.id).state == FlowState.DONE_CLEAN
+    assert engine.repo.get_case(case.id).state == FlowState.DONE_PASSED
 
 
-async def test_recheck_backstop_fails_closed_when_still_requarantined(engine):
-    # The verdict push was missed but the email is still re-quarantined: never declare
-    # clean — treat as a wrong password (re-ask), so a held email is never released.
+async def test_recheck_declares_quarantined_when_still_requarantined(engine):
+    # No verdict push arrived, but the final poll finds the _RA still held: the email
+    # is quarantined (terminal), never passed.
     case = await engine.handle_alert(_alert())
     await _submit(engine, case.id)
     engine.ex.ra_quarantined = True
     assert await engine.recheck(case.id, final=True) is True
-    c = engine.repo.get_case(case.id)
-    assert c.state == FlowState.AWAITING_PASSWORD          # re-asked, not DONE_CLEAN
-    assert c.attempts == 1
+    assert engine.repo.get_case(case.id).state == FlowState.DONE_QUARANTINED
 
 
 async def test_wrong_password_retries_then_gives_up(engine):

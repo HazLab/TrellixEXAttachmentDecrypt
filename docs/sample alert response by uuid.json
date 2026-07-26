@@ -1,0 +1,46 @@
+{
+    "alert": [
+        {
+            "explanation": {
+                "malwareDetected": {
+                    "malware": [
+                        {
+                            "md5Sum": "daa5b3cbe7d720ee058efba1943381df",
+                            "sha256": "f4f5b8446a442d537875df9bf4c02950540e22bf535190a272d200293d6e9167",
+                            "name": "Malware.Parent.DOCX"
+                        }
+                    ]
+                },
+                "osChanges": []
+            },
+            "src": {
+                "smtpMailFrom": "it-support@networkshark.com"
+            },
+            "alertUrl": "https://exivx.networkshark.com/detection/objects?uuid=22a6e16f-b4b0-440a-8896-ca684f442ab2",
+            "action": "blocked",
+            "occurred": "2026-07-26 08:26:31 +0000",
+            "attackTime": "2026-07-26 08:24:48 +0000",
+            "dst": {
+                "smtpTo": "head.sales@networkshark.com"
+            },
+            "smtpMessage": {
+                "subject": "Action required: DOCX9 PASSWORD REQUIRED!!!!",
+                "queueId": "4h7F8c082jz68C5P_RA"
+            },
+            "applianceId": "86F8E7C5CEB0",
+            "id": 129,
+            "name": "MALWARE_OBJECT",
+            "severity": "MAJR",
+            "uuid": "22a6e16f-b4b0-440a-8896-ca684f442ab2",
+            "ack": "no",
+            "product": "EMAIL_MPS",
+            "vlan": 0,
+            "malicious": "yes",
+            "scVersion": "1679.298"
+        }
+    ],
+    "appliance": "eMPS",
+    "version": "eMPS (eMPS) 11.0.1.1024269",
+    "msg": "concise",
+    "alertsCount": 1
+}

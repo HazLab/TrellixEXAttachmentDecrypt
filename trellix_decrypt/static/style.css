@@ -121,6 +121,20 @@ td.subject, td.attach, td.recipient, td.sender { max-width: 230px; overflow: hid
 .timeline .t-detail { color: var(--muted); font-size: 12.5px; }
 .timeline .t-time { color: var(--muted); font-size: 11.5px; }
 
+/* Extra EX alert details (drawer, lazy-loaded) */
+.alert-extra { margin-top: 10px; }
+.alert-extra .ax-empty { color: var(--muted); font-size: 13px; }
+.ax-alert { border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2);
+  padding: 10px 12px; margin-top: 10px; }
+.ax-head { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13.5px; }
+.ax-sev { margin-left: auto; color: var(--muted); font-size: 11.5px; letter-spacing: .04em; }
+.ax-kv { margin: 8px 0 0; }
+.ax-mals { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.ax-mal { display: flex; align-items: baseline; gap: 8px; font-size: 12.5px; }
+.ax-mal-name { font-weight: 600; }
+.ax-hash { color: var(--muted); font-size: 11.5px; }
+.ax-link { display: inline-block; margin-top: 8px; font-size: 12.5px; color: var(--brand); }
+
 /* Forms */
 .form { padding: 8px 22px 22px; }
 .form fieldset { border: 1px solid var(--border); border-radius: 12px; margin: 18px 0 0; padding: 8px 16px 16px; }

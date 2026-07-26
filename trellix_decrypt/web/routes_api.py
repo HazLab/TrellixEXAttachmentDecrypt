@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, HTTPException, Request
 
 from . import auth
 from ..settings_store import EDITABLE
+
+log = logging.getLogger(__name__)
 
 # FlowState value -> (human label, unique badge class for CSS).
 STATUS_META = {
@@ -50,6 +54,19 @@ def build_api_router(ctx) -> APIRouter:
         if case is None:
             raise HTTPException(status_code=404, detail="not found")
         return _decorate(case)
+
+    @router.get("/cases/{case_id}/alerts")
+    async def case_alerts(request: Request, case_id: str):
+        """Extra, display-only EX alert details for the drawer (fetched by UUID). Degrades
+        gracefully — this is supplementary info and must never break the case view."""
+        _guard(request)
+        if ctx.repo.get_case(case_id) is None:
+            raise HTTPException(status_code=404, detail="not found")
+        try:
+            return {"alerts": await ctx.engine.alert_details_for_case(case_id)}
+        except Exception as exc:  # noqa: BLE001 — supplementary; never surface as a hard error
+            log.warning("alert detail fetch failed for case %s: %s", case_id, exc)
+            return {"alerts": [], "error": "could not fetch alert details from EX"}
 
     @router.post("/cases/{case_id}/resend")
     async def resend(request: Request, case_id: str):

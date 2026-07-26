@@ -29,13 +29,17 @@ Pipeline:
 5. EX re-analyzes the resubmission and re-detects it under the **same queue id +
    `_RA` suffix**, then **pushes** that re-detection to our webhook (the same HTTP
    notification consumer as the original). The push *triggers* classification in
-   `domain.FlowEngine._classify_resubmission` — we do **not** join the alert back via
-   an API lookup: the `/alerts` query returns no `uuid` to match the quarantine
-   record's `alert_uuids` on, and there is no reliable GET-by-uuid (the removed
-   `get_alert_by_uuid`/`EP_ALERT_DETAILS`). The alert detail that lookup used to surface
-   (alert type + malware names) rides in on the push instead: `_detection_summary(event)`
-   folds it into the timeline detail at the held / wrong-password transitions (empty on
-   the recheck-timer path, which has no push). Classification
+   `domain.FlowEngine._classify_resubmission` — **classification never joins the alert
+   back via an API lookup**: the `/alerts` query returns no `uuid` to match the
+   quarantine record's `alert_uuids` on. The verdict rides in on the push instead, and
+   `_detection_summary(event)` folds the alert type + malware names into the timeline
+   detail at the held / wrong-password transitions (empty on the recheck-timer path,
+   which has no push). Separately, a **display-only** drawer feature *does* fetch full
+   alert detail by UUID via `GET /alerts/alert/<uuid>` (`ex_client.get_alert_by_uuid`,
+   endpoint undocumented but present on the box; a quarantine record can carry several
+   `alert_uuids`, all fetched via `alert_uuids_for` → `FlowEngine.alert_details_for_case`
+   → `/api/cases/<id>/alerts`). It is best-effort, degrades gracefully, and is never part
+   of a flow decision. Classification
    keys on one signal off the push — the **still-encrypted marker** (a
    `CustomPolicy.MVX.<ext>` malware name matching the trigger rule, or a
    `PASSWORD_EXTRACTION_FAILED` name):
@@ -100,10 +104,12 @@ trellix_decrypt/
                   FlowEngine (the state machine / orchestrator) + the pure alert
                   parser (parse_alert / iter_alerts). NO I/O.
   ex_client.py    EXClient: auth (X-FeApi-Token + optional X-FeClient-Token, auto
-                  re-auth), get_alerts, quarantine list/release/delete,
+                  re-auth), get_alerts, get_alert_by_uuid (display-only detail),
+                  quarantine list/release/delete,
                   rescan_target (picks the path-bearing rescannable entry),
                   rescan(target_id, passwords), has_resubmission_quarantine (recheck
-                  backstop). EXApiError carries status_code/body (+ .not_found).
+                  backstop), alert_uuids_for (collects a case's alert_uuids).
+                  EXApiError carries status_code/body (+ .not_found).
                   Verified against docs/*.pdf (Release 2025.1).
                   *** ALL wsapis paths live at the top — the single place to adjust. ***
   ingest.py       AlertSource base + EX-alert JSON parser + FastAPI webhook router.

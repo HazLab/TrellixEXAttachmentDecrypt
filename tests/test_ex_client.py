@@ -118,6 +118,44 @@ async def test_ex_time_formats_and_assumes_utc_when_naive():
 
 
 @respx.mock
+async def test_get_alert_by_uuid_returns_raw_alert():
+    router = respx.mock
+    _mock_login(router)
+    router.get(BASE + ex.EP_ALERT_DETAILS + "/u-1").mock(return_value=httpx.Response(200, json={
+        "alert": [{"uuid": "u-1", "name": "MALWARE_OBJECT", "malicious": "yes"}], "alertsCount": 1}))
+    client = _client()
+    alert = await client.get_alert_by_uuid("u-1")
+    assert alert["name"] == "MALWARE_OBJECT"
+    await client.aclose()
+
+
+@respx.mock
+async def test_get_alert_by_uuid_none_when_not_found():
+    router = respx.mock
+    _mock_login(router)
+    router.get(BASE + ex.EP_ALERT_DETAILS + "/nope").mock(return_value=httpx.Response(
+        404, text='{"message":"alert not found"}'))
+    client = _client()
+    assert await client.get_alert_by_uuid("nope") is None
+    await client.aclose()
+
+
+@respx.mock
+async def test_alert_uuids_for_collects_original_and_RA_deduped():
+    router = respx.mock
+    _mock_login(router)
+    # The original and its _RA both belong to Q1; a prefix-sibling (Q12345) does not.
+    router.get(BASE + ex.EP_QUARANTINE).mock(return_value=httpx.Response(200, json=[
+        {"queue_id": "Q1", "alert_uuids": ["a-1", "a-2"]},
+        {"queue_id": "Q1_RA", "alert_uuids": ["a-2", "a-3"]},   # a-2 repeats -> deduped
+        {"queue_id": "Q12345", "alert_uuids": ["x-9"]},          # different email, ignored
+    ]))
+    client = _client()
+    assert await client.alert_uuids_for("Q1", "s@x", "subj") == ["a-1", "a-2", "a-3"]
+    await client.aclose()
+
+
+@respx.mock
 async def test_rescan_not_found_flags_error():
     router = respx.mock
     _mock_login(router)

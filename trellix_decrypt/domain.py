@@ -52,6 +52,23 @@ def _canon_name(value) -> str:
     return str(value or "").strip().lower().replace("-", "_")
 
 
+def _detection_summary(event: "AlertEvent | None") -> str:
+    """Compact detection detail from a pushed alert — the alert type plus the malware
+    names EX reported — for the case timeline. This is the info the removed alert-detail
+    API lookup used to surface; it now rides in on the webhook push. Empty string when
+    there's no push (the recheck-timer path), so callers can append it unconditionally."""
+    if event is None:
+        return ""
+    parts: list[str] = []
+    if event.alert_name:
+        parts.append(str(event.alert_name))
+    if event.malware_names:
+        parts.append("[" + ", ".join(dict.fromkeys(event.malware_names)) + "]")
+    if event.malicious:
+        parts.append("(malicious)")
+    return " ".join(parts)
+
+
 @dataclasses.dataclass
 class AlertEvent:
     """Normalized EX alert. One quarantined email can list several recipients."""
@@ -181,18 +198,24 @@ class FlowEngine:
         return (self.rules.matches(event)
                 or any(_canon_name(n) in PASSWORD_FAILED_MARKERS for n in event.malware_names))
 
-    async def _confirm_outcome(self, case) -> None:
+    async def _confirm_outcome(self, case, event: AlertEvent | None = None) -> None:
         """Terminal outcome, decided by the **actual quarantine list** — never by a
         pushed alert's type. A riskware rule may raise an alert without quarantining
         (alert-but-allow), so a push proves only that re-analysis happened, not that
         the email is held. We ask EX whether the ``_RA`` is still quarantined:
-        present → DONE_QUARANTINED (held); absent → DONE_PASSED (delivered)."""
+        present → DONE_QUARANTINED (held); absent → DONE_PASSED (delivered).
+
+        ``event`` is the pushed re-detection (None on the recheck-timer path); when held,
+        its detection detail is recorded on the timeline."""
         self.repo.clear_password(case)  # terminal either way — held password no longer needed
         # since=case.created_at widens the list window past EX's 24h default — a full
         # decrypt cycle can take longer, and the _RA is always after the email arrived.
         if await self.ex.has_resubmission_quarantine(case.queue_id, case.sender, case.subject,
                                                      since=case.created_at):
-            self.repo.set_state(case, FlowState.DONE_QUARANTINED, "re-quarantined after resubmission: held")
+            detail = "re-quarantined after resubmission: held"
+            summary = _detection_summary(event)
+            self.repo.set_state(case, FlowState.DONE_QUARANTINED,
+                                f"{detail} — {summary}" if summary else detail)
         else:
             self.repo.set_state(case, FlowState.DONE_PASSED, "not re-quarantined after resubmission: delivered")
 
@@ -212,10 +235,10 @@ class FlowEngine:
         landed first — hence we reopen DONE_QUARANTINED on a later marker."""
         if self._still_encrypted(event):
             if case.state in RECHECKABLE or case.state == FlowState.DONE_QUARANTINED:
-                await self._fail_extraction(case)  # reopen if a quarantine verdict jumped ahead
+                await self._fail_extraction(case, event)  # reopen if a quarantine verdict jumped ahead
             return
         if case.state in RECHECKABLE:
-            await self._confirm_outcome(case)
+            await self._confirm_outcome(case, event)
 
     async def reissue_expired_link(self, token: str):
         """If an expired-but-valid link is opened and the case still awaits a
@@ -303,14 +326,17 @@ class FlowEngine:
         for case_id in self.repo.list_resubmit_pending_ids(self.settings.resubmit_max_retries):
             await self.resubmit_case(case_id)
 
-    async def _fail_extraction(self, case) -> None:
+    async def _fail_extraction(self, case, event: AlertEvent | None = None) -> None:
         """A confirmed wrong password: the resubmission was re-quarantined as the same
-        failed-extraction riskware. Count the attempt and re-ask, or give up at the cap."""
+        failed-extraction riskware. Count the attempt and re-ask, or give up at the cap.
+        ``event`` is the still-encrypted re-detection whose detail we record."""
         self.repo.increment_attempts(case)
+        summary = _detection_summary(event)
+        note = f"wrong password: {summary}" if summary else "wrong password"
         if case.attempts >= self.settings.max_password_attempts:
-            self.repo.set_state(case, FlowState.FAILED_MAX_RETRIES, "max password attempts reached")
+            self.repo.set_state(case, FlowState.FAILED_MAX_RETRIES, f"max password attempts reached — {note}")
         else:
-            await self._send_password_request(case, retry=True)  # re-send the link to retry
+            await self._send_password_request(case, retry=True, note=note)  # re-send the link to retry
 
     async def recheck(self, case_id: str, final: bool = False) -> bool:
         """Timeout backstop for a resubmitted case. Returns True to stop polling.
@@ -368,7 +394,7 @@ class FlowEngine:
     async def aclose(self):
         await self.ex.aclose()
 
-    async def _send_password_request(self, case, retry: bool = False) -> bool:
+    async def _send_password_request(self, case, retry: bool = False, note: str = "") -> bool:
         token = self.tokens.mint(case.id)
         link = f"{self.settings.public_base_url.rstrip('/')}/p/{token}"
         # One email lists all recipients (the case holds them comma-joined); every
@@ -381,7 +407,8 @@ class FlowEngine:
             self.repo.increment_notify_attempts(case)
             self.repo.set_state(case, FlowState.NOTIFY_FAILED, f"email send failed: {exc}")
             return False
-        self.repo.set_state(case, FlowState.AWAITING_PASSWORD, "password link sent" + (" (retry)" if retry else ""))
+        detail = "password link sent" + (" (retry)" if retry else "")
+        self.repo.set_state(case, FlowState.AWAITING_PASSWORD, f"{detail} — {note}" if note else detail)
         return True
 
 

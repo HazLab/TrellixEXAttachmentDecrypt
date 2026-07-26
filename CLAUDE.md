@@ -31,7 +31,11 @@ Pipeline:
    notification consumer as the original). The push *triggers* classification in
    `domain.FlowEngine._classify_resubmission` — we do **not** join the alert back via
    an API lookup: the `/alerts` query returns no `uuid` to match the quarantine
-   record's `alert_uuids` on, and there is no reliable GET-by-uuid. Classification
+   record's `alert_uuids` on, and there is no reliable GET-by-uuid (the removed
+   `get_alert_by_uuid`/`EP_ALERT_DETAILS`). The alert detail that lookup used to surface
+   (alert type + malware names) rides in on the push instead: `_detection_summary(event)`
+   folds it into the timeline detail at the held / wrong-password transitions (empty on
+   the recheck-timer path, which has no push). Classification
    keys on one signal off the push — the **still-encrypted marker** (a
    `CustomPolicy.MVX.<ext>` malware name matching the trigger rule, or a
    `PASSWORD_EXTRACTION_FAILED` name):

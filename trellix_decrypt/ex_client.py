@@ -7,7 +7,11 @@ at the top of this file — the single place to adjust for another appliance.
 
 from __future__ import annotations
 
+import logging
+
 import httpx
+
+log = logging.getLogger(__name__)
 
 # --- Endpoints (Trellix WSAPI v2.0.0) ---------------------------------------
 API_VERSION = "v2.0.0"
@@ -132,23 +136,28 @@ class EXClient:
     # --- recheck backstop ---------------------------------------------------
     async def has_resubmission_quarantine(self, queue_id: str, sender: str | None = None,
                                           subject: str | None = None) -> bool:
-        """True if EX still *holds* the re-analysis (``_RA``) of this email.
+        """True if EX still holds a re-analysis (``_RA``) quarantine entry for this email.
 
         This is the authoritative resubmission verdict: the FlowEngine decides
         DONE_QUARANTINED vs DONE_PASSED from it, because a pushed ``_RA`` alert proves
         only that re-analysis happened, not that the email is held (a riskware rule can
         alert without quarantining).
 
-        The signal is the ``_RA`` entry's ``quarantine_path``, NOT its mere presence.
-        EX writes a ``_RA`` *record* to the quarantine list for every rescan, held or
-        passed; only a held one has a file behind it (``quarantine_path`` set). A ``_RA``
-        with a null path is a re-analysis record whose content was released/delivered =
-        passed. (Verified in docs/quarantine_sample.json: the only null-path entries are
-        ``_RA`` records.) This is the same "has a real file" test ``rescan_target`` uses.
-        Matched by sender+subject, then by queue-id prefix (we never build the suffix)."""
+        INTERIM (conservative): a ``_RA`` entry's presence = held. The
+        ``docs/quarantine_sample.json``-based theory that ``quarantine_path`` distinguishes
+        held from passed did NOT hold on the live box (held ``_RA`` records also carry a
+        null path there), so keying on the path mislabels held emails as passed — the
+        dangerous direction. Until the true discriminator is confirmed from the DIAGNOSTIC
+        log below, we err toward "held". Matched by sender+subject, then by queue-id prefix
+        (we never build the suffix)."""
         entries = await self.list_quarantine(sender=sender, subject=subject)
-        return any(e.get("quarantine_path") and _qid(e) != queue_id and _qid(e).startswith(queue_id)
-                   for e in entries)
+        # DIAGNOSTIC: dump every entry whose queue-id is related to this email (the base
+        # itself, or a "<base>...RA" suffix) with its quarantine_path, so we can see on a
+        # live box exactly how EX represents a held vs a passed resubmission. Remove once
+        # the true "held" discriminator is confirmed.
+        related = [(_qid(e), e.get("quarantine_path")) for e in entries if _qid(e).startswith(queue_id)]
+        log.info("has_resubmission_quarantine(base=%s) related entries: %s", queue_id, related)
+        return any(_qid(e) != queue_id and _qid(e).startswith(queue_id) for e in entries)
 
 
 # --- helpers ----------------------------------------------------------------

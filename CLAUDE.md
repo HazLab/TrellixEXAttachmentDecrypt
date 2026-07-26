@@ -183,11 +183,14 @@ pytest                         # unit + respx-mocked EX client tests
     nothing for re-detections, the recheck timer still runs the same quarantine-list
     confirm, so the verdict is unaffected — only the wrong-password fast-path (the
     still-encrypted marker) depends on a push.
-  - "Held" is read off the matched `_RA` entry's **`quarantine_path`**, not its mere
-    presence. EX writes a `_RA` *record* to the quarantine list for **every** rescan,
-    held or passed; only a held one has a file behind it (non-null `quarantine_path`).
-    A `_RA` with a null path is a re-analysis record whose content was released =
-    passed. (In `docs/quarantine_sample.json` the only null-path entries are `_RA`
-    records — same "has a real file" test `rescan_target` uses.) Keying on presence
-    alone labels *every* resubmission quarantined.
+  - **UNRESOLVED — how EX marks a held vs passed resubmission in the quarantine list.**
+    Two theories both failed on the live box: (a) *presence of any `_RA`* = held →
+    labels *every* resubmission Quarantined (a `_RA` record appears even for passed
+    emails); (b) *`_RA` with a non-null `quarantine_path`* = held (the shape in
+    `docs/quarantine_sample.json`, where the only null-path entries are `_RA` records) →
+    labels *every* resubmission Passed, because held `_RA` records on the live box *also*
+    carry a null path. `has_resubmission_quarantine` currently uses (a) as a conservative
+    interim (flag-as-held is safer than reporting a held email delivered) and logs a
+    `related entries` DIAGNOSTIC line per confirm so the real discriminator can be read
+    off a known-held vs known-passed case, then implemented.
 ```

@@ -191,4 +191,10 @@ pytest                         # unit + respx-mocked EX client tests
     resubmission as held. `quarantine_path` is NOT the discriminator (held `_RA` records
     on the live box also carry a null path). `has_resubmission_quarantine` logs the
     entries it considered per confirm.
+  - The quarantine list defaults to a `now()-24h` window, which a slow decrypt cycle can
+    outlast (the `_RA` would drop out of view and read as passed). The per-case checks
+    (`has_resubmission_quarantine`, `rescan_target`) pass `since=case.created_at`, so
+    `list_quarantine` sends a `start_time`/`end_time` pair widened to
+    `[created_at - 1h, now + 1h]` (the ±1h absorbs appliance/host clock skew). The `_RA`
+    is always created after the email arrived, so this window always covers it.
 ```

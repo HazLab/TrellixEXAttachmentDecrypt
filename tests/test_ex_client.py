@@ -94,6 +94,30 @@ async def test_has_resubmission_quarantine_ignores_prefix_siblings():
 
 
 @respx.mock
+async def test_list_quarantine_since_sets_time_window():
+    from datetime import datetime, timezone
+    router = respx.mock
+    _mock_login(router)
+    route = router.get(BASE + ex.EP_QUARANTINE).mock(return_value=httpx.Response(200, json=[]))
+    client = _client()
+    await client.list_quarantine(sender="s@x", since=datetime(2026, 7, 1, 9, 30, tzinfo=timezone.utc))
+    params = route.calls.last.request.url.params
+    # start_time is the arrival minus the skew (1h) -> 08:30; both sides present as a pair.
+    assert params["start_time"] == "2026-07-01T08:30:00.000+0000"
+    assert "end_time" in params
+    assert params["from"] == "s@x"
+    await client.aclose()
+
+
+async def test_ex_time_formats_and_assumes_utc_when_naive():
+    from datetime import datetime, timezone
+    assert ex._ex_time(datetime(2026, 7, 1, 8, 30, 0, 123000, tzinfo=timezone.utc)) == \
+        "2026-07-01T08:30:00.123+0000"
+    # A naive timestamp (as SQLite round-trips can produce) is treated as UTC.
+    assert ex._ex_time(datetime(2026, 7, 1, 8, 30)) == "2026-07-01T08:30:00.000+0000"
+
+
+@respx.mock
 async def test_rescan_not_found_flags_error():
     router = respx.mock
     _mock_login(router)

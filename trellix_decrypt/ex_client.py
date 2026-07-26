@@ -35,6 +35,7 @@ _BASE = f"/wsapis/{API_VERSION}"
 EP_LOGIN = f"{_BASE}/auth/login"
 EP_LOGOUT = f"{_BASE}/auth/logout"
 EP_ALERTS = f"{_BASE}/alerts"
+EP_ALERT_DETAILS = f"{_BASE}/alerts/alert"  # + /<uuid>; undocumented but present on the appliance
 EP_QUARANTINE = f"{_BASE}/emailmgmt/quarantine"
 EP_QUARANTINE_RELEASE = f"{_BASE}/emailmgmt/quarantine/release"
 EP_QUARANTINE_DELETE = f"{_BASE}/emailmgmt/quarantine/delete"
@@ -113,6 +114,23 @@ class EXClient:
         resp = await self._request("GET", EP_ALERTS, params=params)
         return resp.json()
 
+    async def get_alert_by_uuid(self, uuid: str) -> dict | None:
+        """Fetch one alert's full detail by UUID via ``GET /alerts/alert/<uuid>``.
+
+        Undocumented but present on the appliance; quarantine records reference their
+        alerts by ``alert_uuids``. Returns the raw alert dict (EX wraps it in an ``alert``
+        array), or None if EX has no such alert. Used only for display, never for flow
+        decisions."""
+        try:
+            resp = await self._request("GET", f"{EP_ALERT_DETAILS}/{uuid}")
+        except EXApiError as exc:
+            if exc.status_code == 404 or exc.not_found:  # no such alert
+                return None
+            raise
+        data = resp.json()
+        alerts = data.get("alert") if isinstance(data, dict) else None
+        return alerts[0] if isinstance(alerts, list) and alerts else None
+
     # --- quarantine ---------------------------------------------------------
     async def list_quarantine(self, sender: str | None = None, subject: str | None = None,
                               since: datetime | None = None, **params) -> list[dict]:
@@ -177,6 +195,23 @@ class EXClient:
         related = [(_qid(e), e.get("quarantine_path")) for e in entries if _strip_ra(_qid(e)) == queue_id]
         log.info("has_resubmission_quarantine(base=%s) entries for this queue id: %s", queue_id, related)
         return any(_qid(e).endswith("_RA") and _strip_ra(_qid(e)) == queue_id for e in entries)
+
+    async def alert_uuids_for(self, queue_id: str, sender: str | None = None,
+                              subject: str | None = None, since: datetime | None = None) -> list[str]:
+        """Every alert UUID EX attaches to this email's quarantine records — the original
+        and any ``<queue_id>_RA`` re-analysis. A record can list several ``alert_uuids``,
+        so we collect them all, order preserved and de-duplicated."""
+        entries = await self.list_quarantine(sender=sender, subject=subject, since=since)
+        out: list[str] = []
+        seen: set[str] = set()
+        for e in entries:
+            if _strip_ra(_qid(e)) != queue_id:
+                continue
+            for uuid in e.get("alert_uuids") or e.get("alertUuids") or []:
+                if uuid and uuid not in seen:
+                    seen.add(uuid)
+                    out.append(str(uuid))
+        return out
 
 
 # --- helpers ----------------------------------------------------------------

@@ -32,3 +32,6 @@ locale/*/LC_MESSAGES/django.mo
 
 # Proprietary Trellix API reference PDFs (vendor copyright) — keep local only
 docs/*.pdf
+
+# Windows/WSL alternate-data-stream cruft
+*:Zone.Identifier

@@ -48,6 +48,42 @@ def test_token_roundtrip_and_tamper():
     assert svc.verify(token + "x") is None
 
 
+# --- alert detail (display) -------------------------------------------------
+def test_parse_alert_detail_extracts_display_fields():
+    import json
+    from pathlib import Path
+
+    from trellix_decrypt.domain import parse_alert_detail
+    raw = json.loads(Path("docs/sample alert response by uuid.json").read_text())["alert"][0]
+    d = parse_alert_detail(raw)
+    assert d["name"] == "MALWARE_OBJECT"
+    assert d["malicious"] is True
+    assert d["severity"] == "MAJR"
+    assert d["action"] == "blocked"
+    assert d["queue_id"] == "4h7F8c082jz68C5P_RA"
+    assert d["uuid"] == "22a6e16f-b4b0-440a-8896-ca684f442ab2"
+    assert d["alert_url"].startswith("https://")
+    assert d["malware"][0]["name"] == "Malware.Parent.DOCX"
+    assert d["malware"][0]["sha256"].startswith("f4f5b844")
+
+
+async def test_alert_details_for_case_fetches_all_uuids(engine):
+    case = await engine.handle_alert(_alert())
+    engine.ex.alert_uuids = ["a-1", "a-2"]
+    engine.ex.alerts = {
+        "a-1": {"uuid": "a-1", "name": "MALWARE_OBJECT", "malicious": "yes",
+                "explanation": {"malwareDetected": {"malware": [{"name": "Malware.Parent.DOCX"}]}}},
+        "a-2": {"uuid": "a-2", "name": "RISKWARE_OBJECT", "malicious": "no"},
+    }
+    details = await engine.alert_details_for_case(case.id)
+    assert [d["uuid"] for d in details] == ["a-1", "a-2"]
+    assert details[0]["malware"][0]["name"] == "Malware.Parent.DOCX"
+
+
+async def test_alert_details_for_case_unknown_case_is_empty(engine):
+    assert await engine.alert_details_for_case("nope") == []
+
+
 # --- flow engine ------------------------------------------------------------
 async def test_non_trigger_alert_ignored(engine):
     # A different CustomPolicy.MVX riskware object (e.g. QR-code) must NOT trigger.

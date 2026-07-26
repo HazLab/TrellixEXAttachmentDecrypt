@@ -52,6 +52,12 @@ class FakeEX:
     async def has_resubmission_quarantine(self, queue_id, sender=None, subject=None, since=None):
         return self.ra_quarantined
 
+    async def alert_uuids_for(self, queue_id, sender=None, subject=None, since=None):
+        return list(getattr(self, "alert_uuids", []))
+
+    async def get_alert_by_uuid(self, uuid):
+        return getattr(self, "alerts", {}).get(uuid)
+
     async def aclose(self):
         pass
 

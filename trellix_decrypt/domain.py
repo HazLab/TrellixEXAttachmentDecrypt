@@ -7,6 +7,7 @@ is fully unit-testable with fakes.
 
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 import enum
 import hashlib
@@ -371,6 +372,20 @@ class FlowEngine:
             return None
         return await self._send_password_request(case)
 
+    async def alert_details_for_case(self, case_id: str) -> list[dict]:
+        """Extra, display-only alert details for the case drawer: every alert EX attaches
+        to this email's quarantine records (original + any ``_RA`` re-analysis), fetched
+        by UUID. Best-effort and never part of a flow decision — a quarantine record can
+        carry several ``alert_uuids``, so we fetch and return all of them. Empty list for
+        an unknown case."""
+        case = self.repo.get_case(case_id)
+        if case is None:
+            return []
+        uuids = await self.ex.alert_uuids_for(case.queue_id, case.sender, case.subject,
+                                              since=case.created_at)
+        raws = await asyncio.gather(*(self.ex.get_alert_by_uuid(u) for u in uuids))
+        return [parse_alert_detail(r) for r in raws if r]
+
     async def retry_failed_notifications(self):
         """Background sweep: re-attempt emails for NOTIFY_FAILED cases under the cap."""
         for case_id in self.repo.list_notify_failed_ids(self.settings.notify_max_retries):
@@ -530,3 +545,29 @@ def parse_alert(alert: dict) -> AlertEvent:
                        if (name := _text(m.get("name")) or _text(m.get("malware_name"))) is not None],
         raw=alert,
     )
+
+
+def parse_alert_detail(alert: dict) -> dict:
+    """Compact, display-only view of one raw EX alert (from GET /alerts/alert/<uuid>).
+
+    Pure. Surfaces the fields worth showing in the case drawer — alert type/verdict,
+    severity/action, when it occurred, the console link, and the detected malware
+    (name + hashes). Tolerates both the camelCase query shape and the hyphenated push."""
+    return {
+        "uuid": _text(alert.get("uuid")),
+        "name": _text(_first(alert.get("name"), alert.get("alert_name"))),
+        "malicious": _is_yes(_text(alert.get("malicious"))),
+        "severity": _text(alert.get("severity")),
+        "action": _text(alert.get("action")),
+        "occurred": _text(_first(alert.get("occurred"), alert.get("attackTime"), alert.get("attack-time"))),
+        "alert_url": _text(_first(alert.get("alertUrl"), alert.get("alert-url"))),
+        "queue_id": _text(_first(
+            _dig(alert, "smtpMessage", "queueId"), _dig(alert, "smtp-message", "queue-id"),
+            alert.get("queueId"), alert.get("queue-id"))),
+        "malware": [
+            {"name": _text(m.get("name")),
+             "sha256": _text(_first(m.get("sha256"), m.get("sha-256"))),
+             "md5": _text(_first(m.get("md5Sum"), m.get("md5sum"), m.get("md5")))}
+            for m in _malware_entries(alert)
+        ],
+    }

@@ -101,7 +101,9 @@ async function openDrawer(id) {
     <ul class="timeline">${(c.events || []).map((e) => `
       <li><div class="t-state">${esc((e.state || "").replace(/_/g, " "))}</div>
       <div class="t-detail">${esc(e.detail || "")}</div>
-      <div class="t-time">${esc(fmtTime(e.at))}</div></li>`).join("")}</ul>`;
+      <div class="t-time">${esc(fmtTime(e.at))}</div></li>`).join("")}</ul>
+    <h3 style="font-size:14px;margin:18px 0 0;">EX alert details</h3>
+    <div id="alert-extra" class="alert-extra">Loading…</div>`;
 
   const resend = document.getElementById("resend-btn");
   if (resend) resend.addEventListener("click", async () => {
@@ -116,6 +118,47 @@ async function openDrawer(id) {
     catch (e) { rescan.disabled = false; rescan.textContent = "Rescan failed — try again"; }
   });
   $("drawer").hidden = false;
+  loadAlertDetails(id);
+}
+
+// Extra, best-effort EX alert detail (fetched by UUID) — populated after the drawer
+// renders so a slow/unavailable EX never blocks the case view.
+async function loadAlertDetails(id) {
+  const box = document.getElementById("alert-extra");
+  if (!box) return;
+  try {
+    const r = await api("/api/cases/" + encodeURIComponent(id) + "/alerts");
+    box.innerHTML = renderAlertDetails(r);
+  } catch (e) {
+    box.innerHTML = `<div class="ax-empty">Could not load alert details.</div>`;
+  }
+}
+
+function renderAlertDetails(r) {
+  const alerts = (r && r.alerts) || [];
+  if (!alerts.length) {
+    return `<div class="ax-empty">${esc(r && r.error ? r.error : "No alert details available.")}</div>`;
+  }
+  return alerts.map((a) => {
+    const mal = (a.malware || []).map((m) => `
+      <div class="ax-mal"><span class="ax-mal-name">${esc(m.name || "—")}</span>
+      ${m.sha256 ? `<code class="mono ax-hash" title="${esc(m.sha256)}">${esc(m.sha256.slice(0, 16))}…</code>` : ""}</div>`).join("");
+    const verdict = a.malicious
+      ? `<span class="badge quarantined">malicious</span>`
+      : `<span class="badge passed">clean</span>`;
+    return `<div class="ax-alert">
+      <div class="ax-head">${esc(a.name || "alert")} ${verdict}
+        ${a.severity ? `<span class="ax-sev">${esc(a.severity)}</span>` : ""}</div>
+      <dl class="kv ax-kv">
+        ${a.action ? `<dt>Action</dt><dd>${esc(a.action)}</dd>` : ""}
+        ${a.occurred ? `<dt>Occurred</dt><dd class="mono">${esc(a.occurred)}</dd>` : ""}
+        ${a.queue_id ? `<dt>Queue ID</dt><dd class="mono">${esc(a.queue_id)}</dd>` : ""}
+        ${a.uuid ? `<dt>Alert UUID</dt><dd class="mono">${esc(a.uuid)}</dd>` : ""}
+      </dl>
+      ${mal ? `<div class="ax-mals">${mal}</div>` : ""}
+      ${a.alert_url ? `<a class="ax-link" href="${esc(a.alert_url)}" target="_blank" rel="noopener">Open in EX console ↗</a>` : ""}
+    </div>`;
+  }).join("");
 }
 
 function closeDrawer() { $("drawer").hidden = true; }

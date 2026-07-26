@@ -54,9 +54,7 @@ async def test_rescan_target_none_when_only_RA():
 async def test_has_resubmission_quarantine_true_when_RA_present():
     router = respx.mock
     _mock_login(router)
-    # INTERIM (conservative): any _RA entry alongside the original counts as held,
-    # regardless of quarantine_path (the path did not discriminate held vs passed on the
-    # live box). See has_resubmission_quarantine's DIAGNOSTIC note.
+    # An <queue_id>_RA record is present -> the re-analysis is still held.
     router.get(BASE + ex.EP_QUARANTINE).mock(return_value=httpx.Response(200, json=[
         {"queue_id": "Q1", "quarantine_path": "/p"},
         {"queue_id": "Q1_RA", "quarantine_path": None},
@@ -70,9 +68,26 @@ async def test_has_resubmission_quarantine_true_when_RA_present():
 async def test_has_resubmission_quarantine_false_when_only_original():
     router = respx.mock
     _mock_login(router)
-    # Only the original remains (no _RA) -> released/delivered.
+    # Only the original remains (no _RA) -> released/delivered = passed.
     router.get(BASE + ex.EP_QUARANTINE).mock(return_value=httpx.Response(200, json=[
         {"queue_id": "Q1", "quarantine_path": "/p"}]))
+    client = _client()
+    assert await client.has_resubmission_quarantine("Q1", "s@x", "subj") is False
+    await client.aclose()
+
+
+@respx.mock
+async def test_has_resubmission_quarantine_ignores_prefix_siblings():
+    router = respx.mock
+    _mock_login(router)
+    # The bug: a loose prefix match flagged everything held. Entries that merely START
+    # with the queue id (a longer unrelated id, or a non-_RA suffix) are NOT this email's
+    # re-analysis -> passed. Only an exact <queue_id>_RA counts.
+    router.get(BASE + ex.EP_QUARANTINE).mock(return_value=httpx.Response(200, json=[
+        {"queue_id": "Q1", "quarantine_path": "/p"},       # the original itself
+        {"queue_id": "Q12345", "quarantine_path": "/p2"},  # a different email, shares prefix
+        {"queue_id": "Q1_OTHER", "quarantine_path": "/p3"},# same prefix, not an _RA suffix
+    ]))
     client = _client()
     assert await client.has_resubmission_quarantine("Q1", "s@x", "subj") is False
     await client.aclose()

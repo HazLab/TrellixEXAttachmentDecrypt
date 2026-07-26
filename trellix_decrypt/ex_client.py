@@ -136,33 +136,35 @@ class EXClient:
     # --- recheck backstop ---------------------------------------------------
     async def has_resubmission_quarantine(self, queue_id: str, sender: str | None = None,
                                           subject: str | None = None) -> bool:
-        """True if EX still holds a re-analysis (``_RA``) quarantine entry for this email.
+        """True if EX still holds the re-analysis (``_RA``) quarantine entry for this email.
 
         This is the authoritative resubmission verdict: the FlowEngine decides
         DONE_QUARANTINED vs DONE_PASSED from it, because a pushed ``_RA`` alert proves
         only that re-analysis happened, not that the email is held (a riskware rule can
         alert without quarantining).
 
-        INTERIM (conservative): a ``_RA`` entry's presence = held. The
-        ``docs/quarantine_sample.json``-based theory that ``quarantine_path`` distinguishes
-        held from passed did NOT hold on the live box (held ``_RA`` records also carry a
-        null path there), so keying on the path mislabels held emails as passed — the
-        dangerous direction. Until the true discriminator is confirmed from the DIAGNOSTIC
-        log below, we err toward "held". Matched by sender+subject, then by queue-id prefix
-        (we never build the suffix)."""
+        The signal is simple and exact: is there a quarantine record whose queue id is
+        **this email's queue id with an ``_RA`` suffix**? Present → still held
+        (DONE_QUARANTINED); absent → released/delivered (DONE_PASSED). We match the
+        ``_RA``-suffixed id exactly (via ``_strip_ra``), NOT a loose prefix: a prefix
+        match also catches the original entry's siblings and any longer unrelated id,
+        which is what wrongly flagged every resubmission as held."""
         entries = await self.list_quarantine(sender=sender, subject=subject)
-        # DIAGNOSTIC: dump every entry whose queue-id is related to this email (the base
-        # itself, or a "<base>...RA" suffix) with its quarantine_path, so we can see on a
-        # live box exactly how EX represents a held vs a passed resubmission. Remove once
-        # the true "held" discriminator is confirmed.
-        related = [(_qid(e), e.get("quarantine_path")) for e in entries if _qid(e).startswith(queue_id)]
-        log.info("has_resubmission_quarantine(base=%s) related entries: %s", queue_id, related)
-        return any(_qid(e) != queue_id and _qid(e).startswith(queue_id) for e in entries)
+        related = [(_qid(e), e.get("quarantine_path")) for e in entries if _strip_ra(_qid(e)) == queue_id]
+        log.info("has_resubmission_quarantine(base=%s) entries for this queue id: %s", queue_id, related)
+        return any(_qid(e).endswith("_RA") and _strip_ra(_qid(e)) == queue_id for e in entries)
 
 
 # --- helpers ----------------------------------------------------------------
 def _qid(entry: dict) -> str:
     return str(entry.get("queue_id") or entry.get("queueId") or "")
+
+
+def _strip_ra(queue_id: str) -> str:
+    """The base queue id, with EX's one-or-more ``_RA`` re-analysis suffixes removed."""
+    while queue_id.endswith("_RA"):
+        queue_id = queue_id[: -len("_RA")]
+    return queue_id
 
 
 def _as_quarantine_list(data) -> list[dict]:

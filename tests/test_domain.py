@@ -266,6 +266,44 @@ async def test_RA_arriving_as_multiple_pushes_counts_once(engine):
     assert c.attempts == 1                                 # not 3
 
 
+def _last_detail(engine, case_id, state):
+    """The detail of the most recent timeline event in the given state."""
+    events = [e for e in engine.repo.case_detail(case_id)["events"] if e["state"] == state.value]
+    return events[-1]["detail"] if events else ""
+
+
+async def test_quarantined_records_the_pushed_detection_detail(engine):
+    # The alert detail (type + malware names) that the removed API lookup used to surface
+    # now rides in on the push and must land on the timeline when the email is held.
+    case = await engine.handle_alert(_alert())
+    await _submit(engine, case.id)
+    engine.ex.ra_quarantined = True
+    await engine.handle_alert(_malware_ra(names=["FE_Backdoor_Go_Sandcat_1"]))
+    detail = _last_detail(engine, case.id, FlowState.DONE_QUARANTINED)
+    assert "malware-object" in detail
+    assert "FE_Backdoor_Go_Sandcat_1" in detail
+
+
+async def test_wrong_password_retry_records_the_still_encrypted_marker(engine):
+    # A wrong-password re-ask should say why: the still-encrypted detection that triggered it.
+    case = await engine.handle_alert(_alert())
+    await _submit(engine, case.id)
+    await engine.handle_alert(_malware_ra(names=["Malware.Parent.ZIP", "PASSWORD_EXTRACTION_FAILED"]))
+    detail = _last_detail(engine, case.id, FlowState.AWAITING_PASSWORD)
+    assert "wrong password" in detail
+    assert "PASSWORD_EXTRACTION_FAILED" in detail
+
+
+async def test_recheck_timer_outcome_has_no_detection_suffix(engine):
+    # No push (recheck-timer path) -> _detection_summary is empty -> plain detail, no dangling dash.
+    case = await engine.handle_alert(_alert())
+    await _submit(engine, case.id)
+    engine.ex.ra_quarantined = True
+    await engine.recheck(case.id, final=True)
+    detail = _last_detail(engine, case.id, FlowState.DONE_QUARANTINED)
+    assert detail == "re-quarantined after resubmission: held"
+
+
 async def test_password_failed_marker_reopens_if_quarantine_push_first(engine):
     # If a no-marker re-quarantine push lands before the PASSWORD_EXTRACTION_FAILED one,
     # the marker must still win and reopen the case for another attempt.

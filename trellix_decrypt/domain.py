@@ -188,7 +188,10 @@ class FlowEngine:
         the email is held. We ask EX whether the ``_RA`` is still quarantined:
         present → DONE_QUARANTINED (held); absent → DONE_PASSED (delivered)."""
         self.repo.clear_password(case)  # terminal either way — held password no longer needed
-        if await self.ex.has_resubmission_quarantine(case.queue_id, case.sender, case.subject):
+        # since=case.created_at widens the list window past EX's 24h default — a full
+        # decrypt cycle can take longer, and the _RA is always after the email arrived.
+        if await self.ex.has_resubmission_quarantine(case.queue_id, case.sender, case.subject,
+                                                     since=case.created_at):
             self.repo.set_state(case, FlowState.DONE_QUARANTINED, "re-quarantined after resubmission: held")
         else:
             self.repo.set_state(case, FlowState.DONE_PASSED, "not re-quarantined after resubmission: delivered")
@@ -260,7 +263,8 @@ class FlowEngine:
             return
         # Rescan the entry that actually holds a quarantined file (_RA re-analysis
         # records have a null path and can't be rescanned).
-        queue_id, email_uuid = await self.ex.rescan_target(case.queue_id, case.sender, case.subject)
+        queue_id, email_uuid = await self.ex.rescan_target(case.queue_id, case.sender, case.subject,
+                                                           since=case.created_at)
         if queue_id is None:
             log.warning("no rescannable quarantine entry for case %s (queue %s)", case.id, case.queue_id)
             self.repo.increment_resubmit_attempts(case)

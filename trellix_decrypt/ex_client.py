@@ -8,10 +8,26 @@ at the top of this file — the single place to adjust for another appliance.
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timedelta, timezone
 
 import httpx
 
 log = logging.getLogger(__name__)
+
+#: The quarantine-list default window is only now()-24h, but a full decrypt cycle
+#: (notify -> recipient submits -> rescan -> re-analysis) can outlast that. When a
+#: caller passes ``since`` we widen the window to [since - skew, now + skew]; the skew
+#: absorbs clock differences between us and the appliance. Extra rows are harmless — the
+#: match is by exact queue id.
+_TIME_SKEW = timedelta(hours=1)
+
+
+def _ex_time(dt: datetime) -> str:
+    """Format a datetime as EX expects: ``YYYY-MM-DDTHH:MM:SS.SSS-HHMM`` (UTC)."""
+    if dt.tzinfo is None:  # DB round-trips can drop tzinfo; our timestamps are UTC
+        dt = dt.replace(tzinfo=timezone.utc)
+    dt = dt.astimezone(timezone.utc)
+    return f"{dt:%Y-%m-%dT%H:%M:%S}.{dt.microsecond // 1000:03d}{dt:%z}"
 
 # --- Endpoints (Trellix WSAPI v2.0.0) ---------------------------------------
 API_VERSION = "v2.0.0"
@@ -98,20 +114,28 @@ class EXClient:
         return resp.json()
 
     # --- quarantine ---------------------------------------------------------
-    async def list_quarantine(self, sender: str | None = None, subject: str | None = None, **params) -> list[dict]:
+    async def list_quarantine(self, sender: str | None = None, subject: str | None = None,
+                              since: datetime | None = None, **params) -> list[dict]:
         # The EX list filters are `from` and `subject`; narrow by the email when known.
         if sender:
             params["from"] = sender
         if subject:
             params["subject"] = subject
+        # Without start_time/end_time EX only looks back 24h. When the caller knows when
+        # the email arrived, widen the window to cover the whole cycle. The doc requires
+        # start_time and end_time to be sent as a pair.
+        if since is not None:
+            params["start_time"] = _ex_time(since - _TIME_SKEW)
+            params["end_time"] = _ex_time(datetime.now(timezone.utc) + _TIME_SKEW)
         resp = await self._request("GET", EP_QUARANTINE, params=params)
         return _as_quarantine_list(resp.json())
 
-    async def rescan_target(self, queue_id: str, sender: str | None = None, subject: str | None = None):
+    async def rescan_target(self, queue_id: str, sender: str | None = None, subject: str | None = None,
+                            since: datetime | None = None):
         """Return (queue_id, email_uuid) of the RESCANNABLE quarantine entry for this
         email — i.e. one with an actual quarantined file (`quarantine_path` set).
         `_RA` re-analysis records have a null path and are NOT rescannable."""
-        entries = await self.list_quarantine(sender=sender, subject=subject)
+        entries = await self.list_quarantine(sender=sender, subject=subject, since=since)
         rescannable = [e for e in entries if e.get("quarantine_path")]
         exact = [e for e in rescannable if _qid(e) == queue_id]
         for entry in exact or rescannable:
@@ -135,7 +159,7 @@ class EXClient:
 
     # --- recheck backstop ---------------------------------------------------
     async def has_resubmission_quarantine(self, queue_id: str, sender: str | None = None,
-                                          subject: str | None = None) -> bool:
+                                          subject: str | None = None, since: datetime | None = None) -> bool:
         """True if EX still holds the re-analysis (``_RA``) quarantine entry for this email.
 
         This is the authoritative resubmission verdict: the FlowEngine decides
@@ -149,7 +173,7 @@ class EXClient:
         ``_RA``-suffixed id exactly (via ``_strip_ra``), NOT a loose prefix: a prefix
         match also catches the original entry's siblings and any longer unrelated id,
         which is what wrongly flagged every resubmission as held."""
-        entries = await self.list_quarantine(sender=sender, subject=subject)
+        entries = await self.list_quarantine(sender=sender, subject=subject, since=since)
         related = [(_qid(e), e.get("quarantine_path")) for e in entries if _strip_ra(_qid(e)) == queue_id]
         log.info("has_resubmission_quarantine(base=%s) entries for this queue id: %s", queue_id, related)
         return any(_qid(e).endswith("_RA") and _strip_ra(_qid(e)) == queue_id for e in entries)

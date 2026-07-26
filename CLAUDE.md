@@ -183,4 +183,11 @@ pytest                         # unit + respx-mocked EX client tests
     nothing for re-detections, the recheck timer still runs the same quarantine-list
     confirm, so the verdict is unaffected — only the wrong-password fast-path (the
     still-encrypted marker) depends on a push.
+  - "Held" is read off the matched `_RA` entry's **`quarantine_path`**, not its mere
+    presence. EX writes a `_RA` *record* to the quarantine list for **every** rescan,
+    held or passed; only a held one has a file behind it (non-null `quarantine_path`).
+    A `_RA` with a null path is a re-analysis record whose content was released =
+    passed. (In `docs/quarantine_sample.json` the only null-path entries are `_RA`
+    records — same "has a real file" test `rescan_target` uses.) Keying on presence
+    alone labels *every* resubmission quarantined.
 ```

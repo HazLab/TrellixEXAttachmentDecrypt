@@ -51,16 +51,31 @@ async def test_rescan_target_none_when_only_RA():
 
 
 @respx.mock
-async def test_has_resubmission_quarantine_true_when_RA_present():
+async def test_has_resubmission_quarantine_true_when_RA_holds_a_file():
     router = respx.mock
     _mock_login(router)
-    # An _RA re-analysis record alongside the original means it was re-quarantined.
+    # A held _RA re-detection has a real file behind it (quarantine_path set) -> held.
+    router.get(BASE + ex.EP_QUARANTINE).mock(return_value=httpx.Response(200, json=[
+        {"queue_id": "Q1", "quarantine_path": "/p"},
+        {"queue_id": "Q1_RA", "quarantine_path": "/p_RA"},
+    ]))
+    client = _client()
+    assert await client.has_resubmission_quarantine("Q1", "s@x", "subj") is True
+    await client.aclose()
+
+
+@respx.mock
+async def test_has_resubmission_quarantine_false_when_RA_has_no_file():
+    router = respx.mock
+    _mock_login(router)
+    # EX writes an _RA record for every rescan; a null quarantine_path means nothing is
+    # held -> the content was released/delivered = passed (this is the real-sample shape).
     router.get(BASE + ex.EP_QUARANTINE).mock(return_value=httpx.Response(200, json=[
         {"queue_id": "Q1", "quarantine_path": "/p"},
         {"queue_id": "Q1_RA", "quarantine_path": None},
     ]))
     client = _client()
-    assert await client.has_resubmission_quarantine("Q1", "s@x", "subj") is True
+    assert await client.has_resubmission_quarantine("Q1", "s@x", "subj") is False
     await client.aclose()
 
 

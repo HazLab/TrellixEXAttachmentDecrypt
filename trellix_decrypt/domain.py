@@ -209,10 +209,7 @@ class FlowEngine:
         ``event`` is the pushed re-detection (None on the recheck-timer path); when held,
         its detection detail is recorded on the timeline."""
         self.repo.clear_password(case)  # terminal either way — held password no longer needed
-        # since=case.created_at widens the list window past EX's 24h default — a full
-        # decrypt cycle can take longer, and the _RA is always after the email arrived.
-        if await self.ex.has_resubmission_quarantine(case.queue_id, case.sender, case.subject,
-                                                     since=case.created_at):
+        if await self.ex.has_resubmission_quarantine(case.queue_id, case.sender, case.subject):
             detail = "re-quarantined after resubmission: held"
             summary = _detection_summary(event)
             self.repo.set_state(case, FlowState.DONE_QUARANTINED,
@@ -287,8 +284,7 @@ class FlowEngine:
             return
         # Rescan the entry that actually holds a quarantined file (_RA re-analysis
         # records have a null path and can't be rescanned).
-        queue_id, email_uuid = await self.ex.rescan_target(case.queue_id, case.sender, case.subject,
-                                                           since=case.created_at)
+        queue_id, email_uuid = await self.ex.rescan_target(case.queue_id, case.sender, case.subject)
         if queue_id is None:
             log.warning("no rescannable quarantine entry for case %s (queue %s)", case.id, case.queue_id)
             self.repo.increment_resubmit_attempts(case)
@@ -381,8 +377,7 @@ class FlowEngine:
         case = self.repo.get_case(case_id)
         if case is None:
             return []
-        uuids = await self.ex.alert_uuids_for(case.queue_id, case.sender, case.subject,
-                                              since=case.created_at)
+        uuids = await self.ex.alert_uuids_for(case.queue_id, case.sender, case.subject)
         raws = await asyncio.gather(*(self.ex.get_alert_by_uuid(u) for u in uuids))
         return [parse_alert_detail(r) for r in raws if r]
 

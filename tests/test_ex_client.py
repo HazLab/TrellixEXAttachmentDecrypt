@@ -109,6 +109,23 @@ async def test_list_quarantine_since_sets_time_window():
     await client.aclose()
 
 
+@respx.mock
+async def test_case_lookups_use_clock_independent_window():
+    # rescan_target / has_resubmission_quarantine must send a fixed wide window (not a
+    # now-relative one) so a wrong EX clock can't hide the entry. Assert start_time is the
+    # year-2000 floor, proving the window doesn't depend on our clock.
+    router = respx.mock
+    _mock_login(router)
+    route = router.get(BASE + ex.EP_QUARANTINE).mock(return_value=httpx.Response(200, json=[
+        {"queue_id": "Q1", "quarantine_path": "/p"}]))
+    client = _client()
+    await client.rescan_target("Q1", "s@x", "subj")
+    params = route.calls.last.request.url.params
+    assert params["start_time"].startswith("1999-12-31") or params["start_time"].startswith("2000-01-01")
+    assert params["end_time"].startswith("2100-01-01") or params["end_time"].startswith("2099-12")
+    await client.aclose()
+
+
 async def test_ex_time_formats_and_assumes_utc_when_naive():
     from datetime import datetime, timezone
     assert ex._ex_time(datetime(2026, 7, 1, 8, 30, 0, 123000, tzinfo=timezone.utc)) == \

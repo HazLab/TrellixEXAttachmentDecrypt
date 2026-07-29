@@ -15,11 +15,18 @@ import httpx
 log = logging.getLogger(__name__)
 
 #: The quarantine-list default window is only now()-24h, but a full decrypt cycle
-#: (notify -> recipient submits -> rescan -> re-analysis) can outlast that. When a
-#: caller passes ``since`` we widen the window to [since - skew, now + skew]; the skew
-#: absorbs clock differences between us and the appliance. Extra rows are harmless — the
-#: match is by exact queue id.
+#: (notify -> recipient submits -> rescan -> re-analysis) can outlast that. A caller can
+#: pass ``since``/``until`` to widen it; ``_TIME_SKEW`` pads each open end.
 _TIME_SKEW = timedelta(hours=1)
+
+#: Clock-INDEPENDENT window for the per-case lookups. EX filters the list by its OWN
+#: clock while we'd compute a now-relative window on ours, so a wrong appliance clock
+#: (skew > the pad) pushes the very entry we need outside the window — the list comes
+#: back empty and a rescan/confirm wrongly finds "no queue id". A fixed wide span avoids
+#: any dependence on the two clocks agreeing; `from`+`subject`+exact-queue-id still narrow
+#: the result. Verified failure mode: EX clock off by hours -> rescan target not found.
+_ALL_TIME_START = datetime(2000, 1, 1, tzinfo=timezone.utc)
+_ALL_TIME_END = datetime(2100, 1, 1, tzinfo=timezone.utc)
 
 
 def _ex_time(dt: datetime) -> str:
@@ -133,27 +140,35 @@ class EXClient:
 
     # --- quarantine ---------------------------------------------------------
     async def list_quarantine(self, sender: str | None = None, subject: str | None = None,
-                              since: datetime | None = None, **params) -> list[dict]:
+                              since: datetime | None = None, until: datetime | None = None,
+                              **params) -> list[dict]:
         # The EX list filters are `from` and `subject`; narrow by the email when known.
         if sender:
             params["from"] = sender
         if subject:
             params["subject"] = subject
-        # Without start_time/end_time EX only looks back 24h. When the caller knows when
-        # the email arrived, widen the window to cover the whole cycle. The doc requires
-        # start_time and end_time to be sent as a pair.
-        if since is not None:
-            params["start_time"] = _ex_time(since - _TIME_SKEW)
-            params["end_time"] = _ex_time(datetime.now(timezone.utc) + _TIME_SKEW)
+        # Without start_time/end_time EX only looks back 24h. Passing either widens it;
+        # the doc requires them as a pair, so we fill the open end and pad it by the skew.
+        if since is not None or until is not None:
+            start = (since if since is not None else _ALL_TIME_START) - _TIME_SKEW
+            end = (until if until is not None else datetime.now(timezone.utc)) + _TIME_SKEW
+            params["start_time"] = _ex_time(start)
+            params["end_time"] = _ex_time(end)
         resp = await self._request("GET", EP_QUARANTINE, params=params)
         return _as_quarantine_list(resp.json())
 
-    async def rescan_target(self, queue_id: str, sender: str | None = None, subject: str | None = None,
-                            since: datetime | None = None):
+    async def _list_for_case(self, sender: str | None, subject: str | None) -> list[dict]:
+        """Quarantine list for a per-case lookup, over a clock-INDEPENDENT window (see
+        ``_ALL_TIME_START``): overrides EX's 24h default without depending on our clock
+        agreeing with the appliance's, so a wrong EX clock can't hide the entry."""
+        return await self.list_quarantine(sender=sender, subject=subject,
+                                          since=_ALL_TIME_START, until=_ALL_TIME_END)
+
+    async def rescan_target(self, queue_id: str, sender: str | None = None, subject: str | None = None):
         """Return (queue_id, email_uuid) of the RESCANNABLE quarantine entry for this
         email — i.e. one with an actual quarantined file (`quarantine_path` set).
         `_RA` re-analysis records have a null path and are NOT rescannable."""
-        entries = await self.list_quarantine(sender=sender, subject=subject, since=since)
+        entries = await self._list_for_case(sender, subject)
         rescannable = [e for e in entries if e.get("quarantine_path")]
         exact = [e for e in rescannable if _qid(e) == queue_id]
         for entry in exact or rescannable:
@@ -177,7 +192,7 @@ class EXClient:
 
     # --- recheck backstop ---------------------------------------------------
     async def has_resubmission_quarantine(self, queue_id: str, sender: str | None = None,
-                                          subject: str | None = None, since: datetime | None = None) -> bool:
+                                          subject: str | None = None) -> bool:
         """True if EX still holds the re-analysis (``_RA``) quarantine entry for this email.
 
         This is the authoritative resubmission verdict: the FlowEngine decides
@@ -190,18 +205,20 @@ class EXClient:
         (DONE_QUARANTINED); absent → released/delivered (DONE_PASSED). We match the
         ``_RA``-suffixed id exactly (via ``_strip_ra``), NOT a loose prefix: a prefix
         match also catches the original entry's siblings and any longer unrelated id,
-        which is what wrongly flagged every resubmission as held."""
-        entries = await self.list_quarantine(sender=sender, subject=subject, since=since)
+        which is what wrongly flagged every resubmission as held. The clock-independent
+        window matters here too: a skewed EX clock could hide the ``_RA`` and mislabel a
+        held email as passed — the dangerous direction."""
+        entries = await self._list_for_case(sender, subject)
         related = [(_qid(e), e.get("quarantine_path")) for e in entries if _strip_ra(_qid(e)) == queue_id]
         log.info("has_resubmission_quarantine(base=%s) entries for this queue id: %s", queue_id, related)
         return any(_qid(e).endswith("_RA") and _strip_ra(_qid(e)) == queue_id for e in entries)
 
     async def alert_uuids_for(self, queue_id: str, sender: str | None = None,
-                              subject: str | None = None, since: datetime | None = None) -> list[str]:
+                              subject: str | None = None) -> list[str]:
         """Every alert UUID EX attaches to this email's quarantine records — the original
         and any ``<queue_id>_RA`` re-analysis. A record can list several ``alert_uuids``,
         so we collect them all, order preserved and de-duplicated."""
-        entries = await self.list_quarantine(sender=sender, subject=subject, since=since)
+        entries = await self._list_for_case(sender, subject)
         out: list[str] = []
         seen: set[str] = set()
         for e in entries:

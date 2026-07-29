@@ -202,9 +202,14 @@ pytest                         # unit + respx-mocked EX client tests
     on the live box also carry a null path). `has_resubmission_quarantine` logs the
     entries it considered per confirm.
   - The quarantine list defaults to a `now()-24h` window, which a slow decrypt cycle can
-    outlast (the `_RA` would drop out of view and read as passed). The per-case checks
-    (`has_resubmission_quarantine`, `rescan_target`) pass `since=case.created_at`, so
-    `list_quarantine` sends a `start_time`/`end_time` pair widened to
-    `[created_at - 1h, now + 1h]` (the ±1h absorbs appliance/host clock skew). The `_RA`
-    is always created after the email arrived, so this window always covers it.
+    outlast (the `_RA` would drop out of view and read as passed). The per-case lookups
+    (`rescan_target`, `has_resubmission_quarantine`, `alert_uuids_for`) therefore go
+    through `_list_for_case`, which sends a **fixed, clock-INDEPENDENT** window
+    (`_ALL_TIME_START..._ALL_TIME_END`, i.e. 2000–2100). **Do not** make this window
+    now-relative: EX filters the list by its OWN clock while we'd compute the window on
+    ours, so a wrong appliance clock (skew beyond the pad) pushes the very entry we need
+    outside the window — the list comes back empty and a rescan reports "no rescannable
+    entry"/"can't find queue id" (observed live; fixing the EX clock made it work). The
+    `from`+`subject`+exact-queue-id match still narrows the result, so the wide window is
+    harmless. `list_quarantine` still takes `since`/`until` for other callers/tests.
 ```

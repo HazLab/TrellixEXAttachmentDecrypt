@@ -21,7 +21,8 @@ stopping on malicious or clean results.
    - failed extraction again → ask the recipient again (up to a retry cap);
    - malicious, or not quarantined → done.
 
-See `CLAUDE.md` for architecture and module layout.
+See `CLAUDE.md` for architecture and module layout, and `docs/STACK.md` for the
+tech stack.
 
 ## Install
 

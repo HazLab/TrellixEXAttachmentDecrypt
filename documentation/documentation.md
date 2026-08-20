@@ -1335,17 +1335,117 @@ restart is required. TLS-certificate verification for EX and SMTP is **off by de
 (appliances/relays commonly use self-signed certs); enable it in production with trusted
 certs.
 
-| Section | Notable fields |
-|---------|----------------|
-| Admin access | **Admin password** (required; bootstraps sign-in). |
-| Trellix EX | Base URL, username/password, verify TLS, client token, rescan path id, timeout. |
-| SMTP | Host/port, credentials, from, TLS mode, HELO hostname, verify TLS. |
-| Bounce (IMAP) | Host/port/credentials/mailbox, SSL, poll interval (blank host = disabled). |
-| Trigger | Alert name, malware names (CSV). |
-| Web & webhook | Public URL, webhook username/password, **IP allowlist**, link lifetime. |
-| Security & rate limiting | Login/form limits & windows, trust X-Forwarded-For, max body bytes. |
-| Logging *(restart)* | Level, file, rotation. |
-| Infrastructure *(restart)* | Bind host/port. (`DB_URL` is env-only.) |
+The table below lists every setting with the same explanation its **?** tooltip shows,
+and whether a change needs a restart (● = restart to apply). `DB_URL` and `SECRET_KEY`
+are environment-only (not editable in the UI).
+
+### Admin access
+
+| Setting (env var) | What it does | Restart |
+|-------------------|--------------|:------:|
+| `UI_PASSWORD` | Password for signing in to this dashboard. Required — setting it for the first time ends setup mode. |  |
+
+### Trellix EX
+
+| Setting (env var) | What it does | Restart |
+|-------------------|--------------|:------:|
+| `EX_BASE_URL` | Base URL of the Trellix EX appliance, e.g. https://ex.example.com. |  |
+| `EX_USERNAME` | EX API account username (needs the API Analyst role). |  |
+| `EX_PASSWORD` | Password for the EX API account. Leave blank to keep the current one; tick remove to clear. |  |
+| `EX_CLIENT_TOKEN` | Optional X-FeClient-Token issued by Trellix. Leave blank if unused. |  |
+| `EX_VERIFY_TLS` | Verify the EX TLS certificate. Off by default — EX appliances commonly use self-signed certs. |  |
+| `EX_RESCAN_ID_FIELD` | Which id the rescan endpoint expects in its path. Try email_uuid if rescan returns an authorization error. |  |
+| `EX_TIMEOUT` | HTTP timeout (seconds) for EX API calls. Raise if EX is slow (ReadTimeout). |  |
+
+### Mail gateway (SMTP)
+
+| Setting (env var) | What it does | Restart |
+|-------------------|--------------|:------:|
+| `SMTP_HOST` | SMTP relay hostname used to send the recipient emails. |  |
+| `SMTP_PORT` | SMTP port (587 = STARTTLS, 465 = implicit TLS, 25 = plain). |  |
+| `SMTP_USERNAME` | SMTP auth username. Leave blank if the relay needs no auth. |  |
+| `SMTP_PASSWORD` | SMTP auth password. Leave blank to keep the current one; tick remove to clear. |  |
+| `SMTP_FROM` | From address shown on the recipient emails. |  |
+| `SMTP_HELO_HOSTNAME` | HELO/EHLO name sent to the server. Set an FQDN if the server rejects the OS hostname (504 5.5.2). |  |
+| `SMTP_TLS_MODE` | How TLS is negotiated: opportunistic, required STARTTLS, none, or implicit SSL (port 465). |  |
+| `SMTP_VERIFY_TLS` | Verify the SMTP server's TLS certificate. Off by default for lab/self-signed CAs. |  |
+
+### Bounce monitoring (IMAP)
+
+| Setting (env var) | What it does | Restart |
+|-------------------|--------------|:------:|
+| `IMAP_HOST` | IMAP host to poll for bounce (DSN) detection. Blank disables bounce monitoring. |  |
+| `IMAP_PORT` | IMAP port (993 for IMAPS). |  |
+| `IMAP_USERNAME` | IMAP account username for the bounce mailbox. |  |
+| `IMAP_PASSWORD` | IMAP account password. Leave blank to keep the current one; tick remove to clear. |  |
+| `IMAP_MAILBOX` | Mailbox scanned for bounces (e.g. INBOX). |  |
+| `IMAP_SSL` | Connect to IMAP over SSL (IMAPS). |  |
+| `BOUNCE_POLL_INTERVAL` | Seconds between IMAP bounce polls. |  |
+
+### Trigger
+
+| Setting (env var) | What it does | Restart |
+|-------------------|--------------|:------:|
+| `TRIGGER_ALERT_NAME` | The EX alert top-level name that triggers the flow (e.g. RISKWARE_OBJECT). |  |
+| `TRIGGER_MALWARE_NAMES` | Comma-separated malware names that trigger the flow (the encrypted-attachment policy emits CustomPolicy.MVX.<ext>). Empty disables triggering. |  |
+
+### Web & webhook
+
+| Setting (env var) | What it does | Restart |
+|-------------------|--------------|:------:|
+| `PUBLIC_BASE_URL` | Public URL recipients use — the one-time links are built from it. Must match how they reach this server. |  |
+| `WEBHOOK_USERNAME` | HTTP Basic-auth username EX must send to the webhook. |  |
+| `WEBHOOK_PASSWORD` | HTTP Basic-auth password EX must send. Leave blank to keep the current one; tick remove to clear. |  |
+| `WEBHOOK_IP_ALLOWLIST` | Comma-separated source IPs allowed to POST the webhook (blank = any). The webhook needs Basic auth and/or an allowlist. |  |
+| `TOKEN_TTL` | Lifetime (seconds) of a one-time recipient link before it expires. |  |
+
+### Security & rate limiting
+
+| Setting (env var) | What it does | Restart |
+|-------------------|--------------|:------:|
+| `LOGIN_RATE_LIMIT` | Failed admin sign-ins allowed per IP within the window before HTTP 429. | ● |
+| `LOGIN_RATE_WINDOW` | Window (seconds) for the login rate limit. | ● |
+| `FORM_RATE_LIMIT` | Password-form submissions allowed per IP + link within the window. | ● |
+| `FORM_RATE_WINDOW` | Window (seconds) for the password-form rate limit. | ● |
+| `MAX_REQUEST_BYTES` | Reject webhook/form request bodies larger than this many bytes (DoS guard). |  |
+| `TRUST_FORWARDED_FOR` | Trust X-Forwarded-For for the client IP. Enable only behind a trusted reverse proxy (otherwise spoofable). |  |
+
+### Retry & recheck
+
+| Setting (env var) | What it does | Restart |
+|-------------------|--------------|:------:|
+| `MAX_PASSWORD_ATTEMPTS` | How many wrong-password rounds before giving up (cap 5). |  |
+| `RECHECK_DELAY` | Seconds before the first recheck poll after a resubmission. |  |
+| `RECHECK_INTERVAL` | Steady-state seconds between later recheck polls. |  |
+| `RECHECK_MAX_ATTEMPTS` | Number of recheck polls before concluding the verdict from the list. |  |
+| `NOTIFY_MAX_RETRIES` | How many times to retry a failed recipient email. |  |
+| `NOTIFY_RETRY_INTERVAL` | Seconds between email retry sweeps. |  |
+| `RESUBMIT_MAX_RETRIES` | How many times to retry a failed EX rescan. |  |
+| `RESUBMIT_RETRY_INTERVAL` | Seconds between rescan retry sweeps. |  |
+
+### Reconciliation
+
+| Setting (env var) | What it does | Restart |
+|-------------------|--------------|:------:|
+| `RECONCILE_LOOKBACK` | EX alerts-query window scanned to backfill missed alerts (e.g. 1_hour, 24_hours, 48_hours). |  |
+| `RECONCILE_INTERVAL` | Seconds between periodic reconcile sweeps (0 = run only on startup). |  |
+
+### Logging
+
+| Setting (env var) | What it does | Restart |
+|-------------------|--------------|:------:|
+| `LOG_LEVEL` | Logging verbosity: DEBUG, INFO, WARNING, or ERROR. | ● |
+| `LOG_FILE` | File to write logs to (blank = console only). | ● |
+| `LOG_FILE_MAX_BYTES` | Rotate the log file when it reaches this size (bytes). | ● |
+| `LOG_FILE_BACKUPS` | How many rotated log files to keep. | ● |
+
+### Infrastructure
+
+| Setting (env var) | What it does | Restart |
+|-------------------|--------------|:------:|
+| `WEB_HOST` | Network interface the server binds to (0.0.0.0 = all). | ● |
+| `WEB_PORT` | Port the server listens on. In Docker set the WEB_PORT env var instead, so the mapping/healthcheck stay in sync. | ● |
+
 
 **Secret fields (passwords, tokens).** These show `********` and never reveal the stored
 value, so **leaving one blank means "keep the existing value"** — that is how you avoid

@@ -1094,7 +1094,14 @@ per-server entry — both under **Settings → Notifications → HTTP**.
 
 ### 4d. Verify
 
-Trigger or wait for a matching detection and confirm a `POST /webhook/ex-alert`
+First, confirm the URL is reachable and correctly spelled: open
+`https://<your-public-host>/webhook/ex-alert` in a browser (or `curl` it). A **GET**
+returns a small readiness response — `{"status": "ready", "method": "POST", …}` — so a
+`200` here means the path is right. (Alerts themselves must be **POST**ed; a common
+mistake is configuring the base host as the Server URL, which makes EX POST to `/` and
+get a **405**.)
+
+Then trigger or wait for a matching detection and confirm a `POST /webhook/ex-alert`
 appears in this service's log (`LOG_FILE`) and the quarantined email shows up as a
 case in the dashboard.
 
@@ -1304,10 +1311,18 @@ Sign in at `/`:
 | Logging *(restart)* | Level, file, rotation. |
 | Infrastructure *(restart)* | Bind host/port. (`DB_URL` is env-only.) |
 
+**Secret fields (passwords, tokens).** These show `********` and never reveal the stored
+value, so **leaving one blank means "keep the existing value"** — that is how you avoid
+wiping a secret you simply didn't retype. To actually **remove** an optional secret
+(EX client token, SMTP / IMAP / webhook password), tick its **remove** checkbox and
+save; the value is cleared (which also blanks an env-provided value). The EX password
+and admin password have no remove box — change them by typing a new value.
+
 ## 10. Troubleshooting
 
 | Symptom | Likely cause / fix |
 |---------|--------------------|
+| Webhook returns **405** | EX is POSTing to the wrong path — usually the base host was set as the Server URL, so EX hits `/`. Set it to `https://<host>/webhook/ex-alert`. A GET to that URL returns `200 {"status":"ready"}` when correct. |
 | Webhook returns **503** | Service in setup mode — finish required config (see the dashboard banner). |
 | Webhook returns **401** | Missing/bad Basic auth, or webhook auth not configured. |
 | Webhook returns **403** | Source IP not in `WEBHOOK_IP_ALLOWLIST`. |

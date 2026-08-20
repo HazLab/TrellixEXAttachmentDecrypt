@@ -88,10 +88,18 @@ class SettingsStore:
         return out
 
     def update(self, changes: dict, clear: "tuple | list" = ()) -> None:
-        """Apply setting changes. ``clear`` explicitly blanks the named keys — this is
-        how an optional secret is *removed* (a blank field alone means "keep existing",
-        since the real secret is never shown). Clearing stores an empty override, which
-        also masks any env-provided value, so the effective value becomes empty."""
+        """Apply setting changes.
+
+        A value is persisted as a DB override **only when it differs from the
+        environment value**; submitting a value equal to the env default drops any
+        existing override instead. This keeps environment variables authoritative
+        (e.g. ``LOG_LEVEL`` / trigger config) so that clicking *Save* in the UI can't
+        silently shadow them with a redundant copy of what env already provides.
+
+        ``clear`` explicitly blanks the named keys — how an optional secret is *removed*
+        (a blank field alone means "keep existing", since the real secret is never
+        shown). Clearing stores an empty override, which also masks any env-provided
+        value, so the effective value becomes empty."""
         clear = [k for k in clear if k in EDITABLE]
         with self._sf() as s:
             for key in clear:
@@ -103,17 +111,32 @@ class SettingsStore:
             for key, value in changes.items():
                 if key not in EDITABLE or key in clear:
                     continue
-                if key in SECRET_KEYS:
-                    if value in (None, "", "********"):  # blank / unchanged -> keep existing
-                        continue
-                    value = self._fernet.encrypt(str(value).encode()).decode()
-                elif isinstance(value, list):
-                    value = ",".join(str(v) for v in value)
-                else:
-                    value = str(value)
+                env_val = getattr(self._env, key, None)
                 row = s.get(Setting, key)
-                if row is None:
-                    s.add(Setting(key=key, value=value, is_secret=key in SECRET_KEYS))
+                if key in SECRET_KEYS:
+                    if value in (None, "", "********"):   # blank field alone -> keep existing
+                        continue
+                    if value == env_val:                   # same as env -> don't shadow it
+                        if row is not None:
+                            s.delete(row)
+                        continue
+                    stored, is_secret = self._fernet.encrypt(str(value).encode()).decode(), True
+                elif key in LIST_KEYS:
+                    incoming = value if isinstance(value, list) else \
+                        [p.strip() for p in str(value).split(",") if p.strip()]
+                    if incoming == (env_val or []):
+                        if row is not None:
+                            s.delete(row)
+                        continue
+                    stored, is_secret = ",".join(str(v) for v in incoming), False
                 else:
-                    row.value = value
+                    stored, is_secret = str(value), False
+                    if stored == ("" if env_val is None else str(env_val)):
+                        if row is not None:  # equals the env value -> drop the override
+                            s.delete(row)
+                        continue
+                if row is None:
+                    s.add(Setting(key=key, value=stored, is_secret=is_secret))
+                else:
+                    row.value, row.is_secret = stored, is_secret
             s.commit()

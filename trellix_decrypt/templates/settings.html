@@ -15,8 +15,9 @@
     <label>Base URL<input name="ex_base_url" placeholder="https://ex.example.com"></label>
     <label>Username<input name="ex_username" autocomplete="off"></label>
     <label>Password<input name="ex_password" type="password" autocomplete="new-password" placeholder="leave blank to keep"></label>
-    <label>Client token (optional)<input name="ex_client_token" type="password" autocomplete="new-password" placeholder="leave blank to keep">
-      <span class="rm"><input type="checkbox" class="clear-secret" data-for="ex_client_token"> remove</span></label>
+    <label>Client token (optional)
+      <span class="input-row"><input name="ex_client_token" type="password" autocomplete="new-password" placeholder="leave blank to keep">
+        <span class="rm"><input type="checkbox" class="clear-secret" data-for="ex_client_token" aria-label="remove client token"><span>remove</span></span></span></label>
     <label class="check"><input name="ex_verify_tls" type="checkbox"> Verify TLS certificate</label>
     <label>Rescan path id (flip if rescan returns an authorization error)
       <select name="ex_rescan_id_field">
@@ -32,8 +33,9 @@
     <label>Host<input name="smtp_host" placeholder="smtp.example.com"></label>
     <label>Port<input name="smtp_port" type="number"></label>
     <label>Username<input name="smtp_username" autocomplete="off"></label>
-    <label>Password<input name="smtp_password" type="password" autocomplete="new-password" placeholder="leave blank to keep">
-      <span class="rm"><input type="checkbox" class="clear-secret" data-for="smtp_password"> remove</span></label>
+    <label>Password
+      <span class="input-row"><input name="smtp_password" type="password" autocomplete="new-password" placeholder="leave blank to keep">
+        <span class="rm"><input type="checkbox" class="clear-secret" data-for="smtp_password" aria-label="remove SMTP password"><span>remove</span></span></span></label>
     <label>From address<input name="smtp_from"></label>
     <label>HELO hostname (FQDN, if server requires)<input name="smtp_helo_hostname" placeholder="e.g. decrypt.yourdomain.com"></label>
     <label>TLS mode
@@ -52,8 +54,9 @@
     <label>IMAP host (blank = disabled)<input name="imap_host" placeholder="imap.example.com"></label>
     <label>IMAP port<input name="imap_port" type="number"></label>
     <label>IMAP username<input name="imap_username" autocomplete="off"></label>
-    <label>IMAP password<input name="imap_password" type="password" autocomplete="new-password" placeholder="leave blank to keep">
-      <span class="rm"><input type="checkbox" class="clear-secret" data-for="imap_password"> remove</span></label>
+    <label>IMAP password
+      <span class="input-row"><input name="imap_password" type="password" autocomplete="new-password" placeholder="leave blank to keep">
+        <span class="rm"><input type="checkbox" class="clear-secret" data-for="imap_password" aria-label="remove IMAP password"><span>remove</span></span></span></label>
     <label>Mailbox<input name="imap_mailbox" placeholder="INBOX"></label>
     <label>Poll interval (s)<input name="bounce_poll_interval" type="number"></label>
     <label class="check"><input name="imap_ssl" type="checkbox"> Use SSL (IMAPS)</label>
@@ -69,8 +72,9 @@
     <legend>Web & webhook</legend>
     <label>Public base URL<input name="public_base_url" placeholder="https://decrypt.example.com"></label>
     <label>Webhook username (EX Basic auth)<input name="webhook_username" autocomplete="off"></label>
-    <label>Webhook password<input name="webhook_password" type="password" autocomplete="new-password" placeholder="leave blank to keep">
-      <span class="rm"><input type="checkbox" class="clear-secret" data-for="webhook_password"> remove</span></label>
+    <label>Webhook password
+      <span class="input-row"><input name="webhook_password" type="password" autocomplete="new-password" placeholder="leave blank to keep">
+        <span class="rm"><input type="checkbox" class="clear-secret" data-for="webhook_password" aria-label="remove webhook password"><span>remove</span></span></span></label>
     <label>Webhook IP allowlist (comma-separated; blank = any)<input name="webhook_ip_allowlist" placeholder="10.0.0.5, 10.0.0.6"></label>
     <label>Link lifetime (seconds)<input name="token_ttl" type="number"></label>
     <p class="hint">The webhook needs a username+password <em>and/or</em> an IP allowlist before the service will accept alerts.</p>

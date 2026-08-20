@@ -4,6 +4,15 @@ const form = document.getElementById("settings-form");
 const status = document.getElementById("save-status");
 const banner = document.getElementById("setup-banner");
 
+// Make the whole "remove" pill clickable, not just its checkbox.
+form.querySelectorAll(".rm").forEach((pill) => {
+  pill.addEventListener("click", (e) => {
+    if (e.target.tagName === "INPUT") return; // native toggle already fired
+    const cb = pill.querySelector(".clear-secret");
+    if (cb) cb.checked = !cb.checked;
+  });
+});
+
 const LABELS = {
   ex_base_url: "Trellix EX base URL", ex_username: "EX username", ex_password: "EX password",
   smtp_host: "SMTP host", smtp_from: "From address", public_base_url: "Public base URL",

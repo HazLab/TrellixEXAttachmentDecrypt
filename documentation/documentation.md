@@ -52,7 +52,7 @@ flowchart LR
 6. **Conclude** — the service determines the outcome and records it:
    - **Wrong password** → the attachment is still encrypted → email the recipient
      again, up to a retry cap.
-   - **Clean** → EX released and delivered the email → `Passed`.
+   - **Clean** → EX released and delivered the email → `Released`.
    - **Malicious / still held** → EX re-quarantined it → `Quarantined`.
 
 Every recipient, email, password attempt, and state change is tracked and visible
@@ -285,9 +285,9 @@ the sequences that drive transitions.
 | `AWAITING_PASSWORD` | One-time link emailed; waiting for the recipient. | no |
 | `PASSWORD_SUBMITTED` | Recipient submitted the password (held encrypted). | no |
 | `RESUBMITTED` | EX rescan issued with the password. | no |
-| `RECHECKING` | Polling EX for the `_RA` re-detection verdict. | no |
-| `DONE_PASSED` | Not re-quarantined → released & delivered. | **yes** |
-| `DONE_QUARANTINED` | Re-quarantined → still held. | **yes** |
+| `RECHECKING` | Polling EX quarantine for the verdict (held vs released). | no |
+| `DONE_PASSED` | Original released, no `_RA` → delivered. Shown as **Released**. | **yes** |
+| `DONE_QUARANTINED` | Re-quarantined (`_RA` present) → still held. Shown as **Quarantined**. | **yes** |
 | `FAILED_MAX_RETRIES` | Wrong password too many times; gave up. | yes* |
 | `EXPIRED` | Case aged out without completion. | **yes** |
 | `NOTIFY_FAILED` | SMTP error handing off the email (auto-retried, resendable). | no |
@@ -324,13 +324,14 @@ stateDiagram-v2
     RESUBMITTED --> RECHECKING: first recheck poll
     RECHECKING --> AWAITING_PASSWORD: wrong password (still encrypted), under cap
     RECHECKING --> FAILED_MAX_RETRIES: wrong password, cap reached
-    RESUBMITTED --> DONE_QUARANTINED: _RA still held
-    RECHECKING --> DONE_QUARANTINED: _RA still held
-    RESUBMITTED --> DONE_PASSED: _RA absent (delivered)
-    RECHECKING --> DONE_PASSED: _RA absent (delivered)
+    RESUBMITTED --> DONE_QUARANTINED: _RA present (held)
+    RECHECKING --> DONE_QUARANTINED: _RA present (held)
+    RESUBMITTED --> DONE_PASSED: original released (no _RA)
+    RECHECKING --> DONE_PASSED: original released (no _RA)
 
     AWAITING_PASSWORD --> BOUNCED: DSN received
     DONE_QUARANTINED --> AWAITING_PASSWORD: later wrong-password push reopens (under cap)
+    DONE_PASSED --> AWAITING_PASSWORD: later wrong-password push reopens (under cap)
 
     DONE_PASSED --> [*]
     DONE_QUARANTINED --> [*]
@@ -451,10 +452,15 @@ exactly `<queue_id>_RA`?** Present → held; absent → delivered.
 - The still-encrypted marker is **authoritative** and wins over any malware verdict
   (the wrong-password path is checked first).
 
-## Journey 4 — Recheck backstop (no push)
+## Journey 4 — Recheck poll (concludes clean/released emails)
 
-Not every deployment pushes re-detections. The recheck timer runs the same
-quarantine-list confirmation so the verdict is reached even with no push.
+A **held** email resolves almost instantly from the pushed `_RA` re-detection. A
+**released/clean** email sends **no push**, so it is found only by the recheck poll.
+The poll therefore reads a three-state verdict from the quarantine list each time
+(`resubmission_outcome`) and concludes **as soon as it is decisive** — it does not wait
+for the final poll — so a clean email doesn't linger in `RECHECKING`. Polling is
+**eager**: the first check is soon after resubmission, then it backs off to
+`recheck_interval`.
 
 ```mermaid
 sequenceDiagram
@@ -462,19 +468,20 @@ sequenceDiagram
     participant E as FlowEngine
     participant X as EXClient
 
-    S->>S: wait recheck_delay
-    loop up to recheck_max_attempts
+    S->>S: wait recheck_delay (first poll, eager)
+    loop eager backoff, up to recheck_max_attempts
         S->>E: recheck(case, final?)
-        alt case already resolved by a push
+        alt already resolved by a push
             E-->>S: stop
-        else not final
-            E->>E: set RECHECKING, keep waiting
-        else final poll
-            E->>X: has_resubmission_quarantine(queue_id)?
-            E->>E: DONE_QUARANTINED or DONE_PASSED
+        else list decisive now
+            E->>X: resubmission_outcome(queue_id)
+            Note over E,X: _RA present → held; original gone → released
+            E->>E: DONE_QUARANTINED (held) / DONE_PASSED (released)
             E-->>S: stop
+        else still pending (original quarantined, no _RA)
+            E->>E: set RECHECKING, keep polling
         end
-        S->>S: wait recheck_interval
+        S->>S: back off toward recheck_interval
     end
 ```
 
@@ -547,7 +554,7 @@ scheduler`. Key methods:
 | `handle_alert(event)` | Entry point for an incoming alert. Correlates `_RA` re-detections to the parent (classifies, never creates a case); otherwise gates on the trigger rules and starts the flow. Returns the case or `None`. |
 | `handle_password(token, password)` | Store the password encrypted, ack immediately, schedule the background rescan. Returns `(case_or_None, status)`. |
 | `resubmit_case(case_id)` | Background: decrypt the held password, find the rescannable entry, call EX rescan; on success record the hash, purge the password, schedule recheck; on failure count + `RESUBMIT_FAILED`. |
-| `recheck(case_id, final)` | Timeout backstop: confirm the outcome from the quarantine list on the final poll. Returns `True` to stop polling. |
+| `recheck(case_id, final)` | Poll toward a verdict: reads `resubmission_outcome` and concludes as soon as decisive — `held` → DONE_QUARANTINED, `released` (original gone) → DONE_PASSED — else keeps polling; the final poll concludes from the list. Returns `True` to stop polling. |
 | `reissue_expired_link(token)` | Re-email a fresh link if an expired-but-valid link is opened while still `AWAITING_PASSWORD`. |
 | `resend(case_id)` | Operator-triggered re-send for `NOTIFY_FAILED`/`AWAITING_PASSWORD`/`BOUNCED`. |
 | `handle_bounce(bounce)` | Mark a case `BOUNCED` (correlate by `X-Case-Id`, else recipient); never overrides a terminal state. |
@@ -591,6 +598,10 @@ for another appliance): `EP_LOGIN`, `EP_ALERTS`, `EP_ALERT_DETAILS`,
 - `has_resubmission_quarantine(queue_id, sender, subject) -> bool` — **authoritative
   verdict**: is there a record whose queue id is exactly `<queue_id>_RA`? Exact
   suffix match (via `_strip_ra`), never a loose prefix.
+- `resubmission_outcome(queue_id, sender, subject) -> str` — three-state verdict for the
+  recheck poll: `"held"` (the `<queue_id>_RA` is present), `"released"` (neither the
+  `_RA` nor the original `<queue_id>` remains — delivered), or `"pending"` (original
+  still quarantined, no `_RA` yet). Lets a clean email conclude without a push.
 - `alert_uuids_for(queue_id, sender, subject) -> list[str]` — all alert UUIDs on the
   case's quarantine records, deduped, order-preserved.
 - `release(queue_ids)` / `delete(queue_ids)` — quarantine actions.
@@ -1335,7 +1346,8 @@ and admin password have no remove box — change them by typing a new value.
 | Webhook returns **503** | Service in setup mode — finish required config (see the dashboard banner). |
 | Webhook returns **401** | Missing/bad Basic auth, or webhook auth not configured. |
 | Webhook returns **403** | Source IP not in `WEBHOOK_IP_ALLOWLIST`. |
-| Everything reads **Passed** / **Quarantined** wrongly, or rescan says "queue id not found" | Check the **EX appliance clock**. Per-case lookups use a clock-independent window, but a badly wrong EX clock has caused rescans to fail; fixing the clock resolves it. |
+| Everything reads **Released** / **Quarantined** wrongly, or rescan says "queue id not found" | Check the **EX appliance clock**. Per-case lookups use a clock-independent window, but a badly wrong EX clock has caused rescans to fail; fixing the clock resolves it. |
+| A clean email sits in **Re-checking** for a while | The verdict for a released/clean email comes only from the poll (no push). It concludes once the original queue id leaves EX quarantine; the poll is eager (first check ~`RECHECK_DELAY`, default 10s). Lower `RECHECK_DELAY` / `RECHECK_INTERVAL` if you set them high. |
 | Recipient link says expired | Links TTL-expire (`TOKEN_TTL`); opening one auto-reissues a fresh link if still awaiting a password. |
 | Emails not sending | Check SMTP settings; failed sends go to `Email failed` and are auto-retried and resendable. Check `SMTP_TLS_MODE` and `SMTP_HELO_HOSTNAME` (some servers demand an FQDN). |
 | Rescan keeps failing | Try flipping `EX_RESCAN_ID_FIELD` between `queue_id` and `email_uuid`; check the EX account's rescan permission. Failures retry under `RESUBMIT_MAX_RETRIES`. |

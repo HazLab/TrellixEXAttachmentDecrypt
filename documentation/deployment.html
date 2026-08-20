@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deployment Guide</title>
+<style>
+:root{--ground:#f4f6f9;--surface:#fff;--surface-2:#eef1f6;--border:#e2e7ef;--ink:#1a2230;
+  --muted:#5a6676;--faint:#8a94a3;--accent:#2d6ae0;--accent-soft:#e7efff;
+  --code-bg:#f4f6fa;--code-ink:#26324a;--shadow:0 1px 2px rgba(20,30,50,.06),0 8px 30px rgba(20,30,50,.05);}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ground:#0f1319;--surface:#161c25;
+  --surface-2:#1c232e;--border:#2a3340;--ink:#e7ebf1;--muted:#9aa5b3;--faint:#6d7887;--accent:#5b9bff;
+  --accent-soft:#16233c;--code-bg:#111722;--code-ink:#c7d2e5;--shadow:0 1px 2px rgba(0,0,0,.4),0 10px 34px rgba(0,0,0,.35);}}
+:root[data-theme="dark"]{--ground:#0f1319;--surface:#161c25;--surface-2:#1c232e;--border:#2a3340;--ink:#e7ebf1;
+  --muted:#9aa5b3;--faint:#6d7887;--accent:#5b9bff;--accent-soft:#16233c;--code-bg:#111722;--code-ink:#c7d2e5;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 34px rgba(0,0,0,.35);}
+*{box-sizing:border-box}
+*{scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px;background-clip:padding-box;border:3px solid transparent}
+::-webkit-scrollbar-thumb:hover{background:var(--faint);background-clip:padding-box;border:3px solid transparent}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--ground);color:var(--ink);line-height:1.72;
+  font-family:"IBM Plex Sans",-apple-system,"Segoe UI",Roboto,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:820px;margin:0 auto;padding:0 24px 120px}
+.topbar{position:sticky;top:0;display:flex;justify-content:space-between;align-items:center;padding:14px 0;
+  background:linear-gradient(var(--ground),var(--ground) 70%,transparent);z-index:5}
+.crumb{font-size:12.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.09em}
+.toggle{border:1px solid var(--border);background:var(--surface);color:var(--muted);border-radius:8px;
+  padding:7px 12px;font:inherit;font-size:13px;cursor:pointer}
+.toggle:hover{color:var(--ink);border-color:var(--accent)}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+h1{font-size:clamp(26px,4vw,34px);line-height:1.15;letter-spacing:-.02em;margin:.2em 0 .1em;text-wrap:balance}
+h2{font-size:22px;letter-spacing:-.01em;margin:1.9em 0 .5em;padding-top:.4em;border-top:1px solid var(--border);text-wrap:balance}
+h3{font-size:17px;margin:1.4em 0 .4em}
+h4{font-size:14px;margin:1.2em 0 .3em;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+p{margin:.85em 0;text-align:justify;hyphens:auto;-webkit-hyphens:auto;hyphenate-limit-chars:7 3 3;overflow-wrap:break-word}
+strong{font-weight:600}
+ul,ol{margin:.7em 0;padding-left:1.4em}
+li{margin:.35em 0;text-align:justify;hyphens:auto;-webkit-hyphens:auto;overflow-wrap:break-word}
+li::marker{color:var(--faint)}
+p code,li code,td code{overflow-wrap:break-word}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+blockquote{margin:1.1em 0;padding:12px 18px;border-left:3px solid var(--accent);background:var(--accent-soft);
+  border-radius:0 10px 10px 0;font-size:15px}
+code{font-family:"IBM Plex Mono",Consolas,monospace;font-size:.86em;background:var(--code-bg);color:var(--code-ink);
+  padding:.12em .4em;border-radius:5px;border:1px solid var(--border)}
+pre.code{background:var(--code-bg);border:1px solid var(--border);border-radius:12px;padding:16px 18px;overflow-x:auto;
+  font-size:13px;line-height:1.5;box-shadow:var(--shadow)}
+pre.code code{background:none;border:none;padding:0;color:var(--code-ink);font-family:"IBM Plex Mono",Consolas,monospace}
+.lead{font-family:"IBM Plex Serif",Georgia,serif;font-size:18px;color:var(--muted);text-align:left}
+.toc{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin:1.4em 0;box-shadow:var(--shadow)}
+.toc b{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);display:block;margin-bottom:6px}
+.toc a{display:block;padding:2px 0;font-size:14px}
+.table-wrap{overflow-x:auto;margin:1.1em 0;border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+thead th{background:var(--surface-2);text-align:left;font-weight:600;padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:9px 14px;border-bottom:1px solid var(--border);vertical-align:top}
+tbody tr:nth-child(even){background:var(--surface-2)}tbody tr:last-child td{border-bottom:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar"><span class="crumb">Trellix&nbsp;EX &middot; Attachment Decrypt</span>
+    <button class="toggle" id="t" aria-label="Toggle theme">&#9680; Theme</button></div>
+  <h1 id="top">Deployment Guide</h1>
+<div class="toc"><b>Contents</b><a href="#at-a-glance">At a glance</a><a href="#1-before-you-start">Before you start</a><a href="#2-persistent-state-data-dir-read-first">Persistent state — `DATA_DIR` (read first)</a><a href="#3-secret-key-how-to-set-it">SECRET_KEY — how to set it</a><a href="#4-database-what-s-required">Database — what&#x27;s required</a><a href="#5-option-a-from-source">Option A — From source</a><a href="#6-option-b-docker">Option B — Docker</a><a href="#7-option-c-prebuilt-executable">Option C — Prebuilt executable</a><a href="#8-minimum-configuration-to-go-live">Minimum configuration to go live</a><a href="#9-first-run-flow">First-run flow</a><a href="#10-upgrades">Upgrades</a><a href="#11-backups-restore">Backups &amp; restore</a><a href="#12-troubleshooting">Troubleshooting</a></div>
+<p class="lead">How to install, run, and persist <strong>Trellix EX Attachment Decrypt</strong> in production — from source, with Docker, or as a prebuilt executable — plus what the <code>SECRET_KEY</code> and database require. For the full architecture and operations reference see <code>documentation/documentation.md</code> (rendered: <code>documentation/documentation.html</code>).</p>
+<h2 id="at-a-glance">At a glance</h2>
+<div class="table-wrap"><table><thead><tr><th>Method</th><th>Best for</th><th>Needs on the host</th></tr></thead><tbody><tr><td>From source</td><td>Dev, or servers that already run Python</td><td>Python ≥ 3.11 + pip</td></tr><tr><td>Docker</td><td>Most production installs</td><td>Docker (+ Compose)</td></tr><tr><td>Executable</td><td>Hosts without Python</td><td>Nothing — a single binary</td></tr></tbody></table></div>
+<p class="lead">All three run the same app and share the same configuration and persistence rules (below). Whichever you pick, terminate <strong>HTTPS at a reverse proxy</strong> in front of the service; if that proxy is trusted, set <code>TRUST_FORWARDED_FOR=true</code> so rate limits key on the real client IP.</p>
+<h2 id="1-before-you-start">1. Before you start</h2>
+<ul>
+<li>A host that can reach your <strong>Trellix EX</strong> appliance and an <strong>SMTP</strong> relay.</li>
+<li>A public hostname for the recipient links (<code>PUBLIC_BASE_URL</code>), fronted by a reverse proxy that terminates TLS and forwards to the service (default port 8080).</li>
+<li>The EX appliance must be able to POST to <code>https://&lt;host&gt;/webhook/ex-alert</code> (see the &quot;Point EX at the webhook&quot; section of the main guide).</li>
+</ul>
+<h2 id="2-persistent-state-data-dir-read-first">2. Persistent state — <code>DATA_DIR</code> (read first)</h2>
+<p class="lead">Two things <strong>must survive restarts</strong>, or sign-in sessions break and stored encrypted settings become unreadable:</p>
+<ul>
+<li><strong>`secret.key`</strong> — signs sessions and one-time links; encrypts stored secrets.</li>
+<li><strong>the database</strong> — case history and settings.</li>
+</ul>
+<p class="lead">Both live under <strong>`DATA_DIR`</strong> (default: the current working directory). For anything beyond a quick local test, set <code>DATA_DIR</code> to a dedicated, writable, backed-up folder (source/exe) or a mounted volume (Docker). <strong>Back up `DATA_DIR` as a unit</strong> — the database is partly unreadable without its <code>secret.key</code>.</p>
+<h2 id="3-secret-key-how-to-set-it">3. SECRET_KEY — how to set it</h2>
+<p class="lead">Precedence: an explicit <strong>`SECRET_KEY`</strong> environment variable wins; otherwise the app <strong>generates a strong key on first run</strong> and writes it to <code>DATA_DIR/secret.key</code> (file mode <code>600</code>). Two supported options:</p>
+<ul>
+<li><strong>Auto-generate (simplest).</strong> Do nothing; just keep <code>DATA_DIR</code> persistent so the generated key is reused on restart.</li>
+<li><strong>Manage it yourself.</strong> Generate one and set <code>SECRET_KEY</code>:</li>
+</ul>
+<pre class="code"><code>  python -c &quot;import secrets; print(secrets.token_urlsafe(48))&quot;</code></pre>
+<p class="lead"><code>SECRET_KEY</code> is intentionally <strong>not</strong> editable from the Settings UI (it protects the database the UI writes to). <strong>Rotating it invalidates</strong> every active session and makes any held password and stored settings-secrets unreadable — rotate deliberately, then re-enter settings secrets.</p>
+<h2 id="4-database-what-s-required">4. Database — what&#x27;s required</h2>
+<ul>
+<li><strong>Default (SQLite): nothing to set up.</strong> The app <strong>creates the database file automatically</strong> on first run at <code>DATA_DIR/trellix_decrypt.sqlite3</code> — no server, no schema/migration step. Just keep the file (it&#x27;s inside <code>DATA_DIR</code>).</li>
+<li><strong>A different database (optional).</strong> Set <code>DB_URL</code> to any SQLAlchemy URL, e.g. <code>postgresql+psycopg://user:pass@host/dbname</code>. The <strong>driver is not bundled</strong> — install it yourself (e.g. <code>pip install &quot;psycopg[binary]&quot;</code>) in your source or Docker build. <code>DB_URL</code> is environment-only (it can&#x27;t be stored in the database it points at). Tables are created automatically.</li>
+</ul>
+<h2 id="5-option-a-from-source">5. Option A — From source</h2>
+<pre class="code"><code>python -m venv .venv &amp;&amp; source .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install -r requirements.txt                        # or: pip install .
+export DATA_DIR=/var/lib/trellix-decrypt               # writable, persistent folder
+python -m trellix_decrypt --check                      # optional: validate EX connectivity
+python -m trellix_decrypt                              # or the console script: trellix-decrypt</code></pre>
+<p class="lead">For a service manager (systemd, supervisor, …), run <code>python -m trellix_decrypt</code> with <code>DATA_DIR</code> and any config exported in the unit&#x27;s environment. Configuration can come from the environment, a <code>.env</code> file, or entirely from the Settings UI.</p>
+<h2 id="6-option-b-docker">6. Option B — Docker</h2>
+<p class="lead"><strong>Compose</strong> (persists <code>DATA_DIR</code> in a named volume automatically):</p>
+<pre class="code"><code>docker compose up -d --build</code></pre>
+<p class="lead"><code>docker-compose.yml</code> sets <code>DATA_DIR=/data</code> and mounts the <code>data</code> volume there, so <code>secret.key</code> and the SQLite DB persist across restarts and rebuilds. Provide config via a local <code>.env</code> (optional — the app boots into setup mode and can be configured from the UI), or pass <code>SECRET_KEY</code> as an environment secret. The image runs as a non-root user, exposes port 8080, and has a <code>/healthz</code> healthcheck.</p>
+<p class="lead"><strong>Plain `docker run`</strong> (bring your own volume):</p>
+<pre class="code"><code>docker build -t trellix-attachment-decrypt .
+docker run -d --name attachment-decrypt \
+  -p 8080:8080 \
+  -e DATA_DIR=/data \
+  -e SECRET_KEY=$(python -c &quot;import secrets;print(secrets.token_urlsafe(48))&quot;) \
+  -v trellix_data:/data \
+  --restart unless-stopped \
+  trellix-attachment-decrypt</code></pre>
+<p class="lead">Omit <code>-e SECRET_KEY=...</code> to auto-generate into the volume; add <code>--env-file .env</code> to pass operator config.</p>
+<h2 id="7-option-c-prebuilt-executable">7. Option C — Prebuilt executable</h2>
+<p class="lead">Standalone <strong>Windows / Linux / macOS</strong> binaries come from the <strong>Build binaries</strong> GitHub Actions workflow — built when a version tag (<code>v*</code>) is pushed (attached to the GitHub <strong>Release</strong>) or on demand via the workflow&#x27;s <strong>Run workflow</strong> button (downloadable as run artifacts). It does <strong>not</strong> build on ordinary commits. The binary bundles Python, all dependencies, and the templates/static assets; it only needs a writable <code>DATA_DIR</code>.</p>
+<p class="lead"><strong>Linux / macOS:</strong></p>
+<pre class="code"><code>chmod +x ./trellix-decrypt
+DATA_DIR=/var/lib/trellix-decrypt ./trellix-decrypt        # add --check first to test EX</code></pre>
+<p class="lead"><strong>Windows (PowerShell):</strong></p>
+<pre class="code"><code>$env:DATA_DIR = &quot;C:\ProgramData\trellix-decrypt&quot;
+.\trellix-decrypt-windows.exe</code></pre>
+<p class="lead">The Windows binary is unsigned, so SmartScreen may warn on first run — choose <em>More info → Run anyway</em>, or code-sign it in your own pipeline.</p>
+<h2 id="8-minimum-configuration-to-go-live">8. Minimum configuration to go live</h2>
+<p class="lead">Whichever method you use, the service stays in <strong>setup mode</strong> (the webhook returns <code>503</code>) until these are set — via environment/<code>.env</code> or the Settings UI:</p>
+<ul>
+<li><strong>EX</strong>: <code>EX_BASE_URL</code>, <code>EX_USERNAME</code>, <code>EX_PASSWORD</code></li>
+<li><strong>SMTP</strong>: <code>SMTP_HOST</code>, <code>SMTP_FROM</code></li>
+<li><strong>Web</strong>: <code>PUBLIC_BASE_URL</code>, <code>UI_PASSWORD</code> (the admin password)</li>
+<li><strong>Webhook auth</strong>: <code>WEBHOOK_USERNAME</code> + <code>WEBHOOK_PASSWORD</code> and/or <code>WEBHOOK_IP_ALLOWLIST</code></li>
+</ul>
+<p class="lead"><code>SECRET_KEY</code> and <code>DB_URL</code> are <strong>not</strong> required — they default as described above. On first run with no admin password, open the app and it drops you on the Settings page to bootstrap; once the admin password is saved, normal sign-in is enforced.</p>
+<h2 id="9-first-run-flow">9. First-run flow</h2>
+<ol>
+<li>Start the service (any method) with <code>DATA_DIR</code> set.</li>
+<li>Open <code>http://&lt;host&gt;:8080/</code> — you are redirected to <strong>Settings</strong> (setup mode).</li>
+<li>Fill in the <strong>admin password</strong> plus the required fields above; <strong>Save</strong>.</li>
+<li>Sign in with the admin password. Register this service as an EX <strong>HTTP notification</strong> destination (main guide, &quot;Point EX at the webhook&quot;).</li>
+<li>Confirm a <code>POST /webhook/ex-alert</code> reaches the log and a case appears.</li>
+</ol>
+<h2 id="10-upgrades">10. Upgrades</h2>
+<ul>
+<li><strong>From source:</strong> pull, <code>pip install -r requirements.txt</code> (in case pins changed), restart. <code>DATA_DIR</code> is untouched.</li>
+<li><strong>Docker:</strong> <code>docker compose pull</code> / <code>docker compose up -d --build</code>. The <code>data</code> volume persists across image rebuilds.</li>
+<li><strong>Executable:</strong> replace the binary; keep the same <code>DATA_DIR</code>.</li>
+</ul>
+<p class="lead">Schema changes are applied automatically (tables are created on start); there is no separate migration command.</p>
+<h2 id="11-backups-restore">11. Backups &amp; restore</h2>
+<p class="lead">Back up <strong>`DATA_DIR` as a whole</strong> — it holds both <code>secret.key</code> and the database, and one is useless without the other. To restore, put the same <code>DATA_DIR</code> contents in place and start the service (or restore the Docker <code>data</code> volume). If you manage <code>SECRET_KEY</code> via the environment, back that value up too (separately and securely).</p>
+<h2 id="12-troubleshooting">12. Troubleshooting</h2>
+<div class="table-wrap"><table><thead><tr><th>Symptom</th><th>Fix</th></tr></thead><tbody><tr><td>Webhook returns <strong>503</strong></td><td>Setup mode — finish the required config (§8).</td></tr><tr><td><strong>Missing dependencies</strong> at start (source)</td><td>You skipped install — <code>pip install -r requirements.txt</code> (or use Docker/exe).</td></tr><tr><td>Sessions drop / stored secrets unreadable after redeploy</td><td><code>DATA_DIR</code> (or <code>SECRET_KEY</code>) wasn&#x27;t persisted — mount a volume / set a stable folder.</td></tr><tr><td>Rescan says &quot;queue id not found&quot;</td><td>Check the <strong>EX appliance clock</strong>; fix it and retry.</td></tr><tr><td>Windows exe blocked</td><td>Unsigned binary — <em>More info → Run anyway</em>, or sign it.</td></tr></tbody></table></div>
+</div>
+<script>
+(function(){var r=document.documentElement;var s=localStorage.getItem('dep-theme');if(s)r.setAttribute('data-theme',s);
+document.getElementById('t').addEventListener('click',function(){var c=r.getAttribute('data-theme');
+var d=window.matchMedia('(prefers-color-scheme:dark)').matches;var e=c||(d?'dark':'light');var n=e==='dark'?'light':'dark';
+r.setAttribute('data-theme',n);localStorage.setItem('dep-theme',n);});})();
+</script>
+</body>
+</html>

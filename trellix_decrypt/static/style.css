@@ -188,3 +188,8 @@ td.subject, td.attach, td.recipient, td.sender { max-width: 230px; overflow: hid
 .hint { color: var(--muted); font-size: 12px; margin: 4px 0 0; }
 .tag { background: var(--neutral-bg); color: var(--neutral-fg); font-size: 11px; font-weight: 600;
        padding: 2px 7px; border-radius: 999px; margin-left: 8px; vertical-align: middle; }
+
+/* Settings: "remove" control for optional secret fields */
+.rm { display: inline-flex; align-items: center; gap: 5px; margin-top: 5px;
+      font-size: 11.5px; font-weight: 400; color: var(--muted); cursor: pointer; }
+.rm input { width: auto; margin: 0; accent-color: var(--danger-fg); }

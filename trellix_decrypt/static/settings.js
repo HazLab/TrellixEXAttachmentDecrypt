@@ -52,10 +52,15 @@ function collect() {
   const out = {};
   for (const el of form.elements) {
     if (!el.name) continue;
+    if (el.classList.contains("clear-secret")) continue;   // handled below
     if (el.type === "checkbox") out[el.name] = el.checked;
     else if (el.type === "password" && el.value === "") continue; // blank secret = keep existing
     else out[el.name] = el.value;
   }
+  // Explicit removals: ticked "remove" boxes clear that secret (blank alone = keep).
+  const clear = [];
+  form.querySelectorAll(".clear-secret:checked").forEach((c) => clear.push(c.dataset.for));
+  if (clear.length) out.__clear__ = clear;
   return out;
 }
 
@@ -72,6 +77,7 @@ form.addEventListener("submit", async (e) => {
     });
     fill(res.settings);
     renderBanner(res);
+    form.querySelectorAll(".clear-secret:checked").forEach((c) => (c.checked = false));  // reset removals
     status.textContent = "Saved — applied live.";
     // Leaving setup mode (an admin password was just set) means sign-in is now required.
     if (wasSetup && !res.setup_mode) {

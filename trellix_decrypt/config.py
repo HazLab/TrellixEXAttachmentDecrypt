@@ -85,9 +85,13 @@ class Settings(BaseSettings):
 
     # --- Flow tuning ---
     max_password_attempts: int = 3
-    recheck_delay: int = 120
-    recheck_interval: int = 60
-    recheck_max_attempts: int = 10
+    # Recheck polling. A released/clean email sends no push, so it's found only by the
+    # poll — kept eager so it doesn't sit in "rechecking". recheck_delay is the wait
+    # before the FIRST poll; after a short eager ramp the poll settles to
+    # recheck_interval, for recheck_max_attempts polls total.
+    recheck_delay: int = 10
+    recheck_interval: int = 30
+    recheck_max_attempts: int = 12
     # Auto-retry of failed recipient emails (SMTP errors).
     notify_max_retries: int = 5
     notify_retry_interval: int = 300  # seconds between background retry sweeps

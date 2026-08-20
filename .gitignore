@@ -39,5 +39,7 @@ docs/*.pdf
 # Auto-generated deployment secret key (never commit)
 secret.key
 
-# Generated internal documentation — kept local, not published
-documentation/
+# Generated internal documentation: commit the HTML + Markdown, keep the Word export
+# and any intermediate render artifacts local only.
+documentation/*.docx
+documentation/_diagrams/

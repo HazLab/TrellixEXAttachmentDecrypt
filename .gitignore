@@ -21,6 +21,8 @@ media/
 staticfiles/
 node_modules/
 dist/
+# PyInstaller build cache (the .spec IS committed; the build/ and dist/ outputs are not)
+build/
 
 .pytest_cache/
 .ruff_cache/

@@ -107,6 +107,11 @@ class Settings(BaseSettings):
     bounce_poll_interval: int = 120  # seconds
 
     # --- Storage ---
+    # Directory for persistent state that must survive restarts — the auto-generated
+    # secret.key and (when DB_URL is left at its default) the SQLite file. Point this
+    # at a mounted volume for Docker or a writable path for the packaged executable.
+    # Empty = the current working directory (unchanged legacy behaviour).
+    data_dir: str = ""
     db_url: str = "sqlite:///trellix_decrypt.sqlite3"
 
     # --- Logging ---

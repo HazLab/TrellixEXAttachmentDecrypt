@@ -1126,14 +1126,57 @@ The flow fires only when an alert's top-level **name** equals `TRIGGER_ALERT_NAM
 
 ## 7. Run in production
 
+Put the service behind a reverse proxy that terminates HTTPS. If the proxy is trusted,
+enable `TRUST_FORWARDED_FOR=true` so rate limits key on the real client IP. Choose one
+of three ways to run it.
+
+### Persistent state (all methods)
+
+Two things must survive restarts, or sessions break and stored encrypted settings
+become unreadable:
+
+- **`secret.key`** — the key that signs sessions/links and encrypts stored secrets.
+  It is taken from the `SECRET_KEY` environment variable if set; otherwise a strong
+  key is generated once and written to `secret.key`.
+- **the database** — SQLite by default.
+
+Both live under **`DATA_DIR`** (default: the working directory). Point `DATA_DIR` at a
+mounted volume or a writable folder so they persist. Dependencies are declared in
+`pyproject.toml`, with pinned `requirements.txt` / `requirements-dev.txt` for
+`pip install -r requirements.txt`.
+
+### From source
+
 ```bash
-python -m trellix_decrypt
-# or the console script:
-trellix-decrypt
+pip install -r requirements.txt
+python -m trellix_decrypt      # or the console script: trellix-decrypt
 ```
 
-Put it behind a reverse proxy that terminates HTTPS. If the proxy is trusted, enable
-`TRUST_FORWARDED_FOR=true` so rate limits key on the real client IP.
+### Docker (recommended)
+
+```bash
+docker compose up -d --build
+```
+
+`docker-compose.yml` sets `DATA_DIR=/data` and mounts a named `data` volume there, so
+`secret.key` and the SQLite DB persist across restarts and rebuilds. Supply operator
+config via a local `.env` (optional — the app boots into setup mode and can be
+configured entirely from the Settings UI), or pass `SECRET_KEY` as an environment
+secret to manage the key yourself. The image runs as a non-root user and exposes
+port 8080 with a `/healthz` healthcheck.
+
+### Prebuilt executable
+
+Standalone Windows / Linux / macOS binaries are produced by the **Build binaries**
+GitHub Actions workflow — automatically when a version tag (`v*`) is pushed (attached
+to the GitHub Release), or on demand via the workflow's **Run workflow** button
+(downloadable as run artifacts). It does not build on ordinary commits. The executable
+bundles Python, all dependencies, and the templates/static assets; it still needs a
+writable `DATA_DIR`:
+
+```bash
+DATA_DIR=/var/lib/trellix-decrypt ./trellix-decrypt
+```
 
 ## 8. Daily operations (the dashboard)
 

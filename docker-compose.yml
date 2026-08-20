@@ -1,0 +1,28 @@
+# Run the service with a persistent data volume.
+#   docker compose up -d --build
+# secret.key + the SQLite DB live in the named volume `data` (DATA_DIR=/data), so they
+# survive restarts and rebuilds. Put real configuration in a .env file next to this
+# (see env.example) — or configure everything from the app's Settings UI on first run.
+
+services:
+  attachment-decrypt:
+    build: .
+    image: trellix-attachment-decrypt:latest
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      DATA_DIR: /data
+      # Optional: supply SECRET_KEY here to manage it yourself; otherwise a strong key
+      # is generated once and persisted to /data/secret.key.
+      # SECRET_KEY: ${SECRET_KEY:-}
+    # Load operator config from a local .env if present (all keys are optional; the
+    # app boots into setup mode and can be configured from the UI instead).
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - data:/data
+
+volumes:
+  data:

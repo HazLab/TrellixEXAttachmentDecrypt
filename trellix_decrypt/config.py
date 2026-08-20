@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     ex_base_url: str = ""
     ex_username: str = ""
     ex_password: str = ""
-    ex_verify_tls: bool = True
+    ex_verify_tls: bool = False  # default off — EX appliances commonly use self-signed certs
     ex_client_token: str = ""  # optional X-FeClient-Token, provided by Trellix
     # Which identifier the rescan endpoint expects in its path. The API doc names
     # it "email_uuid"; some appliances accept the queue id. Flip if rescan returns
@@ -47,9 +47,9 @@ class Settings(BaseSettings):
     # TLS mode: opportunistic (STARTTLS if offered, else plaintext), starttls
     # (require STARTTLS), none (never), ssl (implicit TLS / SMTPS, e.g. port 465).
     smtp_tls_mode: str = "opportunistic"
-    # Verify the SMTP server's TLS certificate. Set false for self-signed / lab
-    # CAs (e.g. "basic constraints ... not marked critical").
-    smtp_verify_tls: bool = True
+    # Verify the SMTP server's TLS certificate. Default off for self-signed / lab CAs
+    # (e.g. "basic constraints ... not marked critical"); enable in production.
+    smtp_verify_tls: bool = False
     # HELO/EHLO name announced to the server. Some servers require a FQDN here
     # and reject the OS hostname (504 5.5.2). Set to a fully-qualified name.
     smtp_helo_hostname: str = ""

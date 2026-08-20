@@ -1258,6 +1258,11 @@ config via a local `.env` (optional — the app boots into setup mode; configure
 the UI), or pass `SECRET_KEY` as an environment secret. The image runs as non-root,
 exposes port 8080, and has a `/healthz` healthcheck.
 
+To change the port, set `WEB_PORT` (container port — the app and healthcheck follow it)
+and `HOST_PORT` (published host port) in `.env`; compose maps `HOST_PORT:WEB_PORT`. Set
+the port this way in Docker rather than in the Settings UI, so the mapping and
+healthcheck stay in sync.
+
 Or with **plain `docker run`** (mount your own volume for `DATA_DIR`):
 
 ```bash

@@ -622,6 +622,7 @@ python -m trellix_decrypt</code></pre>
 <p>With <strong>compose</strong> (persists <code>DATA_DIR</code> in a named volume automatically):</p>
 <pre class="code"><code>docker compose up -d --build      # secret.key + DB live in the `data` volume</code></pre>
 <p><code>docker-compose.yml</code> sets <code>DATA_DIR=/data</code> and mounts the <code>data</code> volume there. Provide config via a local <code>.env</code> (optional — the app boots into setup mode; configure it from the UI), or pass <code>SECRET_KEY</code> as an environment secret. The image runs as non-root, exposes port 8080, and has a <code>/healthz</code> healthcheck.</p>
+<p>To change the port, set <code>WEB_PORT</code> (container port — the app and healthcheck follow it) and <code>HOST_PORT</code> (published host port) in <code>.env</code>; compose maps <code>HOST_PORT:WEB_PORT</code>. Set the port this way in Docker rather than in the Settings UI, so the mapping and healthcheck stay in sync.</p>
 <p>Or with <strong>plain `docker run`</strong> (mount your own volume for <code>DATA_DIR</code>):</p>
 <pre class="code"><code>docker build -t trellix-attachment-decrypt .
 docker run -d --name attachment-decrypt \

@@ -23,6 +23,7 @@ EDITABLE = (
     "smtp_verify_tls", "smtp_helo_hostname",
     "trigger_alert_name", "trigger_malware_names",
     "max_password_attempts", "recheck_delay", "recheck_interval", "recheck_max_attempts",
+    "reconcile_lookback", "reconcile_interval",
     "notify_max_retries", "notify_retry_interval",
     "resubmit_max_retries", "resubmit_retry_interval",
     "imap_host", "imap_port", "imap_username", "imap_password", "imap_ssl", "imap_mailbox",

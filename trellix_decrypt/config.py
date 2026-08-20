@@ -92,6 +92,14 @@ class Settings(BaseSettings):
     recheck_delay: int = 10
     recheck_interval: int = 30
     recheck_max_attempts: int = 12
+
+    # --- Reconciliation (backfill trigger alerts missed while the app was down) ---
+    # On startup (and, if reconcile_interval > 0, periodically) query EX for recent
+    # alerts and start the flow for any matching email we have no case for. Idempotent
+    # (dedup by queue id; skips _RA re-detections), so it's safe to run repeatedly and
+    # alongside EX's own notification retries — it won't create duplicates or re-email.
+    reconcile_lookback: str = "48_hours"   # EX alerts-query duration to scan
+    reconcile_interval: int = 1800         # seconds between periodic sweeps (0 = startup only)
     # Auto-retry of failed recipient emails (SMTP errors).
     notify_max_retries: int = 5
     notify_retry_interval: int = 300  # seconds between background retry sweeps

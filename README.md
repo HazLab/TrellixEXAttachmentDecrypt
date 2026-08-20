@@ -31,6 +31,11 @@ python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
+Dependencies are declared in `pyproject.toml`; a pinned `requirements.txt`
+(runtime) and `requirements-dev.txt` (tests) are also provided for the common
+`pip install -r requirements.txt` workflow. See **Deployment** below for Docker and
+prebuilt executables.
+
 ## Configure
 
 Configuration is read from environment variables (or a `.env` file you create —
@@ -99,6 +104,36 @@ alerts/quarantine query, exit code 0 = OK):
 ```bash
 python -m trellix_decrypt --check
 ```
+
+## Deployment
+
+Three ways to run it. All persist two things you must keep across restarts — the
+`secret.key` (auto-generated if `SECRET_KEY` is unset) and the database — under
+`DATA_DIR` (default: the working directory).
+
+**Docker (recommended):**
+
+```bash
+docker compose up -d --build      # data (secret.key + SQLite) lives in the `data` volume
+```
+
+`docker-compose.yml` sets `DATA_DIR=/data` and mounts a named volume there. Supply
+config via a local `.env` (all optional — the app boots into setup mode and can be
+configured from the UI) or set everything in **Settings**. Pass `SECRET_KEY` as an
+env/secret to manage it yourself; otherwise it is generated once and persisted to the
+volume.
+
+**Prebuilt executable (no Python needed):** download the Windows/Linux/macOS binary
+from the project's GitHub **Releases** (built by the *Build binaries* workflow on each
+version tag), then:
+
+```bash
+DATA_DIR=/var/lib/trellix-decrypt ./trellix-decrypt      # Linux/macOS
+```
+
+The executable needs a writable `DATA_DIR` for `secret.key` and the SQLite DB.
+
+**From source:** `pip install -r requirements.txt` then `python -m trellix_decrypt`.
 
 ## Admin UI
 

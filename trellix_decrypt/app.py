@@ -14,8 +14,11 @@ from .web import create_app
 
 _LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s: %(message)s"
 
-#: Where an auto-generated SECRET_KEY is persisted when none is supplied via env.
+#: Filename for the auto-generated SECRET_KEY (written under DATA_DIR / the CWD).
 SECRET_KEY_FILE = "secret.key"
+#: The built-in default DB_URL; relocated under DATA_DIR when the operator didn't override it.
+DEFAULT_DB_URL = "sqlite:///trellix_decrypt.sqlite3"
+DEFAULT_DB_FILENAME = "trellix_decrypt.sqlite3"
 
 
 def _configure_logging(settings: Settings) -> None:
@@ -43,10 +46,18 @@ def build_context(settings: Settings) -> AppContext:
 
 def build(settings: Settings | None = None):
     settings = settings or Settings()
+    # Resolve the persistent data directory (DATA_DIR, else CWD). The secret key and,
+    # unless DB_URL was overridden, the SQLite file live here so a single mounted
+    # volume (Docker) or writable folder (exe) keeps both across restarts.
+    data_dir = Path(settings.data_dir) if settings.data_dir else Path.cwd()
+    data_dir.mkdir(parents=True, exist_ok=True)
+    if settings.data_dir and settings.db_url == DEFAULT_DB_URL:
+        settings.db_url = "sqlite:///" + (data_dir / DEFAULT_DB_FILENAME).as_posix()
+    key_path = str(data_dir / SECRET_KEY_FILE)
     # Never run on the shipped placeholder key: resolve to an explicit env key, or a
     # persisted/auto-generated one, before anything signs a token or encrypts a secret.
-    generated_before = not Path(SECRET_KEY_FILE).exists()
-    settings.secret_key = resolve_secret_key(settings.secret_key, SECRET_KEY_FILE)
+    generated_before = not Path(key_path).exists()
+    settings.secret_key = resolve_secret_key(settings.secret_key, key_path)
     ctx = build_context(settings)
     # Effective settings = env defaults overlaid with UI-saved DB overrides. Logging
     # and the bind host/port come from here so GUI-configured infra applies on restart
@@ -54,10 +65,10 @@ def build(settings: Settings | None = None):
     eff = ctx.engine.settings
     _configure_logging(eff)
     log = logging.getLogger(__name__)
-    if generated_before and Path(SECRET_KEY_FILE).exists():
+    if generated_before and Path(key_path).exists():
         log.warning("no SECRET_KEY supplied — generated a strong one and saved it to %s "
                     "(keep this file safe; deleting it invalidates all links and sessions)",
-                    SECRET_KEY_FILE)
+                    key_path)
     log.info("trigger config: alert_name=%r malware_names=%r", eff.trigger_alert_name, eff.trigger_malware_names)
     if not eff.is_configured():
         log.warning("SETUP MODE — configuration incomplete, missing: %s. Open the admin UI to "

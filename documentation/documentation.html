@@ -576,10 +576,23 @@ python -m trellix_decrypt</code></pre>
 <li>Unrelated <code>CustomPolicy.MVX</code> rules (e.g. QR-code detections) must <strong>not</strong> be listed — matching is exact.</li>
 </ul>
 <h2 id="07_user_guide-7-run-in-production">7. Run in production</h2>
-<pre class="code"><code>python -m trellix_decrypt
-# or the console script:
-trellix-decrypt</code></pre>
-<p>Put it behind a reverse proxy that terminates HTTPS. If the proxy is trusted, enable <code>TRUST_FORWARDED_FOR=true</code> so rate limits key on the real client IP.</p>
+<p>Put the service behind a reverse proxy that terminates HTTPS. If the proxy is trusted, enable <code>TRUST_FORWARDED_FOR=true</code> so rate limits key on the real client IP. Choose one of three ways to run it.</p>
+<h3 id="07_user_guide-persistent-state-all-methods">Persistent state (all methods)</h3>
+<p>Two things must survive restarts, or sessions break and stored encrypted settings become unreadable:</p>
+<ul>
+<li><strong>`secret.key`</strong> — the key that signs sessions/links and encrypts stored secrets. It is taken from the <code>SECRET_KEY</code> environment variable if set; otherwise a strong key is generated once and written to <code>secret.key</code>.</li>
+<li><strong>the database</strong> — SQLite by default.</li>
+</ul>
+<p>Both live under <strong>`DATA_DIR`</strong> (default: the working directory). Point <code>DATA_DIR</code> at a mounted volume or a writable folder so they persist. Dependencies are declared in <code>pyproject.toml</code>, with pinned <code>requirements.txt</code> / <code>requirements-dev.txt</code> for <code>pip install -r requirements.txt</code>.</p>
+<h3 id="07_user_guide-from-source">From source</h3>
+<pre class="code"><code>pip install -r requirements.txt
+python -m trellix_decrypt      # or the console script: trellix-decrypt</code></pre>
+<h3 id="07_user_guide-docker-recommended">Docker (recommended)</h3>
+<pre class="code"><code>docker compose up -d --build</code></pre>
+<p><code>docker-compose.yml</code> sets <code>DATA_DIR=/data</code> and mounts a named <code>data</code> volume there, so <code>secret.key</code> and the SQLite DB persist across restarts and rebuilds. Supply operator config via a local <code>.env</code> (optional — the app boots into setup mode and can be configured entirely from the Settings UI), or pass <code>SECRET_KEY</code> as an environment secret to manage the key yourself. The image runs as a non-root user and exposes port 8080 with a <code>/healthz</code> healthcheck.</p>
+<h3 id="07_user_guide-prebuilt-executable">Prebuilt executable</h3>
+<p>Standalone Windows / Linux / macOS binaries are produced by the <strong>Build binaries</strong> GitHub Actions workflow — automatically when a version tag (<code>v*</code>) is pushed (attached to the GitHub Release), or on demand via the workflow&#x27;s <strong>Run workflow</strong> button (downloadable as run artifacts). It does not build on ordinary commits. The executable bundles Python, all dependencies, and the templates/static assets; it still needs a writable <code>DATA_DIR</code>:</p>
+<pre class="code"><code>DATA_DIR=/var/lib/trellix-decrypt ./trellix-decrypt</code></pre>
 <h2 id="07_user_guide-8-daily-operations-the-dashboard">8. Daily operations (the dashboard)</h2>
 <p>Sign in at <code>/</code>:</p>
 <ul>

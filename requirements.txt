@@ -1,0 +1,14 @@
+# Runtime dependencies, pinned for reproducible server installs.
+# This mirrors [project.dependencies] in pyproject.toml — installing the package
+# (`pip install .`) is equivalent; this file is provided for the common
+# `pip install -r requirements.txt` workflow. Transitive deps are resolved by pip.
+fastapi==0.137.2
+uvicorn[standard]==0.49.0
+httpx==0.28.1
+sqlalchemy==2.0.51
+pydantic-settings==2.14.1
+jinja2==3.1.6
+aiosmtplib==5.1.1
+python-multipart==0.0.32
+itsdangerous==2.2.0
+cryptography==49.0.0

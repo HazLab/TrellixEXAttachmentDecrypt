@@ -1,0 +1,6 @@
+# Development / test dependencies (in addition to requirements.txt).
+#   pip install -r requirements.txt -r requirements-dev.txt
+pytest==9.1.0
+pytest-asyncio==1.4.0
+respx==0.23.1
+ruff==0.15.17

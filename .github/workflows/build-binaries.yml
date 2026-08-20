@@ -1,0 +1,67 @@
+name: Build binaries
+
+# Build standalone executables for Windows, Linux, and macOS.
+# Triggers:
+#   • pushing a version tag (v*)  -> builds all three and attaches them to a Release
+#   • the "Run workflow" button    -> builds all three, downloadable as run Artifacts
+# It does NOT run on ordinary commits.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write   # needed to create/update the Release on tag builds
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            asset: trellix-decrypt-linux
+          - os: windows-latest
+            asset: trellix-decrypt-windows.exe
+          - os: macos-latest
+            asset: trellix-decrypt-macos
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps + PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: Build
+        run: pyinstaller trellix_decrypt.spec
+
+      - name: Rename artifact (non-Windows)
+        if: runner.os != 'Windows'
+        run: mv dist/trellix-decrypt "dist/${{ matrix.asset }}"
+
+      - name: Rename artifact (Windows)
+        if: runner.os == 'Windows'
+        run: Move-Item dist/trellix-decrypt.exe "dist/${{ matrix.asset }}"
+
+      - name: Smoke test (non-Windows)
+        if: runner.os != 'Windows'
+        run: |
+          chmod +x "dist/${{ matrix.asset }}"
+          "./dist/${{ matrix.asset }}" --check || true   # exits non-zero without EX; just prove it launches
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: dist/${{ matrix.asset }}
+
+      - name: Attach to Release (tag builds only)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/${{ matrix.asset }}

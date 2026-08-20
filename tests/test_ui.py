@@ -62,8 +62,9 @@ def test_cases_listed_after_login(client_ctx):
 def test_settings_get_masks_secrets_and_update_applies(client_ctx):
     client, ctx = client_ctx
     _login(client)
-    masked = client.get("/api/settings").json()
+    masked = client.get("/api/settings").json()["settings"]
     assert masked["ex_password"] == "********"        # secret never returned
+    assert masked["ui_password"] == "********"        # admin password also masked
     assert masked["ex_username"] == "u"
 
     r = client.post("/api/settings", json={"max_password_attempts": 5, "ex_username": "svc-api"})

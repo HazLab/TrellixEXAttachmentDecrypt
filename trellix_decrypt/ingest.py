@@ -49,6 +49,10 @@ def build_webhook_router(ctx) -> APIRouter:
     @router.post("/webhook/ex-alert")
     async def receive_alert(request: Request):
         s = ctx.engine.settings
+        # Not operational until required settings are in place (first-run setup mode):
+        # tell EX to retry later rather than silently accepting alerts we can't act on.
+        if not s.is_configured():
+            raise HTTPException(status_code=503, detail="service not configured")
         has_creds = bool(s.webhook_username or s.webhook_password)
         has_allowlist = bool(s.webhook_ip_allowlist)
         if not has_creds and not has_allowlist:
@@ -65,7 +69,14 @@ def build_webhook_router(ctx) -> APIRouter:
             if client_ip not in s.webhook_ip_allowlist:
                 raise HTTPException(status_code=403, detail="ip not allowed")
 
-        payload = await request.json()
+        # Cap the body before parsing (cheap DoS guard against an over-large POST).
+        body = await request.body()
+        if len(body) > s.max_request_bytes:
+            raise HTTPException(status_code=413, detail="request body too large")
+        try:
+            payload = json.loads(body)
+        except (ValueError, UnicodeDecodeError):
+            raise HTTPException(status_code=400, detail="invalid JSON body")
         # A single _RA re-detection can arrive as several pushes (one per detected
         # object); classification is order-independent (see FlowEngine), so we just
         # process each alert as it comes.

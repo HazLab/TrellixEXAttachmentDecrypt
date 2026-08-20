@@ -13,8 +13,9 @@ from .config import Settings
 from .crypto import fernet
 from .storage import Setting
 
-# Fields the settings UI may change (everything else is infra: db_url, web_*,
-# secret_key, ui_password — set via environment only).
+# Fields the settings UI may change. SECRET_KEY is the ONLY setting never editable
+# here (it must be set/rotated out-of-band; see resolve_secret_key). Fields in
+# RESTART_REQUIRED are persisted but only take effect on the next restart.
 EDITABLE = (
     "ex_base_url", "ex_username", "ex_password", "ex_verify_tls", "ex_client_token",
     "ex_rescan_id_field", "ex_timeout",
@@ -26,10 +27,27 @@ EDITABLE = (
     "resubmit_max_retries", "resubmit_retry_interval",
     "imap_host", "imap_port", "imap_username", "imap_password", "imap_ssl", "imap_mailbox",
     "bounce_poll_interval",
-    "public_base_url", "webhook_username", "webhook_password", "token_ttl",
+    "public_base_url", "webhook_username", "webhook_password", "webhook_ip_allowlist", "token_ttl",
+    # Admin & security (ui_password bootstraps the admin login; see setup mode).
+    "ui_password",
+    "login_rate_limit", "login_rate_window", "form_rate_limit", "form_rate_window",
+    "trust_forwarded_for", "max_request_bytes",
+    # Infrastructure — persisted, applied on restart (see RESTART_REQUIRED). Note:
+    # db_url is deliberately NOT here — it points at this very database, so it can't
+    # round-trip through it; set it via the environment only.
+    "web_host", "web_port",
+    "log_level", "log_file", "log_file_max_bytes", "log_file_backups",
 )
-SECRET_KEYS = frozenset({"ex_password", "smtp_password", "ex_client_token", "webhook_password", "imap_password"})
-LIST_KEYS = frozenset({"trigger_malware_names"})
+SECRET_KEYS = frozenset({"ex_password", "smtp_password", "ex_client_token", "webhook_password",
+                         "imap_password", "ui_password"})
+LIST_KEYS = frozenset({"trigger_malware_names", "webhook_ip_allowlist"})
+#: Editable, but the running process only picks these up on restart (bind host/port,
+#: DB engine, logging handlers, and rate-limiter windows are wired once at startup).
+RESTART_REQUIRED = frozenset({
+    "web_host", "web_port",
+    "log_level", "log_file", "log_file_max_bytes", "log_file_backups",
+    "login_rate_limit", "login_rate_window", "form_rate_limit", "form_rate_window",
+})
 
 
 class SettingsStore:

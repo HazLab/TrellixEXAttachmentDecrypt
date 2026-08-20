@@ -2,7 +2,14 @@
 {% block title %}Settings — Attachment Decrypt{% endblock %}
 {% block content %}
 <div class="page-head"><h1>Settings</h1></div>
+<div id="setup-banner" class="banner" role="status"></div>
 <form id="settings-form" class="card form">
+  <fieldset>
+    <legend>Admin access</legend>
+    <label>Admin password (UI sign-in)<input name="ui_password" type="password" autocomplete="new-password" placeholder="leave blank to keep"></label>
+    <p class="hint">Required. This is the password for signing in to this dashboard. Setting it for the
+      first time ends setup mode and enables sign-in.</p>
+  </fieldset>
   <fieldset>
     <legend>Trellix EX appliance</legend>
     <label>Base URL<input name="ex_base_url" placeholder="https://ex.example.com"></label>
@@ -60,7 +67,41 @@
     <label>Public base URL<input name="public_base_url" placeholder="https://decrypt.example.com"></label>
     <label>Webhook username (EX Basic auth)<input name="webhook_username" autocomplete="off"></label>
     <label>Webhook password<input name="webhook_password" type="password" autocomplete="new-password" placeholder="leave blank to keep"></label>
+    <label>Webhook IP allowlist (comma-separated; blank = any)<input name="webhook_ip_allowlist" placeholder="10.0.0.5, 10.0.0.6"></label>
     <label>Link lifetime (seconds)<input name="token_ttl" type="number"></label>
+    <p class="hint">The webhook needs a username+password <em>and/or</em> an IP allowlist before the service will accept alerts.</p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Security &amp; rate limiting</legend>
+    <label>Login attempts per window (per IP)<input name="login_rate_limit" type="number"></label>
+    <label>Login window (seconds)<input name="login_rate_window" type="number"></label>
+    <label>Password-form attempts per window (per IP+link)<input name="form_rate_limit" type="number"></label>
+    <label>Password-form window (seconds)<input name="form_rate_window" type="number"></label>
+    <label>Max request body (bytes)<input name="max_request_bytes" type="number"></label>
+    <label class="check"><input name="trust_forwarded_for" type="checkbox"> Trust X-Forwarded-For (enable only behind a trusted reverse proxy)</label>
+    <p class="hint">Rate limits are per-IP and self-healing — they clear as the window elapses and on restart, so there is no permanent lockout. Limit/window changes take effect on restart.</p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Logging <span class="tag">restart to apply</span></legend>
+    <label>Log level
+      <select name="log_level">
+        <option value="DEBUG">DEBUG</option><option value="INFO">INFO</option>
+        <option value="WARNING">WARNING</option><option value="ERROR">ERROR</option>
+      </select>
+    </label>
+    <label>Log file (blank = console only)<input name="log_file" placeholder="trellix_decrypt.log"></label>
+    <label>Rotate at (bytes)<input name="log_file_max_bytes" type="number"></label>
+    <label>Rotated backups to keep<input name="log_file_backups" type="number"></label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Infrastructure <span class="tag">restart to apply</span></legend>
+    <label>Bind host<input name="web_host" placeholder="0.0.0.0"></label>
+    <label>Bind port<input name="web_port" type="number"></label>
+    <p class="hint">The database URL (<code>DB_URL</code>) is set via the environment only — it points at this
+      very database, so it can't be changed from within it.</p>
   </fieldset>
 
   <fieldset>

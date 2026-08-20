@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Request
 
 from . import auth
 from ..settings_store import EDITABLE
+from .routes_dashboard import in_setup_mode
 
 log = logging.getLogger(__name__)
 
@@ -41,6 +42,19 @@ def build_api_router(ctx) -> APIRouter:
     def _guard(request: Request):
         if not auth.is_authenticated(request, ctx.env.secret_key):
             raise HTTPException(status_code=401, detail="unauthorized")
+
+    def _guard_settings(request: Request):
+        # The settings endpoints are also reachable during first-run setup (no admin
+        # password yet) so the operator can bootstrap; otherwise they require auth.
+        if not in_setup_mode(ctx):
+            _guard(request)
+
+    @router.get("/status")
+    async def status(request: Request):
+        _guard(request)
+        s = ctx.engine.settings
+        return {"configured": s.is_configured(), "missing": s.missing_required(),
+                "setup_mode": in_setup_mode(ctx)}
 
     @router.get("/cases")
     async def list_cases(request: Request):
@@ -88,15 +102,18 @@ def build_api_router(ctx) -> APIRouter:
 
     @router.get("/settings")
     async def get_settings(request: Request):
-        _guard(request)
-        return ctx.store.masked()
+        _guard_settings(request)
+        masked = ctx.store.masked()
+        return {"settings": masked, "setup_mode": in_setup_mode(ctx),
+                "missing": ctx.engine.settings.missing_required()}
 
     @router.post("/settings")
     async def update_settings(request: Request):
-        _guard(request)
+        _guard_settings(request)
         changes = {k: v for k, v in (await request.json()).items() if k in EDITABLE}
         ctx.store.update(changes)
         await ctx.reload()  # apply live
-        return {"saved": True, "settings": ctx.store.masked()}
+        return {"saved": True, "settings": ctx.store.masked(),
+                "setup_mode": in_setup_mode(ctx), "missing": ctx.engine.settings.missing_required()}
 
     return router

@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
-from .config import Settings
+from .config import Settings, resolve_secret_key
 from .context import AppContext
 from .recheck import RecheckScheduler
 from .settings_store import SettingsStore
@@ -12,6 +13,9 @@ from .storage import CaseRepository, build_session_factory
 from .web import create_app
 
 _LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s: %(message)s"
+
+#: Where an auto-generated SECRET_KEY is persisted when none is supplied via env.
+SECRET_KEY_FILE = "secret.key"
 
 
 def _configure_logging(settings: Settings) -> None:
@@ -39,12 +43,26 @@ def build_context(settings: Settings) -> AppContext:
 
 def build(settings: Settings | None = None):
     settings = settings or Settings()
-    _configure_logging(settings)
+    # Never run on the shipped placeholder key: resolve to an explicit env key, or a
+    # persisted/auto-generated one, before anything signs a token or encrypts a secret.
+    generated_before = not Path(SECRET_KEY_FILE).exists()
+    settings.secret_key = resolve_secret_key(settings.secret_key, SECRET_KEY_FILE)
     ctx = build_context(settings)
+    # Effective settings = env defaults overlaid with UI-saved DB overrides. Logging
+    # and the bind host/port come from here so GUI-configured infra applies on restart
+    # (db_url is the exception — it must stay env-only; it points at this very DB).
     eff = ctx.engine.settings
+    _configure_logging(eff)
     log = logging.getLogger(__name__)
+    if generated_before and Path(SECRET_KEY_FILE).exists():
+        log.warning("no SECRET_KEY supplied — generated a strong one and saved it to %s "
+                    "(keep this file safe; deleting it invalidates all links and sessions)",
+                    SECRET_KEY_FILE)
     log.info("trigger config: alert_name=%r malware_names=%r", eff.trigger_alert_name, eff.trigger_malware_names)
+    if not eff.is_configured():
+        log.warning("SETUP MODE — configuration incomplete, missing: %s. Open the admin UI to "
+                    "finish setup; the webhook returns 503 until then.", ", ".join(eff.missing_required()))
     log.info("serving on http://%s:%s — password links built from PUBLIC_BASE_URL=%s "
              "(scheme/host/port must match how recipients reach this server)",
-             settings.web_host, settings.web_port, eff.public_base_url)
-    return create_app(ctx), settings
+             eff.web_host, eff.web_port, eff.public_base_url)
+    return create_app(ctx), eff

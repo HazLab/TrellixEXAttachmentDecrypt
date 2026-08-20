@@ -64,6 +64,31 @@ def test_clear_removes_an_optional_secret():
     assert store.masked()["ex_client_token"] == ""   # shows as unset in the UI
 
 
+def test_saving_env_equal_value_does_not_shadow_env():
+    # Regression: a UI Save must not persist a value identical to the env one, or it
+    # would shadow later env changes (e.g. LOG_LEVEL). make_settings sets log_level=INFO.
+    settings = make_settings(log_level="INFO")
+    sf = build_session_factory(settings.db_url)
+    store = SettingsStore(settings, sf)
+    store.update({"log_level": "INFO"})                 # same as env -> no override row
+    with sf() as s:
+        assert s.get(Setting, "log_level") is None
+    store.update({"log_level": "DEBUG"})                # a real change -> override
+    assert store.effective_settings().log_level == "DEBUG"
+
+
+def test_saving_env_equal_value_drops_existing_override():
+    settings = make_settings(log_level="INFO")
+    sf = build_session_factory(settings.db_url)
+    store = SettingsStore(settings, sf)
+    store.update({"log_level": "DEBUG"})                # create an override
+    assert store.effective_settings().log_level == "DEBUG"
+    store.update({"log_level": "INFO"})                 # back to env value -> override removed
+    with sf() as s:
+        assert s.get(Setting, "log_level") is None
+    assert store.effective_settings().log_level == "INFO"
+
+
 def test_clear_masks_an_env_provided_value():
     # A value supplied via env (not the DB) can also be blanked from the UI.
     settings = make_settings(imap_password="from-env")

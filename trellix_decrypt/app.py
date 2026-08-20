@@ -69,6 +69,7 @@ def build(settings: Settings | None = None):
         log.warning("no SECRET_KEY supplied — generated a strong one and saved it to %s "
                     "(keep this file safe; deleting it invalidates all links and sessions)",
                     key_path)
+    log.info("data_dir=%s db=%s", data_dir, eff.db_url)
     log.info("trigger config: alert_name=%r malware_names=%r", eff.trigger_alert_name, eff.trigger_malware_names)
     if not eff.is_configured():
         log.warning("SETUP MODE — configuration incomplete, missing: %s. Open the admin UI to "

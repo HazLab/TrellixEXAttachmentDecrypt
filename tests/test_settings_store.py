@@ -50,3 +50,25 @@ def test_list_field_roundtrips_as_csv():
     store, _ = _store()
     store.update({"trigger_malware_names": ["A.pdf", "B.zip"]})
     assert store.effective_settings().trigger_malware_names == ["A.pdf", "B.zip"]
+
+
+def test_clear_removes_an_optional_secret():
+    store, _ = _store()
+    store.update({"ex_client_token": "tok-123"})
+    assert store.effective_settings().ex_client_token == "tok-123"
+    # A blank alone keeps it; an explicit clear removes it.
+    store.update({"ex_client_token": ""})
+    assert store.effective_settings().ex_client_token == "tok-123"
+    store.update({}, clear=["ex_client_token"])
+    assert store.effective_settings().ex_client_token == ""
+    assert store.masked()["ex_client_token"] == ""   # shows as unset in the UI
+
+
+def test_clear_masks_an_env_provided_value():
+    # A value supplied via env (not the DB) can also be blanked from the UI.
+    settings = make_settings(imap_password="from-env")
+    sf = build_session_factory(settings.db_url)
+    store = SettingsStore(settings, sf)
+    assert store.effective_settings().imap_password == "from-env"
+    store.update({}, clear=["imap_password"])
+    assert store.effective_settings().imap_password == ""

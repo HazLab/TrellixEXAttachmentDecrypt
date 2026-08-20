@@ -110,8 +110,10 @@ def build_api_router(ctx) -> APIRouter:
     @router.post("/settings")
     async def update_settings(request: Request):
         _guard_settings(request)
-        changes = {k: v for k, v in (await request.json()).items() if k in EDITABLE}
-        ctx.store.update(changes)
+        body = await request.json()
+        clear = [k for k in (body.get("__clear__") or []) if k in EDITABLE]  # explicit removals
+        changes = {k: v for k, v in body.items() if k in EDITABLE}
+        ctx.store.update(changes, clear=clear)
         await ctx.reload()  # apply live
         return {"saved": True, "settings": ctx.store.masked(),
                 "setup_mode": in_setup_mode(ctx), "missing": ctx.engine.settings.missing_required()}

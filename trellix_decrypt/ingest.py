@@ -46,6 +46,14 @@ def build_webhook_router(ctx) -> APIRouter:
     """
     router = APIRouter()
 
+    @router.get("/webhook/ex-alert")
+    async def webhook_probe():
+        """Readiness probe. EX (and browsers/health checks) may GET this URL to verify
+        it before POSTing alerts — answer 200 instead of a confusing 405, and make it
+        obvious the endpoint is alive and expects POST. Alerts themselves must be POSTed."""
+        return {"status": "ready", "method": "POST", "detail":
+                "Trellix EX HTTP-notification endpoint. Send alerts as an HTTP POST with a JSON body."}
+
     @router.post("/webhook/ex-alert")
     async def receive_alert(request: Request):
         s = ctx.engine.settings

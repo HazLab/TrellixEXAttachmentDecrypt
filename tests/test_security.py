@@ -55,6 +55,13 @@ def test_webhook_rejects_bad_credentials_when_configured():
     assert client.post("/webhook/ex-alert", json={}, auth=("exuser", "wrong")).status_code == 401
 
 
+def test_webhook_get_probe_is_200_not_405():
+    # EX/browser GET probes to the webhook URL should get a helpful 200, not a 405.
+    client, _ = _client()
+    r = client.get("/webhook/ex-alert")
+    assert r.status_code == 200 and r.json()["method"] == "POST"
+
+
 def test_login_rate_limited_after_threshold():
     client, _ = _client(login_rate_limit=3, login_rate_window=900)
     codes = [client.post("/login", data={"password": "nope"},

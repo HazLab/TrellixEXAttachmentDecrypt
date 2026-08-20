@@ -87,10 +87,21 @@ class SettingsStore:
                 out[key] = value
         return out
 
-    def update(self, changes: dict) -> None:
+    def update(self, changes: dict, clear: "tuple | list" = ()) -> None:
+        """Apply setting changes. ``clear`` explicitly blanks the named keys — this is
+        how an optional secret is *removed* (a blank field alone means "keep existing",
+        since the real secret is never shown). Clearing stores an empty override, which
+        also masks any env-provided value, so the effective value becomes empty."""
+        clear = [k for k in clear if k in EDITABLE]
         with self._sf() as s:
+            for key in clear:
+                row = s.get(Setting, key)
+                if row is None:
+                    s.add(Setting(key=key, value="", is_secret=key in SECRET_KEYS))
+                else:
+                    row.value = ""
             for key, value in changes.items():
-                if key not in EDITABLE:
+                if key not in EDITABLE or key in clear:
                     continue
                 if key in SECRET_KEYS:
                     if value in (None, "", "********"):  # blank / unchanged -> keep existing

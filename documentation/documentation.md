@@ -475,8 +475,8 @@ sequenceDiagram
             E-->>S: stop
         else list decisive now
             E->>X: resubmission_outcome(queue_id)
-            Note over E,X: _RA present → held; original gone → released
-            E->>E: DONE_QUARANTINED (held) / DONE_PASSED (released)
+            Note over E,X: _RA present means held, original gone means released
+            E->>E: conclude DONE_QUARANTINED or DONE_PASSED
             E-->>S: stop
         else still pending (original quarantined, no _RA)
             E->>E: set RECHECKING, keep polling

@@ -1330,6 +1330,11 @@ Sign in at `/`:
 
 ## 9. Settings reference (in the UI)
 
+Every field has a **?** help icon — hover (or focus) it for an explanation and whether a
+restart is required. TLS-certificate verification for EX and SMTP is **off by default**
+(appliances/relays commonly use self-signed certs); enable it in production with trusted
+certs.
+
 | Section | Notable fields |
 |---------|----------------|
 | Admin access | **Admin password** (required; bootstraps sign-in). |

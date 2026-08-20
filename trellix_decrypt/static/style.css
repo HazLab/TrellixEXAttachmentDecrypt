@@ -227,3 +227,19 @@ td.subject, td.attach, td.recipient, td.sender { max-width: 230px; overflow: hid
   padding: 9px 14px; font-size: 14px; white-space: nowrap; }
 .btn.ghost:hover { border-color: var(--brand); color: var(--brand); filter: none; }
 #reconcile-status.banner:not(:empty) { margin-bottom: 14px; }
+
+/* Per-field help "?" with hover/focus tooltip (Settings) */
+.form label.has-help { position: relative; padding-right: 22px; }
+.form label.check.has-help { padding-right: 26px; }
+.help { position: absolute; top: 0; right: 0; width: 16px; height: 16px; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--muted);
+  font-size: 11px; font-weight: 700; line-height: 14px; text-align: center; cursor: help;
+  user-select: none; transition: background .12s, color .12s, border-color .12s; }
+.help:hover, .help:focus-visible { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); outline: none; }
+.help::after { content: attr(data-tip); position: absolute; top: 22px; right: 0; z-index: 30;
+  width: max-content; max-width: 260px; padding: 8px 11px; border-radius: 8px;
+  background: var(--text); color: var(--bg); font-size: 12px; font-weight: 400; line-height: 1.45;
+  text-align: left; white-space: normal; box-shadow: var(--shadow);
+  opacity: 0; visibility: hidden; transform: translateY(-4px);
+  transition: opacity .12s ease, transform .12s ease; pointer-events: none; }
+.help:hover::after, .help:focus-visible::after { opacity: 1; visibility: visible; transform: translateY(0); }

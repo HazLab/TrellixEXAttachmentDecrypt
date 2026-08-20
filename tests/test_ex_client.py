@@ -158,6 +158,22 @@ async def test_get_alert_by_uuid_none_when_not_found():
 
 
 @respx.mock
+async def test_resubmission_outcome_held_released_pending():
+    router = respx.mock
+    _mock_login(router)
+    router.get(BASE + ex.EP_QUARANTINE).mock(side_effect=[
+        httpx.Response(200, json=[{"queue_id": "Q1"}, {"queue_id": "Q1_RA"}]),  # _RA present
+        httpx.Response(200, json=[{"queue_id": "Q1"}]),                          # only original left
+        httpx.Response(200, json=[{"queue_id": "Q9"}]),                          # neither remains
+    ])
+    client = _client()
+    assert await client.resubmission_outcome("Q1", "s@x", "subj") == "held"
+    assert await client.resubmission_outcome("Q1", "s@x", "subj") == "pending"
+    assert await client.resubmission_outcome("Q1", "s@x", "subj") == "released"
+    await client.aclose()
+
+
+@respx.mock
 async def test_alert_uuids_for_collects_original_and_RA_deduped():
     router = respx.mock
     _mock_login(router)

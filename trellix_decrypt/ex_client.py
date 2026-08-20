@@ -213,6 +213,25 @@ class EXClient:
         log.info("has_resubmission_quarantine(base=%s) entries for this queue id: %s", queue_id, related)
         return any(_qid(e).endswith("_RA") and _strip_ra(_qid(e)) == queue_id for e in entries)
 
+    async def resubmission_outcome(self, queue_id: str, sender: str | None = None,
+                                   subject: str | None = None) -> str:
+        """Three-state resubmission verdict from the quarantine list, for the recheck poll.
+
+        Lets a clean email conclude promptly instead of waiting the whole recheck window
+        for a push that never comes (clean content pushes nothing):
+        - ``"held"`` — the ``<queue_id>_RA`` re-quarantine is present (still held).
+        - ``"released"`` — neither the ``_RA`` nor the original ``<queue_id>`` remains, so
+          EX released and delivered it (clean).
+        - ``"pending"`` — the original ``<queue_id>`` is still quarantined and no ``_RA``
+          yet, i.e. EX hasn't finished re-analysis; keep polling.
+        """
+        entries = await self._list_for_case(sender, subject)
+        qids = [_qid(e) for e in entries]
+        log.info("resubmission_outcome(base=%s) queue ids: %s", queue_id, qids)
+        if any(q.endswith("_RA") and _strip_ra(q) == queue_id for q in qids):
+            return "held"
+        return "pending" if any(q == queue_id for q in qids) else "released"
+
     async def alert_uuids_for(self, queue_id: str, sender: str | None = None,
                               subject: str | None = None) -> list[str]:
         """Every alert UUID EX attaches to this email's quarantine records — the original

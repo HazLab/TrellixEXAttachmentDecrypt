@@ -374,6 +374,36 @@ async def test_recheck_declares_quarantined_when_still_requarantined(engine):
     assert engine.repo.get_case(case.id).state == FlowState.DONE_QUARANTINED
 
 
+async def test_recheck_releases_early_when_original_gone(engine):
+    # Clean content pushes nothing, but once EX has released the original (no _RA, no
+    # original) the poll concludes DONE_PASSED immediately — no waiting for the deadline.
+    case = await engine.handle_alert(_alert())
+    await _submit(engine, case.id)                     # -> RESUBMITTED
+    engine.ex.ra_quarantined = False
+    engine.ex.original_quarantined = False             # released/delivered
+    assert await engine.recheck(case.id, final=False) is True
+    assert engine.repo.get_case(case.id).state == FlowState.DONE_PASSED
+
+
+async def test_recheck_keeps_polling_while_pending(engine):
+    # Original still quarantined and no _RA yet = analysis unfinished -> keep polling.
+    case = await engine.handle_alert(_alert())
+    await _submit(engine, case.id)
+    engine.ex.ra_quarantined = False
+    engine.ex.original_quarantined = True
+    assert await engine.recheck(case.id, final=False) is False
+    assert engine.repo.get_case(case.id).state == FlowState.RECHECKING
+
+
+async def test_recheck_held_concludes_on_any_poll(engine):
+    # The _RA appearing is decisive on any poll, not just the final one.
+    case = await engine.handle_alert(_alert())
+    await _submit(engine, case.id)
+    engine.ex.ra_quarantined = True
+    assert await engine.recheck(case.id, final=False) is True
+    assert engine.repo.get_case(case.id).state == FlowState.DONE_QUARANTINED
+
+
 async def test_wrong_password_retries_then_gives_up(engine):
     case = await engine.handle_alert(_alert())
     # 3 wrong-password rounds (max_password_attempts=3); each pushes a riskware _RA.

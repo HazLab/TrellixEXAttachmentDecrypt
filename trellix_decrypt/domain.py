@@ -199,23 +199,30 @@ class FlowEngine:
         return (self.rules.matches(event)
                 or any(_canon_name(n) in PASSWORD_FAILED_MARKERS for n in event.malware_names))
 
-    async def _confirm_outcome(self, case, event: AlertEvent | None = None) -> None:
-        """Terminal outcome, decided by the **actual quarantine list** — never by a
-        pushed alert's type. A riskware rule may raise an alert without quarantining
-        (alert-but-allow), so a push proves only that re-analysis happened, not that
-        the email is held. We ask EX whether the ``_RA`` is still quarantined:
-        present → DONE_QUARANTINED (held); absent → DONE_PASSED (delivered).
-
-        ``event`` is the pushed re-detection (None on the recheck-timer path); when held,
-        its detection detail is recorded on the timeline."""
+    def _finish(self, case, held: bool, event: AlertEvent | None = None) -> None:
+        """Record the terminal resubmission verdict and purge the held password.
+        ``held`` → DONE_QUARANTINED (with the pushed detection detail, if any); otherwise
+        DONE_PASSED (released/delivered)."""
         self.repo.clear_password(case)  # terminal either way — held password no longer needed
-        if await self.ex.has_resubmission_quarantine(case.queue_id, case.sender, case.subject):
+        if held:
             detail = "re-quarantined after resubmission: held"
             summary = _detection_summary(event)
             self.repo.set_state(case, FlowState.DONE_QUARANTINED,
                                 f"{detail} — {summary}" if summary else detail)
         else:
-            self.repo.set_state(case, FlowState.DONE_PASSED, "not re-quarantined after resubmission: delivered")
+            self.repo.set_state(case, FlowState.DONE_PASSED, "not re-quarantined after resubmission: released")
+
+    async def _confirm_outcome(self, case, event: AlertEvent | None = None) -> None:
+        """Terminal outcome, decided by the **actual quarantine list** — never by a
+        pushed alert's type. A riskware rule may raise an alert without quarantining
+        (alert-but-allow), so a push proves only that re-analysis happened, not that
+        the email is held. We ask EX whether the ``_RA`` is still quarantined:
+        present → DONE_QUARANTINED (held); absent → DONE_PASSED (released).
+
+        ``event`` is the pushed re-detection (None on the recheck-timer path); when held,
+        its detection detail is recorded on the timeline."""
+        held = await self.ex.has_resubmission_quarantine(case.queue_id, case.sender, case.subject)
+        self._finish(case, held, event)
 
     async def _classify_resubmission(self, case, event: AlertEvent) -> None:
         """Handle a pushed ``_RA`` re-detection for a resubmitted case.
@@ -232,8 +239,10 @@ class FlowEngine:
         object), so the wrong-password signal wins even if a bare re-quarantine push
         landed first — hence we reopen DONE_QUARANTINED on a later marker."""
         if self._still_encrypted(event):
-            if case.state in RECHECKABLE or case.state == FlowState.DONE_QUARANTINED:
-                await self._fail_extraction(case, event)  # reopen if a quarantine verdict jumped ahead
+            # Reopen even a terminal verdict: a wrong-password re-detection can arrive
+            # after the recheck poll concluded (held or released early).
+            if case.state in RECHECKABLE or case.state in (FlowState.DONE_QUARANTINED, FlowState.DONE_PASSED):
+                await self._fail_extraction(case, event)
             return
         if case.state in RECHECKABLE:
             await self._confirm_outcome(case, event)
@@ -336,21 +345,32 @@ class FlowEngine:
             await self._send_password_request(case, retry=True, note=note)  # re-send the link to retry
 
     async def recheck(self, case_id: str, final: bool = False) -> bool:
-        """Timeout backstop for a resubmitted case. Returns True to stop polling.
+        """Poll a resubmitted case toward a verdict. Returns True to stop polling.
 
-        A wrong-password push resolves the case early (it leaves RECHECKABLE), so we
-        stop. Otherwise, on the final poll, we confirm the outcome from the quarantine
-        list exactly as a push would (``_confirm_outcome``): the ``_RA`` still held →
-        DONE_QUARANTINED, gone → DONE_PASSED."""
+        A wrong-password push resolves the case early (it leaves RECHECKABLE). Otherwise
+        we read the quarantine list each poll and conclude **as soon as it is decisive**,
+        so a clean email doesn't sit in RECHECKING for the whole window waiting for a push
+        that never comes (clean content pushes nothing):
+        - ``held`` (the ``_RA`` is present) → DONE_QUARANTINED;
+        - ``released`` (neither ``_RA`` nor the original remains) → DONE_PASSED;
+        - ``pending`` (original still quarantined, no ``_RA`` yet) → keep polling, and on
+          the final poll conclude from the list as a push would (``_confirm_outcome``)."""
         case = self.repo.get_case(case_id)
         if case is None or case.state not in RECHECKABLE:
             return True  # already resolved (typically by a wrong-password _RA push)
         if case.state == FlowState.RESUBMITTED:
             self.repo.set_state(case, FlowState.RECHECKING, "awaiting re-detection")
-        if not final:
-            return False  # keep waiting for the pushed verdict
-        await self._confirm_outcome(case)
-        return True
+        outcome = await self.ex.resubmission_outcome(case.queue_id, case.sender, case.subject)
+        if outcome == "held":
+            self._finish(case, True)
+            return True
+        if outcome == "released":
+            self._finish(case, False)
+            return True
+        if final:  # still 'pending' at the deadline — conclude from the list
+            await self._confirm_outcome(case)
+            return True
+        return False  # re-analysis unfinished; keep polling
 
     async def resume_pending(self):
         """On startup, reschedule work left mid-flight: rechecks and resubmissions."""

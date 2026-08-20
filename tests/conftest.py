@@ -36,6 +36,7 @@ class FakeEX:
         self.rescan_fail = False
         self.rescan_not_found = False  # simulate EX "email not quarantined" (400)
         self.ra_quarantined = ra_quarantined  # backstop: an _RA entry still in quarantine
+        self.original_quarantined = True  # original still held => 'pending' until released
 
     async def rescan_target(self, queue_id, sender=None, subject=None):
         return queue_id, f"uuid-{queue_id}"
@@ -52,6 +53,11 @@ class FakeEX:
 
     async def has_resubmission_quarantine(self, queue_id, sender=None, subject=None):
         return self.ra_quarantined
+
+    async def resubmission_outcome(self, queue_id, sender=None, subject=None):
+        if self.ra_quarantined:
+            return "held"
+        return "pending" if self.original_quarantined else "released"
 
     async def alert_uuids_for(self, queue_id, sender=None, subject=None):
         return list(getattr(self, "alert_uuids", []))

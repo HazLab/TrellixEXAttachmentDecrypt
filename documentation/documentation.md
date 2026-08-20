@@ -71,7 +71,7 @@ in a password-gated web dashboard.
 | Property | How it's achieved |
 |----------|-------------------|
 | **Fully automated** | Webhook in, email out, rescan, verdict — no human step except the recipient typing the password. |
-| **Resilient** | Wrong passwords retry; failed emails and failed rescans are swept and retried; a recheck timer backstops missed pushes. |
+| **Resilient** | Wrong passwords retry; failed emails and failed rescans are swept and retried; a recheck timer backstops missed pushes; and **reconciliation** backfills any trigger alerts that arrived while the app was down. |
 | **Safe with the password** | Held encrypted (Fernet) only until the rescan succeeds, then deleted; only a hash is kept for audit. |
 | **Operable** | Live dashboard, live-editable settings, health check, connectivity self-test (`--check`). |
 | **Self-contained** | One Python process, SQLite by default, no external services beyond EX and an SMTP relay. |
@@ -204,6 +204,9 @@ tracked asyncio tasks created by `RecheckScheduler`:
   the recipient's submission returns instantly, decoupled from EX availability.
 - **Retry sweeps** (`start_notify_retrier`, `start_resubmit_retrier`) — periodic
   loops that re-attempt failed emails and failed rescans under their caps.
+- **Reconcile** (`start_reconcile`) — a startup backfill (and optional periodic sweep)
+  that queries EX for recent trigger alerts and creates any case missed while the app
+  was down; idempotent (dedups by queue id), so it can't duplicate or re-email.
 - **Bounce loop** (`start_loop`) — the IMAP poller.
 
 ## Live reconfiguration
@@ -560,6 +563,7 @@ scheduler`. Key methods:
 | `handle_bounce(bounce)` | Mark a case `BOUNCED` (correlate by `X-Case-Id`, else recipient); never overrides a terminal state. |
 | `alert_details_for_case(case_id)` | **Display-only**: fetch every alert UUID for the case's quarantine records and return parsed detail. Best-effort; never a flow decision. |
 | `resume_pending()` | On startup, reschedule mid-flight rechecks and resubmissions. |
+| `reconcile(duration)` | Backfill **first-time** trigger alerts missed while down: query EX (`get_alerts`) over a window and start the flow for any matching email with no case. Idempotent — dedups by queue id, skips `_RA` re-detections, only emails brand-new cases. |
 | `retry_failed_notifications()` / `retry_failed_resubmissions()` | Background sweep bodies. |
 
 Private decision helpers: `_still_encrypted`, `_confirm_outcome`,
@@ -676,7 +680,9 @@ aiosmtplib; TLS mode per `smtp_tls_mode`. Sets `X-Case-Id` for bounce correlatio
 
 ## `recheck.py`
 `RecheckScheduler`: `schedule_recheck`, `schedule_resubmit`, `start_notify_retrier`,
-`start_resubmit_retrier`, `start_loop`, `shutdown`. Tasks read settings live.
+`start_resubmit_retrier`, `start_reconcile`, `start_loop`, `shutdown`. Tasks read
+settings live. The recheck poll uses an eager backoff; `start_reconcile` runs the
+startup backfill + optional periodic reconcile sweep.
 
 ## `bounce.py`
 `parse_bounce(raw) -> dict` (DSN parser) + `BounceMonitor` (IMAP poll of the sender
@@ -1310,7 +1316,9 @@ Sign in at `/`:
 - **Case drawer** — lifecycle stepper + event timeline; and, best-effort, full EX
   alert detail fetched by UUID.
 - **Actions** — **Resend** a link (for `Email failed` / `Awaiting` / `Bounced`
-  cases) and **Rescan** (re-run a pending resubmission).
+  cases), **Rescan** (re-run a pending resubmission), and **Reconcile** (top of the
+  page) — on-demand backfill of any trigger alerts missed while the app was down
+  (idempotent; also runs automatically on startup and, if configured, periodically).
 - **Settings** (`/settings`) — every configurable option, applied **live** on save
   (except items tagged *restart to apply*: bind host/port, logging, rate-limit
   windows).

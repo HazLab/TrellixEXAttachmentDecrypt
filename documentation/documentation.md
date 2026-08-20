@@ -22,7 +22,14 @@ Trellix Email Security (EX) inspects inbound email and detonates attachments in 
 sandbox (MVX). When an attachment is **password-protected** — an encrypted PDF, a
 password-locked Office document, or an encrypted ZIP — EX cannot open it, cannot
 prove it is safe, and therefore **quarantines the email** and raises a *riskware*
-alert (`RISKWARE_OBJECT` with a `CustomPolicy.MVX.<ext>` malware name).
+alert (`RISKWARE_OBJECT`).
+
+This behaviour depends on the EX configuration: the appliance must be in **block
+mode**, and the **riskware policy 65066** (*password extraction failed*) must be
+**enabled and set to quarantine**. The alert's **signature name** is then either the
+`CustomPolicy.MVX.<ext>` form (e.g. `CustomPolicy.MVX.pdf` / `.zip` / `.docx`) or
+`CustomPolicy.MVX.65066.PassExtractFailed` — this service's trigger matches any of the
+names you list (see the trigger configuration).
 
 Legitimate senders routinely encrypt attachments and send the password separately.
 Without automation, every such email becomes a manual help-desk ticket: find the

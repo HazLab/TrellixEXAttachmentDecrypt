@@ -3,6 +3,13 @@
 # secret.key + the SQLite DB live in the named volume `data` (DATA_DIR=/data), so they
 # survive restarts and rebuilds. Put real configuration in a .env file next to this
 # (see env.example) — or configure everything from the app's Settings UI on first run.
+#
+# Change the port here (or in a local .env), NOT in the Settings UI, so the mapping +
+# healthcheck stay in sync:
+#   WEB_PORT   — the port inside the container (the app binds it; the healthcheck uses it)
+#   HOST_PORT  — the port published on the host (default 8080)
+# e.g. in .env:  HOST_PORT=9000  and  WEB_PORT=9000  →  reach it at http://host:9000
+# (they're independent — you can also map a different host port to the container port.)
 
 services:
   attachment-decrypt:
@@ -10,9 +17,10 @@ services:
     image: trellix-attachment-decrypt:latest
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "${HOST_PORT:-8080}:${WEB_PORT:-8080}"
     environment:
       DATA_DIR: /data
+      WEB_PORT: ${WEB_PORT:-8080}   # the app binds this; healthcheck reads it too
       # Optional: supply SECRET_KEY here to manage it yourself; otherwise a strong key
       # is generated once and persisted to /data/secret.key.
       # SECRET_KEY: ${SECRET_KEY:-}

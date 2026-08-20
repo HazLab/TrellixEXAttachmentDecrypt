@@ -25,7 +25,7 @@ RUN mkdir -p /data && chown appuser:appuser /data
 VOLUME ["/data"]
 USER appuser
 EXPOSE 8080
-# Simple healthcheck against the public liveness endpoint.
+# Healthcheck honours WEB_PORT so it still works if you change the listen port.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-    CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/healthz',timeout=3).status==200 else 1)"
+    CMD python -c "import os,urllib.request,sys; p=os.environ.get('WEB_PORT','8080'); sys.exit(0 if urllib.request.urlopen(f'http://127.0.0.1:{p}/healthz',timeout=3).status==200 else 1)"
 CMD ["python", "-m", "trellix_decrypt"]

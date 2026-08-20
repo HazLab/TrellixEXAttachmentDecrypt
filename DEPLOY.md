@@ -136,6 +136,12 @@ a local `.env` (optional — the app boots into setup mode and can be configured
 UI), or pass `SECRET_KEY` as an environment secret. The image runs as a non-root user,
 exposes port 8080, and has a `/healthz` healthcheck.
 
+**Changing the port:** set `WEB_PORT` (the container port — the app and the healthcheck
+both follow it) and `HOST_PORT` (the published host port) in `.env`; compose maps
+`HOST_PORT:WEB_PORT`. For example `HOST_PORT=9000` and `WEB_PORT=9000`, then
+`docker compose up -d`, reachable at `http://host:9000`. In Docker set the port this way
+rather than in the Settings UI, so the port mapping and healthcheck stay in sync.
+
 **Plain `docker run`** (bring your own volume):
 
 ```bash

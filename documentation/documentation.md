@@ -1083,10 +1083,13 @@ per-server entry — both under **Settings → Notifications → HTTP**.
    to match this service's `WEBHOOK_USERNAME` / `WEBHOOK_PASSWORD`. *(If you leave Auth
    off, you must instead put the appliance's source IP in `WEBHOOK_IP_ALLOWLIST` — this
    service requires Basic auth and/or an IP allowlist.)*
-3. **Notification** — select **All Events** (safest: it delivers the riskware/malware
-   alerts that carry the `CustomPolicy.MVX.<ext>` detection *and* the `_RA`
-   re-detections). **Malware Object** also works if your encrypted-attachment policy
-   surfaces under it.
+3. **Notification** — select **All Events**. This is **required**, not optional: the
+   encrypted-attachment detection is a **`RISKWARE_OBJECT`**, and the **Malware Object**
+   setting does **not** send riskware objects — so with "Malware Object" EX posts
+   nothing for these emails and the flow never starts. **All Events** delivers the
+   riskware alert (with the `CustomPolicy.MVX.<ext>` malware name your trigger matches)
+   *and* the `_RA` re-detections. If you can pick specific event types instead of "All
+   Events", you must include **riskware object**.
 4. **Delivery** — **Per Event** (recommended).
 5. **SSL Enable** + **SSL Verify** — select both if the endpoint is HTTPS (it should
    be; TLS is terminated by your reverse proxy). Use a certificate from a CA the
@@ -1328,6 +1331,7 @@ and admin password have no remove box — change them by typing a new value.
 |---------|--------------------|
 | Webhook returns **405** | EX is POSTing to the wrong path — usually the base host was set as the Server URL, so EX hits `/`. Set it to `https://<host>/webhook/ex-alert`. A GET to that URL returns `200 {"status":"ready"}` when correct. |
 | Webhook returns **413** | Payload larger than `MAX_REQUEST_BYTES` (default 1 MiB) — usually **Extended** format or a **Daily Digest**. Switch EX to **Normal** + **Per Event**, or raise `MAX_REQUEST_BYTES`. |
+| No alerts arrive / flow never starts (nothing in the log for these emails) | In EX Notification settings the HTTP server's **Notification** is set to **Malware Object** — that excludes `RISKWARE_OBJECT`, which is the encrypted-attachment trigger. Set it to **All Events** (or include **riskware object**). |
 | Webhook returns **503** | Service in setup mode — finish required config (see the dashboard banner). |
 | Webhook returns **401** | Missing/bad Basic auth, or webhook auth not configured. |
 | Webhook returns **403** | Source IP not in `WEBHOOK_IP_ALLOWLIST`. |

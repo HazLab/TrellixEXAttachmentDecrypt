@@ -1,8 +1,8 @@
 # Tech stack
 
 The technologies used by the Trellix EX encrypted-attachment recovery service.
-See `CLAUDE.md` for architecture and module layout, and `pyproject.toml` for exact
-version pins.
+See `documentation/documentation.md` for architecture and module layout, and
+`pyproject.toml` for exact version pins.
 
 ## Language & runtime
 

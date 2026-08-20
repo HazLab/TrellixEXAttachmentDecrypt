@@ -955,9 +955,9 @@ webhook auth all present) it runs in **setup mode**:
 
 ## Repository hygiene
 
-- `.claude/settings.json` denies reading/writing `.env*` and `*.sqlite3`.
-- `.gitignore` excludes `.env*`, `secret.key`, `*.sqlite3`, log files, the vendor
-  PDFs, and this `documentation/` folder.
+- `.gitignore` excludes `.env*`, `secret.key`, `*.sqlite3`, the Word exports of these
+  docs (`documentation/*.docx`), log files, and the vendor PDFs — secrets and local
+  state never reach the repository.
 - The attachment password is never logged in plaintext; a truncated SHA-8 fingerprint
   is logged at rescan time only to diagnose whitespace mismatches.
 

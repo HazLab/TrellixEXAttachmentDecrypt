@@ -35,9 +35,32 @@ settings become unreadable:
 - **the database** — case history and settings.
 
 Both live under **`DATA_DIR`** (default: the current working directory). For anything
-beyond a quick local test, set `DATA_DIR` to a dedicated, writable, backed-up folder
-(source/exe) or a mounted volume (Docker). **Back up `DATA_DIR` as a unit** — the
-database is partly unreadable without its `secret.key`.
+beyond a quick local test, point `DATA_DIR` at a **dedicated, writable, persistent,
+backed-up** folder the service owns. **Back up `DATA_DIR` as a unit** — the database is
+partly unreadable without its `secret.key`.
+
+**What should `DATA_DIR` be?** A durable location (not a container's ephemeral layer or
+a tmpfs), writable by the user the service runs as, and included in your backups:
+
+| Environment | Recommended `DATA_DIR` |
+|-------------|------------------------|
+| Docker | `/data` — a mounted volume (the compose default) |
+| Linux (service) | `/var/lib/trellix-decrypt` (owned by the service user) |
+| macOS | `/usr/local/var/trellix-decrypt` |
+| Windows | `C:\ProgramData\trellix-decrypt` |
+| Quick local test | leave unset → uses the working directory |
+
+Set it the way your shell expects:
+
+```bash
+export DATA_DIR=/var/lib/trellix-decrypt        # Linux / macOS (bash/zsh)
+```
+```powershell
+$env:DATA_DIR = "C:\ProgramData\trellix-decrypt"  # Windows PowerShell
+```
+```bat
+set DATA_DIR=C:\ProgramData\trellix-decrypt       :: Windows cmd.exe
+```
 
 ## 3. SECRET_KEY — how to set it
 
@@ -71,17 +94,33 @@ re-enter settings secrets.
 
 ## 5. Option A — From source
 
+Needs Python ≥ 3.11 and pip. Pick the block for your OS (set `DATA_DIR` to a path
+from §2).
+
+**Linux / macOS:**
+
 ```bash
-python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt                        # or: pip install .
-export DATA_DIR=/var/lib/trellix-decrypt               # writable, persistent folder
+export DATA_DIR=/var/lib/trellix-decrypt               # macOS: /usr/local/var/trellix-decrypt
 python -m trellix_decrypt --check                      # optional: validate EX connectivity
 python -m trellix_decrypt                              # or the console script: trellix-decrypt
 ```
 
-For a service manager (systemd, supervisor, …), run `python -m trellix_decrypt` with
-`DATA_DIR` and any config exported in the unit's environment. Configuration can come
-from the environment, a `.env` file, or entirely from the Settings UI.
+**Windows (PowerShell):**
+
+```powershell
+python -m venv .venv; .\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt                        # or: pip install .
+$env:DATA_DIR = "C:\ProgramData\trellix-decrypt"
+python -m trellix_decrypt --check                      # optional
+python -m trellix_decrypt
+```
+
+For a service manager (systemd, supervisor, Windows Service via NSSM, …), run
+`python -m trellix_decrypt` with `DATA_DIR` and any config set in the service's
+environment. Configuration can come from the environment, a `.env` file, or entirely
+from the Settings UI.
 
 ## 6. Option B — Docker
 

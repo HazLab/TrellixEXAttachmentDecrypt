@@ -19,7 +19,7 @@ STATUS_META = {
     "password_submitted": ("Password received", "submitted"),
     "resubmitted": ("Resubmitted", "resubmitted"),
     "rechecking": ("Re-checking", "rechecking"),
-    "done_passed": ("Passed", "passed"),
+    "done_passed": ("Released", "passed"),
     "done_quarantined": ("Quarantined", "quarantined"),
     "failed_max_retries": ("Wrong password", "wrongpw"),
     "expired": ("Expired", "expired"),

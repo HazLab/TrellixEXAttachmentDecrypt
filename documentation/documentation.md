@@ -1050,9 +1050,13 @@ per-server entry — both under **Settings → Notifications → HTTP**.
    notification each time an object is detected). *This service expects per-event
    pushes, not the Daily Digest.*
 5. **Default provider** — leave **Generic** (recommended).
-6. **Default format** — choose **JSON**, at **Normal** or **Extended** detail. *Do not
-   use Concise* — this service needs fields (recipients, queue id, malware names) that
-   the fuller formats include.
+6. **Default format** — choose **JSON**, at **Normal** detail (recommended). Normal
+   carries everything this service uses (recipients, queue id, sender, subject, malware
+   names) and stays small. *Do not use Concise* (it can omit those fields). **Extended**
+   also works — this service reads only the fields it needs and ignores the rest — but
+   it is much larger (full static-analysis / file detail we don't use) and can approach
+   the webhook body cap (`MAX_REQUEST_BYTES`, default 1 MiB); prefer Normal unless you
+   have a reason to send Extended.
 7. Click **Apply Settings** (changes are lost otherwise).
 
 ### 4b. Add the HTTP server (this service)
@@ -1088,8 +1092,8 @@ per-server entry — both under **Settings → Notifications → HTTP**.
    be; TLS is terminated by your reverse proxy). Use a certificate from a CA the
    appliance trusts.
 6. **Default provider** — **Generic**.
-7. **Message Format** — **JSON**, at **Normal** or **Extended** (or **Default** to
-   inherit 4a). Not **Concise**.
+7. **Message Format** — **JSON**, at **Normal** (or **Default** to inherit 4a). Not
+   **Concise**. Extended works but is unnecessarily large (see 4a).
 8. Click **Update**.
 
 ### 4d. Verify
@@ -1323,6 +1327,7 @@ and admin password have no remove box — change them by typing a new value.
 | Symptom | Likely cause / fix |
 |---------|--------------------|
 | Webhook returns **405** | EX is POSTing to the wrong path — usually the base host was set as the Server URL, so EX hits `/`. Set it to `https://<host>/webhook/ex-alert`. A GET to that URL returns `200 {"status":"ready"}` when correct. |
+| Webhook returns **413** | Payload larger than `MAX_REQUEST_BYTES` (default 1 MiB) — usually **Extended** format or a **Daily Digest**. Switch EX to **Normal** + **Per Event**, or raise `MAX_REQUEST_BYTES`. |
 | Webhook returns **503** | Service in setup mode — finish required config (see the dashboard banner). |
 | Webhook returns **401** | Missing/bad Basic auth, or webhook auth not configured. |
 | Webhook returns **403** | Source IP not in `WEBHOOK_IP_ALLOWLIST`. |

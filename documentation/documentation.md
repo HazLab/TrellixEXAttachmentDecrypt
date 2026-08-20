@@ -13,6 +13,7 @@
 - [Security](#doc-06_security)
 - [User Guide](#doc-07_user_guide)
 - [Tech Stack](#doc-08_tech_stack)
+- [Configuration reference](#doc-09_config_reference)
 
 # 1. Overview
 
@@ -1342,101 +1343,9 @@ restart is required. TLS-certificate verification for EX and SMTP is **off by de
 (appliances/relays commonly use self-signed certs); enable it in production with trusted
 certs.
 
-Configuration can come from environment variables / a `.env` file or the Settings UI
-(each field there also has a **?** tooltip). Two groups point in **opposite directions**
-— the usual source of confusion:
-
-- **EX API** (`EX_*`) — how *this service* reaches *your EX appliance* (outbound: list
-  quarantine, rescan, fetch alerts).
-- **Webhook** (`WEBHOOK_*`) — how *EX* reaches *this service* (inbound: EX POSTs alert
-  notifications to us).
-
-### Trellix EX API — this service → the appliance
-
-| Setting | What it is / what it's for |
-|---------|----------------------------|
-| `EX_BASE_URL` | HTTPS address of your EX appliance (e.g. `https://ex.example.com`). This service calls the EX API here to list quarantine, rescan an email with a password, and fetch alert detail. |
-| `EX_USERNAME` / `EX_PASSWORD` | Credentials of an EX **API account** (needs the *API Analyst* role). This service logs in with them to obtain an API token. |
-| `EX_VERIFY_TLS` | Validate the appliance's TLS certificate. Off by default (EX boxes usually present a self-signed cert); turn on with a trusted cert. |
-| `EX_CLIENT_TOKEN` | Optional extra `X-FeClient-Token` some appliances require alongside the login token. Blank if unused. |
-| `EX_RESCAN_ID_FIELD` | Which identifier the rescan endpoint expects in its URL — `queue_id` (default) or `email_uuid`. Flip it if rescan returns an authorization error despite valid permissions. |
-| `EX_TIMEOUT` | Seconds to wait for an EX API call before giving up. Raise if EX is slow. |
-
-### Webhook — the appliance → this service
-
-EX **pushes** alert notifications to this service so the flow can start. You register
-the endpoint in EX's HTTP-notification settings (see "Point EX at the webhook" in the
-main guide).
-
-| Setting | What it is / what it's for |
-|---------|----------------------------|
-| *Webhook URL* (derived, not a setting) | The endpoint EX POSTs to: **`https://<PUBLIC_BASE_URL>/webhook/ex-alert`**. You paste this into EX's HTTP-notification **Server URL**; it's built from `PUBLIC_BASE_URL`, not a separate value. |
-| `WEBHOOK_USERNAME` / `WEBHOOK_PASSWORD` | HTTP **Basic-auth** credentials EX must send when it POSTs. Set the **same** pair in **two** places — here *and* on the EX HTTP-notification consumer — so this service can confirm the caller is your EX and reject anyone else. Pick any values; they're a shared secret between EX and this service. |
-| `WEBHOOK_IP_ALLOWLIST` | Optional (or additional) gate: comma-separated source IPs allowed to POST the webhook. Use instead of, or with, Basic auth. The webhook refuses to run unless at least one of the two is configured. |
-
-### Email delivery — SMTP (notifying recipients)
-
-| Setting | What it is / what it's for |
-|---------|----------------------------|
-| `SMTP_HOST` / `SMTP_PORT` | Your outbound mail relay + port (587 STARTTLS, 465 implicit TLS, 25 plain). The one-time password-request email is sent through it. |
-| `SMTP_USERNAME` / `SMTP_PASSWORD` | Auth for the relay, if required. Blank for an open/internal relay. |
-| `SMTP_FROM` | The From address recipients see (e.g. `attachment-help@example.com`). |
-| `SMTP_TLS_MODE` | How TLS is negotiated: `opportunistic`, `starttls` (required), `none`, or `ssl` (implicit, 465). |
-| `SMTP_VERIFY_TLS` | Validate the relay's TLS certificate. Off by default for lab/self-signed CAs; on in production. |
-| `SMTP_HELO_HOSTNAME` | HELO/EHLO name announced to the relay. Set an FQDN if the relay rejects the OS hostname. |
-
-### Recipient links & the admin site
-
-| Setting | What it is / what it's for |
-|---------|----------------------------|
-| `PUBLIC_BASE_URL` | The externally-reachable URL of **this service**. Used to build (1) the **one-time link** emailed to recipients and (2) the **webhook URL** you give EX. Must match how recipients and EX actually reach you (scheme/host/port), or links and pushes break. |
-| `UI_PASSWORD` | Password for the **admin dashboard**. Required; setting it the first time ends first-run setup mode. |
-| `TOKEN_TTL` | Seconds a one-time recipient link stays valid (opening an expired link auto-issues a fresh one). |
-| `WEB_HOST` / `WEB_PORT` | Interface and port this service listens on (`0.0.0.0` = all). In Docker set the port via `WEB_PORT`/`HOST_PORT` (§6). *Restart to apply.* |
-| `SECRET_KEY` | Signs the one-time links and admin session and encrypts stored secrets. Auto-generated if unset (§3); environment-only. |
-| `DATA_DIR` / `DB_URL` | Where persistent state lives (§2) and the database URL (§4). |
-
-### What triggers the flow
-
-| Setting | What it is / what it's for |
-|---------|----------------------------|
-| `TRIGGER_ALERT_NAME` | The EX alert's top-level **name** that starts the flow — `RISKWARE_OBJECT` for the encrypted-attachment policy. |
-| `TRIGGER_MALWARE_NAMES` | Comma-separated malware names that must also be present (the policy emits `CustomPolicy.MVX.<ext>`). The alert name **and** one malware name must both match. Empty disables triggering entirely. |
-
-### Bounce detection — optional, IMAP
-
-| Setting | What it is / what it's for |
-|---------|----------------------------|
-| `IMAP_HOST` / `IMAP_PORT` / `IMAP_SSL` | Mailbox this service polls to detect **bounces** (DSNs) of the recipient emails. Blank `IMAP_HOST` disables it. |
-| `IMAP_USERNAME` / `IMAP_PASSWORD` / `IMAP_MAILBOX` | Credentials and mailbox (e.g. `INBOX`) of the sender account to scan. |
-| `BOUNCE_POLL_INTERVAL` | Seconds between bounce polls. |
-
-### Security & rate limiting
-
-| Setting | What it is / what it's for |
-|---------|----------------------------|
-| `LOGIN_RATE_LIMIT` / `LOGIN_RATE_WINDOW` | Failed admin sign-ins allowed per IP within the window before `429`. Self-healing — no permanent lockout. *Restart to apply.* |
-| `FORM_RATE_LIMIT` / `FORM_RATE_WINDOW` | Same, for the recipient password form (per IP + link). *Restart to apply.* |
-| `TRUST_FORWARDED_FOR` | Trust `X-Forwarded-For` for the client IP. Enable **only** behind a trusted reverse proxy. |
-| `MAX_REQUEST_BYTES` | Reject webhook/form bodies larger than this (DoS guard; also relevant to large EX *Extended* alerts). |
-
-### Retry, recheck & reconcile
-
-| Setting | What it is / what it's for |
-|---------|----------------------------|
-| `MAX_PASSWORD_ATTEMPTS` | Wrong-password rounds allowed before giving up. |
-| `RECHECK_DELAY` / `RECHECK_INTERVAL` / `RECHECK_MAX_ATTEMPTS` | How this service polls EX for the resubmission verdict — first wait, steady interval, poll count. Kept eager so a released/clean email resolves quickly. |
-| `NOTIFY_MAX_RETRIES` / `NOTIFY_RETRY_INTERVAL` | Auto-retry of failed recipient emails. |
-| `RESUBMIT_MAX_RETRIES` / `RESUBMIT_RETRY_INTERVAL` | Auto-retry of failed EX rescans. |
-| `RECONCILE_LOOKBACK` / `RECONCILE_INTERVAL` | Backfill of alerts missed while down: how far back to scan EX, and how often to sweep (`0` = startup only). |
-
-### Logging
-
-| Setting | What it is / what it's for |
-|---------|----------------------------|
-| `LOG_LEVEL` | Verbosity: `DEBUG`, `INFO`, `WARNING`, `ERROR`. *Restart to apply.* |
-| `LOG_FILE` | File to write logs to (blank = console only); also captures every HTTP request. *Restart to apply.* |
-| `LOG_FILE_MAX_BYTES` / `LOG_FILE_BACKUPS` | Log-file rotation size and how many rotated files to keep. *Restart to apply.* |
+The full per-setting reference — whether each option is **required or optional**, its
+**default**, and what it's for — is in the [**Configuration reference**](#doc-09_config_reference)
+appendix at the end.
 
 **Secret fields (passwords, tokens).** These show `********` and never reveal the stored
 value, so **leaving one blank means "keep the existing value"** — that is how you avoid
@@ -1591,3 +1500,118 @@ flowchart TB
   management, rescan, and the alert-by-uuid detail endpoint.
 
 ---
+
+# 9. Configuration reference
+
+Configuration can come from environment variables / a `.env` file or the Settings UI
+(each field there also has a **?** tooltip). Two groups point in **opposite directions**
+— the usual source of confusion:
+
+- **EX API** (`EX_*`) — how *this service* reaches *your EX appliance* (outbound: list
+  quarantine, rescan, fetch alerts).
+- **Webhook** (`WEBHOOK_*`) — how *EX* reaches *this service* (inbound: EX POSTs alert
+  notifications to us).
+
+† **Webhook auth** is conditionally required: you need the Basic-auth pair *and/or* the
+IP allowlist — at least one, or the webhook refuses to run.
+
+### Trellix EX API — this service → the appliance
+
+| Setting | Req. | Default | What it is / what it's for |
+|---------|:----:|---------|----------------------------|
+| `EX_BASE_URL` | Yes | `—` | HTTPS address of your EX appliance. This service calls the EX API here to list quarantine, rescan an email with a password, and fetch alert detail. |
+| `EX_USERNAME` | Yes | `—` | Username of an EX **API account** (needs the *API Analyst* role); this service logs in with it. |
+| `EX_PASSWORD` | Yes | `—` | Password for the EX API account. |
+| `EX_VERIFY_TLS` | — | `false` | Validate the appliance's TLS certificate. Off by default (EX boxes usually present a self-signed cert). |
+| `EX_CLIENT_TOKEN` | — | `—` | Optional extra `X-FeClient-Token` some appliances require alongside the login token. |
+| `EX_RESCAN_ID_FIELD` | — | `queue_id` | Which id the rescan endpoint expects in its URL — `queue_id` or `email_uuid`. Flip if rescan returns an authorization error. |
+| `EX_TIMEOUT` | — | `60` | Seconds to wait for an EX API call before giving up. |
+
+### Webhook — the appliance → this service
+
+| Setting | Req. | Default | What it is / what it's for |
+|---------|:----:|---------|----------------------------|
+| *Webhook URL* (derived) | — | `…/webhook/ex-alert` | The endpoint EX POSTs to: `https://<PUBLIC_BASE_URL>/webhook/ex-alert`. Paste it into EX's HTTP-notification **Server URL**; derived from `PUBLIC_BASE_URL`. |
+| `WEBHOOK_USERNAME` | Cond.† | `—` | HTTP **Basic-auth** username EX must send when it POSTs. Set the same value here *and* on the EX notification consumer. |
+| `WEBHOOK_PASSWORD` | Cond.† | `—` | HTTP **Basic-auth** password EX must send (paired with the username above). |
+| `WEBHOOK_IP_ALLOWLIST` | Cond.† | `—` | Comma-separated source IPs allowed to POST the webhook. Use instead of, or with, Basic auth. |
+
+### Email delivery — SMTP
+
+| Setting | Req. | Default | What it is / what it's for |
+|---------|:----:|---------|----------------------------|
+| `SMTP_HOST` | Yes | `—` | Outbound mail relay host used to send the recipient email. |
+| `SMTP_PORT` | — | `587` | Relay port (587 STARTTLS, 465 implicit TLS, 25 plain). |
+| `SMTP_USERNAME` | — | `—` | Relay auth username, if required. |
+| `SMTP_PASSWORD` | — | `—` | Relay auth password, if required. |
+| `SMTP_FROM` | Yes | `attachment-help@example.com` | From address recipients see on the email. |
+| `SMTP_TLS_MODE` | — | `opportunistic` | How TLS is negotiated: `opportunistic`, `starttls`, `none`, or `ssl` (implicit, 465). |
+| `SMTP_VERIFY_TLS` | — | `false` | Validate the relay's TLS certificate. Off by default for lab/self-signed CAs. |
+| `SMTP_HELO_HOSTNAME` | — | `—` | HELO/EHLO name announced to the relay. Set an FQDN if the relay rejects the OS hostname. |
+
+### Recipient links & the admin site
+
+| Setting | Req. | Default | What it is / what it's for |
+|---------|:----:|---------|----------------------------|
+| `PUBLIC_BASE_URL` | Yes | `http://localhost:8080` | Externally-reachable URL of **this service**. Builds the one-time recipient link *and* the webhook URL. Must match how recipients/EX reach you. |
+| `UI_PASSWORD` | Yes | `—` | Password for the admin dashboard. Setting it the first time ends setup mode. |
+| `TOKEN_TTL` | — | `86400` | Seconds a one-time recipient link stays valid before expiring. |
+| `WEB_HOST` | — | `0.0.0.0` | Interface this service binds to (`0.0.0.0` = all). *Restart to apply.* |
+| `WEB_PORT` | — | `8080` | Port this service listens on. In Docker set `WEB_PORT`/`HOST_PORT` (§6). *Restart to apply.* |
+| `SECRET_KEY` | — | `auto-generated` | Signs links/sessions and encrypts stored secrets. Auto-generated if unset; environment-only (not in the UI). |
+| `DATA_DIR` | — | `working dir` | Directory for persistent state — `secret.key` and the default SQLite DB (§2). |
+| `DB_URL` | — | `sqlite:///trellix_decrypt.sqlite3` | Database URL (§4). Environment-only. |
+
+### What triggers the flow
+
+| Setting | Req. | Default | What it is / what it's for |
+|---------|:----:|---------|----------------------------|
+| `TRIGGER_ALERT_NAME` | — | `RISKWARE_OBJECT` | The EX alert top-level **name** that starts the flow (the encrypted-attachment policy raises `RISKWARE_OBJECT`). |
+| `TRIGGER_MALWARE_NAMES` | — | `CustomPolicy.MVX.pdf, CustomPolicy.MVX.zip, CustomPolicy.MVX.docx, CustomPolicy.MVX.65066.PassExtractFailed` | Comma-separated signature names that must also be present (`CustomPolicy.MVX.<ext>` or `...65066.PassExtractFailed`). Alert name **and** one signature name must match. Empty disables triggering. |
+
+### Bounce detection — optional, IMAP
+
+| Setting | Req. | Default | What it is / what it's for |
+|---------|:----:|---------|----------------------------|
+| `IMAP_HOST` | — | `—` | Mailbox host polled to detect **bounces** (DSNs). Blank disables bounce monitoring. |
+| `IMAP_PORT` | — | `993` | IMAP port (993 for IMAPS). |
+| `IMAP_USERNAME` | — | `—` | IMAP account username for the bounce mailbox. |
+| `IMAP_PASSWORD` | — | `—` | IMAP account password. |
+| `IMAP_MAILBOX` | — | `INBOX` | Mailbox scanned for bounces (e.g. `INBOX`). |
+| `IMAP_SSL` | — | `true` | Connect to IMAP over SSL (IMAPS). |
+| `BOUNCE_POLL_INTERVAL` | — | `120` | Seconds between bounce polls. |
+
+### Security & rate limiting
+
+| Setting | Req. | Default | What it is / what it's for |
+|---------|:----:|---------|----------------------------|
+| `LOGIN_RATE_LIMIT` | — | `10` | Failed admin sign-ins allowed per IP within the window before `429`. Self-healing. *Restart to apply.* |
+| `LOGIN_RATE_WINDOW` | — | `900` | Window (seconds) for the login rate limit. *Restart to apply.* |
+| `FORM_RATE_LIMIT` | — | `10` | Password-form submissions allowed per IP+link within the window. *Restart to apply.* |
+| `FORM_RATE_WINDOW` | — | `300` | Window (seconds) for the password-form rate limit. *Restart to apply.* |
+| `TRUST_FORWARDED_FOR` | — | `false` | Trust `X-Forwarded-For` for the client IP. Enable only behind a trusted reverse proxy. |
+| `MAX_REQUEST_BYTES` | — | `1048576` | Reject webhook/form bodies larger than this (DoS guard; also large EX *Extended* alerts). |
+
+### Retry, recheck & reconcile
+
+| Setting | Req. | Default | What it is / what it's for |
+|---------|:----:|---------|----------------------------|
+| `MAX_PASSWORD_ATTEMPTS` | — | `3` | Wrong-password rounds allowed before giving up. |
+| `RECHECK_DELAY` | — | `10` | Seconds before the first recheck poll after a resubmission. |
+| `RECHECK_INTERVAL` | — | `30` | Steady-state seconds between later recheck polls. |
+| `RECHECK_MAX_ATTEMPTS` | — | `12` | Number of recheck polls before concluding from the list. |
+| `NOTIFY_MAX_RETRIES` | — | `5` | How many times to retry a failed recipient email. |
+| `NOTIFY_RETRY_INTERVAL` | — | `300` | Seconds between email retry sweeps. |
+| `RESUBMIT_MAX_RETRIES` | — | `5` | How many times to retry a failed EX rescan. |
+| `RESUBMIT_RETRY_INTERVAL` | — | `120` | Seconds between rescan retry sweeps. |
+| `RECONCILE_LOOKBACK` | — | `48_hours` | EX alerts-query window scanned to backfill missed alerts. |
+| `RECONCILE_INTERVAL` | — | `1800` | Seconds between periodic reconcile sweeps (0 = startup only). |
+
+### Logging
+
+| Setting | Req. | Default | What it is / what it's for |
+|---------|:----:|---------|----------------------------|
+| `LOG_LEVEL` | — | `INFO` | Verbosity: `DEBUG`, `INFO`, `WARNING`, `ERROR`. *Restart to apply.* |
+| `LOG_FILE` | — | `trellix_decrypt.log` | File to write logs to (blank = console only). *Restart to apply.* |
+| `LOG_FILE_MAX_BYTES` | — | `10000000` | Rotate the log file at this size (bytes). *Restart to apply.* |
+| `LOG_FILE_BACKUPS` | — | `5` | How many rotated log files to keep. *Restart to apply.* |

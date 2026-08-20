@@ -12,9 +12,11 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     # --- Trellix EX appliance ---
-    ex_base_url: str
-    ex_username: str
-    ex_password: str
+    # These are operationally required (enforced by missing_required / setup mode) but
+    # default to empty so the service can boot into setup mode and be configured via UI.
+    ex_base_url: str = ""
+    ex_username: str = ""
+    ex_password: str = ""
     ex_verify_tls: bool = True
     ex_client_token: str = ""  # optional X-FeClient-Token, provided by Trellix
     # Which identifier the rescan endpoint expects in its path. The API doc names
@@ -37,7 +39,7 @@ class Settings(BaseSettings):
     ]
 
     # --- Outbound mail ---
-    smtp_host: str
+    smtp_host: str = ""  # required in practice (see missing_required); empty enables setup mode
     smtp_port: int = 587
     smtp_username: str = ""
     smtp_password: str = ""
@@ -56,7 +58,10 @@ class Settings(BaseSettings):
     public_base_url: str = "http://localhost:8080"
     web_host: str = "0.0.0.0"
     web_port: int = 8080
-    secret_key: str = "change-me"
+    # Blank by default: on first run a strong random key is generated and persisted
+    # (see resolve_secret_key). NEVER ship a shared literal default — that would be
+    # identical on every install and so no secret at all.
+    secret_key: str = ""
     token_ttl: int = 86400  # seconds
     ui_password: str = ""  # admin password gating the dashboard/settings UI (UI_PASSWORD)
 
@@ -64,6 +69,19 @@ class Settings(BaseSettings):
     webhook_username: str = ""
     webhook_password: str = ""
     webhook_ip_allowlist: Annotated[list[str], NoDecode] = []
+
+    # --- Rate limiting (public POST endpoints; self-healing, per-IP) ---
+    # Windowed limits: N attempts per window, then HTTP 429 until the window rolls
+    # off. In-memory, so a restart also clears them — there is no permanent lockout.
+    login_rate_limit: int = 10          # failed admin sign-ins per IP per window
+    login_rate_window: int = 900        # seconds (15 min)
+    form_rate_limit: int = 10           # password submissions per (IP+token) per window
+    form_rate_window: int = 300         # seconds (5 min)
+    # Trust the reverse proxy's X-Forwarded-For for the client IP (enable only when
+    # actually behind a trusted proxy; the header is otherwise spoofable).
+    trust_forwarded_for: bool = False
+    # Reject webhook / password bodies larger than this many bytes (cheap DoS guard).
+    max_request_bytes: int = 1_048_576  # 1 MiB
 
     # --- Flow tuning ---
     max_password_attempts: int = 3
@@ -104,3 +122,61 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return [item.strip() for item in v.split(",") if item.strip()]
         return v
+
+    def webhook_auth_configured(self) -> bool:
+        """The webhook is safe to serve only with Basic-auth creds and/or an IP allowlist."""
+        return bool(self.webhook_username or self.webhook_password or self.webhook_ip_allowlist)
+
+    def missing_required(self) -> list[str]:
+        """Settings that must be provided before the service is operational. The admin
+        password is required so the UI can't be left open; SECRET_KEY is intentionally
+        NOT here (auto-generated). Used to drive first-run setup mode."""
+        required = {
+            "ex_base_url": self.ex_base_url,
+            "ex_username": self.ex_username,
+            "ex_password": self.ex_password,
+            "smtp_host": self.smtp_host,
+            "smtp_from": self.smtp_from,
+            "public_base_url": self.public_base_url,
+            "ui_password": self.ui_password,
+        }
+        missing = [k for k, v in required.items() if not str(v or "").strip()]
+        if not self.webhook_auth_configured():
+            missing.append("webhook_auth")  # username+password and/or ip allowlist
+        return missing
+
+    def is_configured(self) -> bool:
+        return not self.missing_required()
+
+
+#: Placeholder still found in old .env files; treated as "unset" so a real key is generated.
+INSECURE_SECRET_KEYS = frozenset({"", "change-me", "changeme", "secret", "please-change-me"})
+
+
+def resolve_secret_key(env_value: str, key_path: str) -> str:
+    """Return a stable, strong SECRET_KEY.
+
+    Precedence: an explicit, non-placeholder ``SECRET_KEY`` env value wins. Otherwise
+    read a previously-generated key from ``key_path``; if absent, generate a strong one
+    and persist it there (0600) so tokens, sessions, and encrypted secrets survive
+    restarts. This removes the shipped ``change-me`` default without forcing the
+    operator to invent a key. Rotating the key invalidates held passwords/sessions.
+    """
+    import os
+    import secrets
+    from pathlib import Path
+
+    if str(env_value or "").strip().lower() not in INSECURE_SECRET_KEYS:
+        return env_value
+    path = Path(key_path)
+    if path.exists():
+        existing = path.read_text(encoding="utf-8").strip()
+        if existing:
+            return existing
+    generated = secrets.token_urlsafe(48)
+    path.write_text(generated, encoding="utf-8")
+    try:
+        os.chmod(path, 0o600)
+    except OSError:  # best-effort on platforms without POSIX perms
+        pass
+    return generated

@@ -168,5 +168,18 @@ $("drawer-close").addEventListener("click", closeDrawer);
 $("drawer").addEventListener("click", (e) => { if (e.target.id === "drawer") closeDrawer(); });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
 
+async function checkConfig() {
+  const b = $("config-banner");
+  if (!b) return;
+  try {
+    const s = await api("/api/status");
+    if (s.configured) { b.className = "banner"; b.textContent = ""; return; }
+    b.className = "banner warn";
+    b.innerHTML = "<strong>Configuration incomplete.</strong> The webhook is disabled (503) until setup is finished. "
+      + "<a href=\"/settings\">Open settings →</a>";
+  } catch (_) { /* ignore — banner is best-effort */ }
+}
+
 refresh();
+checkConfig();
 setInterval(refresh, 5000);

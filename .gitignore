@@ -35,3 +35,9 @@ docs/*.pdf
 
 # Windows/WSL alternate-data-stream cruft
 *:Zone.Identifier
+
+# Auto-generated deployment secret key (never commit)
+secret.key
+
+# Generated internal documentation — kept local, not published
+documentation/

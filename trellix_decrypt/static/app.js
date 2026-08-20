@@ -12,6 +12,7 @@ const FLOW = [
 const TERMINAL = { done_passed: "Released", done_quarantined: "Quarantined", failed_max_retries: "Wrong password", expired: "Expired", notify_failed: "Email failed", bounced: "Bounced" };
 
 let cases = [];
+let openId = null, openSig = null, openState = null;  // the case shown in the drawer
 const $ = (id) => document.getElementById(id);
 const esc = (s) => (s == null ? "" : String(s)).replace(/[&<>"]/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -78,9 +79,10 @@ function stepper(state) {
   }).join("") + `</div>`;
 }
 
-async function openDrawer(id) {
-  const c = await api("/api/cases/" + encodeURIComponent(id));
-  $("drawer-body").innerHTML = `
+// The dynamic part of the drawer (everything except the EX alert-details section, which
+// is loaded separately and preserved across live updates).
+function drawerMainHtml(c) {
+  return `
     <h2><span class="badge ${c.status_kind}">${esc(c.status_label)}</span></h2>
     ${stepper(c.state)}
     <dl class="kv">
@@ -101,10 +103,10 @@ async function openDrawer(id) {
     <ul class="timeline">${(c.events || []).map((e) => `
       <li><div class="t-state">${esc((e.state || "").replace(/_/g, " "))}</div>
       <div class="t-detail">${esc(e.detail || "")}</div>
-      <div class="t-time">${esc(fmtTime(e.at))}</div></li>`).join("")}</ul>
-    <h3 style="font-size:14px;margin:18px 0 0;">EX alert details</h3>
-    <div id="alert-extra" class="alert-extra">Loading…</div>`;
+      <div class="t-time">${esc(fmtTime(e.at))}</div></li>`).join("")}</ul>`;
+}
 
+function wireDrawerButtons(id) {
   const resend = document.getElementById("resend-btn");
   if (resend) resend.addEventListener("click", async () => {
     resend.disabled = true; resend.textContent = "Sending…";
@@ -117,8 +119,39 @@ async function openDrawer(id) {
     try { await post("/api/cases/" + encodeURIComponent(id) + "/rescan"); await openDrawer(id); refresh(); }
     catch (e) { rescan.disabled = false; rescan.textContent = "Rescan failed — try again"; }
   });
+}
+
+// Cheap change signature so live refresh only re-renders when something actually changed.
+function drawerSig(c) {
+  return [c.state, c.updated_at, (c.events || []).length, c.attempts || 0, c.notify_attempts || 0].join("|");
+}
+
+async function openDrawer(id) {
+  openId = id;
+  const c = await api("/api/cases/" + encodeURIComponent(id));
+  $("drawer-body").innerHTML = `<div id="drawer-main">${drawerMainHtml(c)}</div>
+    <h3 style="font-size:14px;margin:18px 0 0;">EX alert details</h3>
+    <div id="alert-extra" class="alert-extra">Loading…</div>`;
+  wireDrawerButtons(id);
+  openState = c.state; openSig = drawerSig(c);
   $("drawer").hidden = false;
   loadAlertDetails(id);
+}
+
+// Live-update the open drawer on the refresh tick — updates the badge, stepper, counters
+// and timeline in place (no flicker, keeps scroll), and re-fetches the EX alert details
+// only when the case state actually changed.
+async function refreshDrawer() {
+  if (!openId || $("drawer").hidden) return;
+  let c;
+  try { c = await api("/api/cases/" + encodeURIComponent(openId)); }
+  catch (e) { return; }  // transient error / case gone — keep the current view
+  if (drawerSig(c) === openSig) return;  // nothing changed
+  const stateChanged = c.state !== openState;
+  const main = $("drawer-main");
+  if (main) { main.innerHTML = drawerMainHtml(c); wireDrawerButtons(openId); }
+  openSig = drawerSig(c); openState = c.state;
+  if (stateChanged) loadAlertDetails(openId);
 }
 
 // Extra, best-effort EX alert detail (fetched by UUID) — populated after the drawer
@@ -161,7 +194,7 @@ function renderAlertDetails(r) {
   }).join("");
 }
 
-function closeDrawer() { $("drawer").hidden = true; }
+function closeDrawer() { $("drawer").hidden = true; openId = null; }
 
 $("search").addEventListener("input", render);
 $("drawer-close").addEventListener("click", closeDrawer);
@@ -209,4 +242,4 @@ if (_rc) _rc.addEventListener("click", reconcile);
 
 refresh();
 checkConfig();
-setInterval(refresh, 5000);
+setInterval(() => { refresh(); refreshDrawer(); }, 5000);

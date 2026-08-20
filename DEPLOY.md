@@ -222,6 +222,7 @@ via the environment, back that value up too (separately and securely).
 
 | Symptom | Fix |
 |---------|-----|
+| Webhook returns **405** | The EX Server URL is the base host (EX POSTs to `/`). Set it to `https://<host>/webhook/ex-alert`; a GET to that URL returns `200 {"status":"ready"}` when correct. |
 | Webhook returns **503** | Setup mode — finish the required config (§8). |
 | **Missing dependencies** at start (source) | You skipped install — `pip install -r requirements.txt` (or use Docker/exe). |
 | Sessions drop / stored secrets unreadable after redeploy | `DATA_DIR` (or `SECRET_KEY`) wasn't persisted — mount a volume / set a stable folder. |

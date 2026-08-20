@@ -73,12 +73,18 @@ class RecheckScheduler:
 
     async def _poll(self, case_id: str) -> None:
         s = self._engine.settings  # read live so settings changes apply
-        await asyncio.sleep(s.recheck_delay)
-        for attempt in range(s.recheck_max_attempts):
-            final = attempt == s.recheck_max_attempts - 1
+        interval = max(5, s.recheck_interval)
+        # Eager backoff: a released/clean email sends no push, so poll quickly at first to
+        # catch the release (the original queue id leaving quarantine), then settle to
+        # recheck_interval. Held emails usually resolve even sooner via the _RA push.
+        delays = [max(1, s.recheck_delay), 10, 20]
+        delays += [interval] * s.recheck_max_attempts
+        delays = delays[: max(1, s.recheck_max_attempts)]
+        for i, delay in enumerate(delays):
+            await asyncio.sleep(delay)
+            final = i == len(delays) - 1
             try:
                 if await self._engine.recheck(case_id, final=final):
                     return
             except Exception:  # transient EX/network error — keep polling
                 log.exception("recheck failed for case %s", case_id)
-            await asyncio.sleep(s.recheck_interval)

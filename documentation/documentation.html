@@ -583,7 +583,10 @@ python -m trellix_decrypt</code></pre>
 <li><strong>`secret.key`</strong> — signs sessions and one-time links and encrypts stored secrets.</li>
 <li><strong>the database</strong> — the case history and settings.</li>
 </ul>
-<p>Both live under <strong>`DATA_DIR`</strong> (default: the current working directory). For anything other than a quick local test, set <code>DATA_DIR</code> to a <strong>dedicated, writable, backed-up folder</strong> (bare-metal/exe) or a <strong>mounted volume</strong> (Docker). Back up <code>DATA_DIR</code> as a unit — the DB is unreadable in part without its <code>secret.key</code>.</p>
+<p>Both live under <strong>`DATA_DIR`</strong> (default: the current working directory). For anything other than a quick local test, point <code>DATA_DIR</code> at a <strong>dedicated, writable, persistent, backed-up</strong> folder the service owns. Back up <code>DATA_DIR</code> as a unit — the DB is partly unreadable without its <code>secret.key</code>.</p>
+<p><strong>What should `DATA_DIR` be?</strong> A durable path (not a container&#x27;s ephemeral layer or a tmpfs), writable by the run-as user:</p>
+<div class="table-wrap"><table><thead><tr><th>Environment</th><th>Recommended <code>DATA_DIR</code></th></tr></thead><tbody><tr><td>Docker</td><td><code>/data</code> — a mounted volume (the compose default)</td></tr><tr><td>Linux (service)</td><td><code>/var/lib/trellix-decrypt</code></td></tr><tr><td>macOS</td><td><code>/usr/local/var/trellix-decrypt</code></td></tr><tr><td>Windows</td><td><code>C:\ProgramData\trellix-decrypt</code></td></tr><tr><td>Quick local test</td><td>leave unset → working directory</td></tr></tbody></table></div>
+<p>Set it as your shell expects: <code>export DATA_DIR=…</code> (Linux/macOS bash/zsh), <code>$env:DATA_DIR = &quot;…&quot;</code> (Windows PowerShell), or <code>set DATA_DIR=…</code> (cmd.exe).</p>
 <h3 id="07_user_guide-7-2-secret-key-how-to-set-it">7.2 SECRET_KEY — how to set it</h3>
 <p>Precedence: an explicit <strong>`SECRET_KEY`</strong> environment variable wins; otherwise the app <strong>generates a strong key on first run</strong> and writes it to <code>DATA_DIR/secret.key</code> (file permission <code>600</code>). You therefore have two supported options:</p>
 <ul>
@@ -599,11 +602,18 @@ python -m trellix_decrypt</code></pre>
 <li><strong>A different database (optional).</strong> Set <code>DB_URL</code> to any SQLAlchemy URL, e.g. <code>postgresql+psycopg://user:pass@host/dbname</code>. Note the <strong>driver is not bundled</strong> — install it yourself (e.g. <code>pip install psycopg[binary]</code>) in your source/Docker build. <code>DB_URL</code> is environment-only (it can&#x27;t be stored in the database it points at). Tables are created automatically; no migration tool is required.</li>
 </ul>
 <h3 id="07_user_guide-7-4-from-source">7.4 From source</h3>
-<pre class="code"><code>python -m venv .venv &amp;&amp; source .venv/bin/activate      # Windows: .venv\Scripts\activate
+<p><strong>Linux / macOS:</strong></p>
+<pre class="code"><code>python -m venv .venv &amp;&amp; source .venv/bin/activate
 pip install -r requirements.txt                        # or: pip install .
-export DATA_DIR=/var/lib/trellix-decrypt               # a writable, persistent folder
+export DATA_DIR=/var/lib/trellix-decrypt               # macOS: /usr/local/var/trellix-decrypt
 python -m trellix_decrypt --check                      # optional: validate EX connectivity
 python -m trellix_decrypt                              # or the console script: trellix-decrypt</code></pre>
+<p><strong>Windows (PowerShell):</strong></p>
+<pre class="code"><code>python -m venv .venv; .\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+$env:DATA_DIR = &quot;C:\ProgramData\trellix-decrypt&quot;
+python -m trellix_decrypt --check
+python -m trellix_decrypt</code></pre>
 <p>Then open the UI to finish first-run setup (§3). Configuration can come from the environment, a <code>.env</code> file, or entirely from the Settings UI.</p>
 <h3 id="07_user_guide-7-5-docker-recommended">7.5 Docker (recommended)</h3>
 <p>With <strong>compose</strong> (persists <code>DATA_DIR</code> in a named volume automatically):</p>

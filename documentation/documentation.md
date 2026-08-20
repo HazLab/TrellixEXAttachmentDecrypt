@@ -1140,9 +1140,23 @@ settings become unreadable:
 - **the database** — the case history and settings.
 
 Both live under **`DATA_DIR`** (default: the current working directory). For anything
-other than a quick local test, set `DATA_DIR` to a **dedicated, writable, backed-up
-folder** (bare-metal/exe) or a **mounted volume** (Docker). Back up `DATA_DIR` as a
-unit — the DB is unreadable in part without its `secret.key`.
+other than a quick local test, point `DATA_DIR` at a **dedicated, writable, persistent,
+backed-up** folder the service owns. Back up `DATA_DIR` as a unit — the DB is partly
+unreadable without its `secret.key`.
+
+**What should `DATA_DIR` be?** A durable path (not a container's ephemeral layer or a
+tmpfs), writable by the run-as user:
+
+| Environment | Recommended `DATA_DIR` |
+|-------------|------------------------|
+| Docker | `/data` — a mounted volume (the compose default) |
+| Linux (service) | `/var/lib/trellix-decrypt` |
+| macOS | `/usr/local/var/trellix-decrypt` |
+| Windows | `C:\ProgramData\trellix-decrypt` |
+| Quick local test | leave unset → working directory |
+
+Set it as your shell expects: `export DATA_DIR=…` (Linux/macOS bash/zsh),
+`$env:DATA_DIR = "…"` (Windows PowerShell), or `set DATA_DIR=…` (cmd.exe).
 
 ### 7.2 SECRET_KEY — how to set it
 
@@ -1177,12 +1191,24 @@ re-enter settings secrets.
 
 ### 7.4 From source
 
+**Linux / macOS:**
+
 ```bash
-python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt                        # or: pip install .
-export DATA_DIR=/var/lib/trellix-decrypt               # a writable, persistent folder
+export DATA_DIR=/var/lib/trellix-decrypt               # macOS: /usr/local/var/trellix-decrypt
 python -m trellix_decrypt --check                      # optional: validate EX connectivity
 python -m trellix_decrypt                              # or the console script: trellix-decrypt
+```
+
+**Windows (PowerShell):**
+
+```powershell
+python -m venv .venv; .\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+$env:DATA_DIR = "C:\ProgramData\trellix-decrypt"
+python -m trellix_decrypt --check
+python -m trellix_decrypt
 ```
 
 Then open the UI to finish first-run setup (§3). Configuration can come from the

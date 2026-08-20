@@ -379,6 +379,40 @@ class FlowEngine:
         for case_id in self.repo.list_resubmit_pending_ids(self.settings.resubmit_max_retries):
             self.scheduler.schedule_resubmit(case_id)
 
+    async def reconcile(self, duration: str | None = None) -> dict:
+        """Backfill trigger alerts missed while the app was down.
+
+        Queries EX for recent alerts and starts the flow for any matching email we have
+        no case for. **Idempotent**: dedups by queue id and skips ``_RA`` re-detections
+        (those are recovered by the recheck poll), so it is safe to run repeatedly and
+        alongside EX's own HTTP-notification retries — it never creates duplicates or
+        re-emails an existing case. Returns a summary dict for logging/UI. In-flight
+        cases are already recovered separately by ``resume_pending`` + the recheck poll;
+        this covers only *first-time* alerts that never reached the webhook."""
+        if not self.settings.ex_base_url:
+            return {"scanned": 0, "created": 0, "already_known": 0, "skipped": 0,
+                    "note": "EX not configured"}
+        duration = duration or self.settings.reconcile_lookback
+        raw = await self.ex.get_alerts(duration=duration)
+        events = [parse_alert(a) for a in iter_alerts(raw)]
+        created = already = skipped = 0
+        for ev in events:
+            # Only first-time trigger alerts with a full envelope; _RA re-detections are
+            # handled by the recheck poll, not here.
+            if (not ev.queue_id or not ev.recipient or ev.queue_id.endswith("_RA")
+                    or not self.rules.matches(ev)):
+                skipped += 1
+                continue
+            if self.repo.find_case_by_queue_id(ev.queue_id) is not None:
+                already += 1
+                continue
+            if await self.handle_alert(ev) is not None:  # creates the case + emails
+                created += 1
+        summary = {"scanned": len(events), "created": created,
+                   "already_known": already, "skipped": skipped}
+        log.info("reconcile(duration=%s): %s", duration, summary)
+        return summary
+
     async def resend(self, case_id: str):
         """Operator-triggered re-send. Returns the send result, or None if the
         case isn't in a re-sendable state."""

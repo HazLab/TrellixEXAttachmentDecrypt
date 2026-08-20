@@ -65,6 +65,9 @@ class FakeEX:
     async def get_alert_by_uuid(self, uuid):
         return getattr(self, "alerts", {}).get(uuid)
 
+    async def get_alerts(self, **filters):
+        return getattr(self, "alerts_payload", {"alert": []})
+
     async def aclose(self):
         pass
 
@@ -98,6 +101,9 @@ class FakeScheduler:
         pass
 
     def start_notify_retrier(self):
+        pass
+
+    def start_reconcile(self):
         pass
 
     def start_loop(self, coro):

@@ -7,8 +7,12 @@
     <h1>Encrypted attachments</h1>
     <p class="muted" id="summary">Loading…</p>
   </div>
-  <input id="search" class="search" type="search" placeholder="Search recipient, subject, queue id, status…" autocomplete="off">
+  <div class="head-actions">
+    <button id="reconcile-btn" class="btn ghost" title="Backfill any trigger alerts missed while the app was down">↻ Reconcile</button>
+    <input id="search" class="search" type="search" placeholder="Search recipient, subject, queue id, status…" autocomplete="off">
+  </div>
 </div>
+<div id="reconcile-status" class="banner" role="status"></div>
 
 <div class="card table-card">
   <table class="cases">

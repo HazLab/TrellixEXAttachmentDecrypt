@@ -180,6 +180,33 @@ async function checkConfig() {
   } catch (_) { /* ignore — banner is best-effort */ }
 }
 
+async function reconcile() {
+  const btn = $("reconcile-btn"), out = $("reconcile-status");
+  if (!btn) return;
+  btn.disabled = true;
+  out.className = "banner"; out.textContent = "Reconciling with EX…";
+  try {
+    const r = await post("/api/reconcile");
+    if (r.ok) {
+      const s = r.result || {};
+      out.className = "banner ok";
+      out.textContent = `Reconcile done — scanned ${s.scanned || 0}, created ${s.created || 0}, `
+        + `already known ${s.already_known || 0}` + (s.note ? ` (${s.note})` : "");
+      if (s.created) refresh();
+    } else {
+      out.className = "banner warn";
+      out.textContent = r.error || "Reconcile failed.";
+    }
+  } catch (e) {
+    out.className = "banner warn";
+    out.textContent = "Reconcile failed: " + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+const _rc = $("reconcile-btn");
+if (_rc) _rc.addEventListener("click", reconcile);
+
 refresh();
 checkConfig();
 setInterval(refresh, 5000);

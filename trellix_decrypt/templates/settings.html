@@ -124,6 +124,15 @@
     <label>Rescan retry interval (s)<input name="resubmit_retry_interval" type="number"></label>
   </fieldset>
 
+  <fieldset>
+    <legend>Reconciliation (backfill missed alerts)</legend>
+    <label>EX look-back window<input name="reconcile_lookback" placeholder="48_hours"></label>
+    <label>Periodic sweep interval (s, 0 = startup only)<input name="reconcile_interval" type="number"></label>
+    <p class="hint">On startup (and every interval) the app queries EX for recent trigger alerts and creates any
+      case it's missing — idempotent, so it won't duplicate or re-email. Use the <em>Reconcile</em> button on the
+      dashboard to run it on demand.</p>
+  </fieldset>
+
   <div class="form-actions">
     <button type="submit" class="btn">Save changes</button>
     <span id="save-status" class="save-status"></span>

@@ -56,6 +56,16 @@ def build_api_router(ctx) -> APIRouter:
         return {"configured": s.is_configured(), "missing": s.missing_required(),
                 "setup_mode": in_setup_mode(ctx)}
 
+    @router.post("/reconcile")
+    async def reconcile(request: Request):
+        """Manually backfill any trigger alerts missed while the app was down (idempotent)."""
+        _guard(request)
+        try:
+            return {"ok": True, "result": await ctx.engine.reconcile()}
+        except Exception as exc:  # noqa: BLE001 — surface a clean error to the UI
+            log.warning("manual reconcile failed: %s", exc)
+            return {"ok": False, "error": "reconcile failed — check EX connectivity and logs"}
+
     @router.get("/cases")
     async def list_cases(request: Request):
         _guard(request)

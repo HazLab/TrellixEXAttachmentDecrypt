@@ -27,6 +27,7 @@ def create_app(ctx) -> FastAPI:
         await ctx.engine.resume_pending()
         ctx.scheduler.start_notify_retrier()
         ctx.scheduler.start_resubmit_retrier()
+        ctx.scheduler.start_reconcile()  # backfill alerts missed while down + periodic sweep
         ctx.scheduler.start_loop(ctx.bounce_monitor.run())
         yield
         await ctx.scheduler.shutdown()

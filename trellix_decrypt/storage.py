@@ -12,6 +12,7 @@ from uuid import uuid4
 
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy import ForeignKey, create_engine, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -111,7 +112,14 @@ class CaseRepository:
                 s.add(case)
                 s.flush()
                 s.add(EventLog(case_id=case.id, state=FlowState.RECEIVED, detail="alert received"))
-                s.commit()
+                try:
+                    s.commit()
+                except IntegrityError:
+                    # A concurrent writer (webhook push racing a reconcile sweep) created
+                    # the same queue_id first — the unique index rejected our insert. Use
+                    # the existing row instead of failing.
+                    s.rollback()
+                    case = s.scalar(select(AttachmentCase).where(AttachmentCase.queue_id == event.queue_id))
             else:
                 # Same email re-notified (e.g. one alert per recipient): merge any new
                 # To addresses so the one case holds the full recipient set.

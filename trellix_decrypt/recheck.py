@@ -53,6 +53,29 @@ class RecheckScheduler:
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
 
+    def start_reconcile(self) -> None:
+        """Startup backfill of alerts missed while down, then an optional periodic sweep."""
+        task = asyncio.create_task(self._reconcile_loop())
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
+
+    async def _reconcile_loop(self) -> None:
+        await asyncio.sleep(5)  # let startup settle before the first EX query
+        try:
+            await self._engine.reconcile()  # backfill anything missed while down
+        except Exception:
+            log.exception("startup reconcile failed")
+        while True:
+            interval = self._engine.settings.reconcile_interval
+            if interval <= 0:  # periodic sweep disabled — poll the setting in case it changes
+                await asyncio.sleep(300)
+                continue
+            await asyncio.sleep(max(60, interval))
+            try:
+                await self._engine.reconcile()
+            except Exception:
+                log.exception("reconcile sweep failed")
+
     def start_loop(self, coro) -> None:
         """Run an arbitrary long-lived coroutine as a tracked background task."""
         task = asyncio.create_task(coro)

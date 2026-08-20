@@ -413,3 +413,42 @@ async def test_wrong_password_retries_then_gives_up(engine):
     assert engine.repo.get_case(case.id).state == FlowState.FAILED_MAX_RETRIES
     # one initial + two retry emails (third attempt hits the cap)
     assert len(engine.mailer.sent) == 3
+
+
+def _raw_alert(qid, rcpt="u@corp.test", alert_name="RISKWARE_OBJECT", malware=TRIGGER_MALWARE_NAME):
+    """A raw EX alerts-query dict (what reconcile parses out of get_alerts)."""
+    return {"name": alert_name, "malicious": "no",
+            "dst": {"smtpTo": rcpt},
+            "smtpMessage": {"queueId": qid, "subject": "Invoice"},
+            "explanation": {"malwareDetected": {"malware": [{"name": malware}]}}}
+
+
+async def test_reconcile_backfills_only_new_matching_alerts(engine):
+    engine.ex.alerts_payload = {"alert": [
+        _raw_alert("Q-A"),                                # new + matches -> create + email
+        _raw_alert("Q-B", alert_name="MALWARE_OBJECT"),   # wrong alert name -> skip
+        _raw_alert("Q-C", malware="Other.thing"),         # wrong malware -> skip
+        _raw_alert("Q-D_RA"),                             # _RA re-detection -> skip (recheck owns it)
+    ]}
+    res = await engine.reconcile()
+    assert res["created"] == 1 and res["scanned"] == 4
+    assert engine.repo.find_case_by_queue_id("Q-A") is not None
+    assert engine.repo.find_case_by_queue_id("Q-B") is None
+    assert engine.repo.find_case_by_queue_id("Q-C") is None
+    assert engine.repo.find_case_by_queue_id("Q-D_RA") is None
+    assert len(engine.mailer.sent) == 1                   # emailed the backfilled recipient
+
+
+async def test_reconcile_is_idempotent(engine):
+    engine.ex.alerts_payload = {"alert": [_raw_alert("Q-A")]}
+    await engine.reconcile()
+    r2 = await engine.reconcile()                         # second run: already known
+    assert r2["created"] == 0 and r2["already_known"] == 1
+    assert sum(1 for c in engine.repo.list_cases() if c["queue_id"] == "Q-A") == 1
+    assert len(engine.mailer.sent) == 1                   # no duplicate email
+
+
+async def test_reconcile_noop_when_ex_not_configured(engine):
+    engine.settings.ex_base_url = ""                      # e.g. setup mode
+    res = await engine.reconcile()
+    assert res["created"] == 0 and res.get("note") == "EX not configured"

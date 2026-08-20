@@ -1126,57 +1126,129 @@ The flow fires only when an alert's top-level **name** equals `TRIGGER_ALERT_NAM
 
 ## 7. Run in production
 
-Put the service behind a reverse proxy that terminates HTTPS. If the proxy is trusted,
-enable `TRUST_FORWARDED_FOR=true` so rate limits key on the real client IP. Choose one
-of three ways to run it.
+Three ways to run it — **from source**, **Docker**, or a **prebuilt executable** —
+each self-contained below. In every case: put the service behind a reverse proxy that
+terminates HTTPS, and if that proxy is trusted, set `TRUST_FORWARDED_FOR=true` so rate
+limits key on the real client IP.
 
-### Persistent state (all methods)
+### 7.1 Persistent state — `DATA_DIR` (read this first)
 
-Two things must survive restarts, or sessions break and stored encrypted settings
-become unreadable:
+Two things must survive restarts, or sign-in sessions break and stored encrypted
+settings become unreadable:
 
-- **`secret.key`** — the key that signs sessions/links and encrypts stored secrets.
-  It is taken from the `SECRET_KEY` environment variable if set; otherwise a strong
-  key is generated once and written to `secret.key`.
-- **the database** — SQLite by default.
+- **`secret.key`** — signs sessions and one-time links and encrypts stored secrets.
+- **the database** — the case history and settings.
 
-Both live under **`DATA_DIR`** (default: the working directory). Point `DATA_DIR` at a
-mounted volume or a writable folder so they persist. Dependencies are declared in
-`pyproject.toml`, with pinned `requirements.txt` / `requirements-dev.txt` for
-`pip install -r requirements.txt`.
+Both live under **`DATA_DIR`** (default: the current working directory). For anything
+other than a quick local test, set `DATA_DIR` to a **dedicated, writable, backed-up
+folder** (bare-metal/exe) or a **mounted volume** (Docker). Back up `DATA_DIR` as a
+unit — the DB is unreadable in part without its `secret.key`.
 
-### From source
+### 7.2 SECRET_KEY — how to set it
+
+Precedence: an explicit **`SECRET_KEY`** environment variable wins; otherwise the app
+**generates a strong key on first run** and writes it to `DATA_DIR/secret.key` (file
+permission `600`). You therefore have two supported options:
+
+- **Let it auto-generate (simplest).** Do nothing — just make sure `DATA_DIR`
+  persists so the generated `secret.key` is reused on restart.
+- **Manage it yourself (env).** Generate one and set `SECRET_KEY`:
+
+  ```bash
+  python -c "import secrets; print(secrets.token_urlsafe(48))"
+  # then set SECRET_KEY=<that value> in the environment / .env / Docker secret
+  ```
+
+`SECRET_KEY` is intentionally **not** editable from the Settings UI (it protects the
+DB the UI writes to). **Rotating it invalidates** every active session and makes any
+held password and stored settings-secrets unreadable — rotate deliberately, then
+re-enter settings secrets.
+
+### 7.3 Database — what's required
+
+- **Default (SQLite): nothing to set up.** The app **creates the database file
+  automatically** on first run at `DATA_DIR/trellix_decrypt.sqlite3`. No server, no
+  schema step. Just keep the file (it's inside `DATA_DIR`).
+- **A different database (optional).** Set `DB_URL` to any SQLAlchemy URL, e.g.
+  `postgresql+psycopg://user:pass@host/dbname`. Note the **driver is not bundled** —
+  install it yourself (e.g. `pip install psycopg[binary]`) in your source/Docker
+  build. `DB_URL` is environment-only (it can't be stored in the database it points
+  at). Tables are created automatically; no migration tool is required.
+
+### 7.4 From source
 
 ```bash
-pip install -r requirements.txt
-python -m trellix_decrypt      # or the console script: trellix-decrypt
+python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install -r requirements.txt                        # or: pip install .
+export DATA_DIR=/var/lib/trellix-decrypt               # a writable, persistent folder
+python -m trellix_decrypt --check                      # optional: validate EX connectivity
+python -m trellix_decrypt                              # or the console script: trellix-decrypt
 ```
 
-### Docker (recommended)
+Then open the UI to finish first-run setup (§3). Configuration can come from the
+environment, a `.env` file, or entirely from the Settings UI.
+
+### 7.5 Docker (recommended)
+
+With **compose** (persists `DATA_DIR` in a named volume automatically):
 
 ```bash
-docker compose up -d --build
+docker compose up -d --build      # secret.key + DB live in the `data` volume
 ```
 
-`docker-compose.yml` sets `DATA_DIR=/data` and mounts a named `data` volume there, so
-`secret.key` and the SQLite DB persist across restarts and rebuilds. Supply operator
-config via a local `.env` (optional — the app boots into setup mode and can be
-configured entirely from the Settings UI), or pass `SECRET_KEY` as an environment
-secret to manage the key yourself. The image runs as a non-root user and exposes
-port 8080 with a `/healthz` healthcheck.
+`docker-compose.yml` sets `DATA_DIR=/data` and mounts the `data` volume there. Provide
+config via a local `.env` (optional — the app boots into setup mode; configure it from
+the UI), or pass `SECRET_KEY` as an environment secret. The image runs as non-root,
+exposes port 8080, and has a `/healthz` healthcheck.
 
-### Prebuilt executable
-
-Standalone Windows / Linux / macOS binaries are produced by the **Build binaries**
-GitHub Actions workflow — automatically when a version tag (`v*`) is pushed (attached
-to the GitHub Release), or on demand via the workflow's **Run workflow** button
-(downloadable as run artifacts). It does not build on ordinary commits. The executable
-bundles Python, all dependencies, and the templates/static assets; it still needs a
-writable `DATA_DIR`:
+Or with **plain `docker run`** (mount your own volume for `DATA_DIR`):
 
 ```bash
-DATA_DIR=/var/lib/trellix-decrypt ./trellix-decrypt
+docker build -t trellix-attachment-decrypt .
+docker run -d --name attachment-decrypt \
+  -p 8080:8080 \
+  -e DATA_DIR=/data \
+  -e SECRET_KEY=$(python -c "import secrets;print(secrets.token_urlsafe(48))") \
+  -v trellix_data:/data \
+  --restart unless-stopped \
+  trellix-attachment-decrypt
 ```
+
+(Omit `-e SECRET_KEY=...` to let it auto-generate into the volume. Add `--env-file .env`
+to pass operator config.)
+
+### 7.6 Prebuilt executable
+
+Standalone **Windows / Linux / macOS** binaries come from the **Build binaries** GitHub
+Actions workflow — built when a version tag (`v*`) is pushed (attached to the GitHub
+**Release**) or on demand via the workflow's **Run workflow** button (downloadable as
+run artifacts). It does **not** build on ordinary commits. The binary bundles Python,
+all dependencies, and the templates/static assets; it only needs a writable `DATA_DIR`.
+
+**Linux / macOS:**
+
+```bash
+chmod +x ./trellix-decrypt
+DATA_DIR=/var/lib/trellix-decrypt ./trellix-decrypt        # add --check first to test EX
+```
+
+**Windows (PowerShell):**
+
+```powershell
+$env:DATA_DIR = "C:\ProgramData\trellix-decrypt"
+.\trellix-decrypt-windows.exe
+```
+
+(The Windows binary is unsigned, so SmartScreen may warn on first run — choose *More
+info → Run anyway*, or code-sign it in your own pipeline.)
+
+### 7.7 Minimum configuration to go live
+
+Whichever method you use, the service stays in **setup mode** (webhook returns 503)
+until these are set — via env/`.env` or the Settings UI (see §3): EX base URL +
+credentials, SMTP host + from address, public base URL, an admin password, and webhook
+auth (Basic credentials and/or an IP allowlist). `SECRET_KEY` and `DB_URL` are **not**
+required — they default as described in §7.2–7.3.
 
 ## 8. Daily operations (the dashboard)
 

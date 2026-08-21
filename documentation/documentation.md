@@ -1468,6 +1468,7 @@ Sign in at `/`:
 | Webhook returns **405** | EX is POSTing to the wrong path — usually the base host was set as the Server URL, so EX hits `/`. Set it to `https://<host>/webhook/ex-alert`. A GET to that URL returns `200 {"status":"ready"}` when correct. |
 | Webhook returns **413** | Payload larger than `MAX_REQUEST_BYTES` (default 1 MiB) — usually **Extended** format or a **Daily Digest**. Switch EX to **Normal** + **Per Event**, or raise `MAX_REQUEST_BYTES`. |
 | No alerts arrive / flow never starts (nothing in the log for these emails) | In EX Notification settings the HTTP server's **Notification** is set to **Malware Object** — that excludes `RISKWARE_OBJECT`, which is the encrypted-attachment trigger. Set it to **All Events** (or include **riskware object**). |
+| Alerts were sent while the app was down / after a connection loss | The app auto-**reconciles** on startup — it queries EX for recent trigger alerts and backfills any case it's missing (idempotent, so no duplicates or re-emails). Force it any time with the **Reconcile** button on the dashboard; tune `RECONCILE_LOOKBACK` / `RECONCILE_INTERVAL`. |
 | Webhook returns **503** | Service in setup mode — finish required config (see the dashboard banner). |
 | Webhook returns **401** | Missing/bad Basic auth, or webhook auth not configured. |
 | Webhook returns **403** | Source IP not in `WEBHOOK_IP_ALLOWLIST`. |

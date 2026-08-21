@@ -18,7 +18,7 @@ from .storage import Setting
 # RESTART_REQUIRED are persisted but only take effect on the next restart.
 EDITABLE = (
     "ex_base_url", "ex_username", "ex_password", "ex_verify_tls", "ex_client_token",
-    "ex_rescan_id_field", "ex_timeout",
+    "ex_timeout",
     "smtp_host", "smtp_port", "smtp_username", "smtp_password", "smtp_from", "smtp_tls_mode",
     "smtp_verify_tls", "smtp_helo_hostname",
     "trigger_alert_name", "trigger_malware_names",

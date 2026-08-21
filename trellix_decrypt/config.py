@@ -19,10 +19,6 @@ class Settings(BaseSettings):
     ex_password: str = ""
     ex_verify_tls: bool = False  # default off — EX appliances commonly use self-signed certs
     ex_client_token: str = ""  # optional X-FeClient-Token, provided by Trellix
-    # Which identifier the rescan endpoint expects in its path. The API doc names
-    # it "email_uuid"; some appliances accept the queue id. Flip if rescan returns
-    # an authorization/EMLMGR_RESCAN error despite valid permissions.
-    ex_rescan_id_field: str = "queue_id"  # "queue_id" | "email_uuid"
     ex_timeout: int = 60  # HTTP timeout (s) for EX API calls — EX can be slow
 
     # An alert triggers the flow only when its top-level "name" equals

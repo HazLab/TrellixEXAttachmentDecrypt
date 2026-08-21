@@ -23,7 +23,6 @@ const HELP = {
   ex_password: "Password for the EX API account. Leave blank to keep the current one; tick remove to clear.",
   ex_verify_tls: "Verify the EX TLS certificate. Off by default — EX appliances commonly use self-signed certs.",
   ex_client_token: "Optional X-FeClient-Token issued by Trellix. Leave blank if unused.",
-  ex_rescan_id_field: "Which id the rescan endpoint expects in its path. Try email_uuid if rescan returns an authorization error.",
   ex_timeout: "HTTP timeout (seconds) for EX API calls. Raise if EX is slow (ReadTimeout).",
   smtp_host: "SMTP relay hostname used to send the recipient emails.",
   smtp_port: "SMTP port (587 = STARTTLS, 465 = implicit TLS, 25 = plain).",

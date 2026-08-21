@@ -293,13 +293,13 @@ class FlowEngine:
             return
         # Rescan the entry that actually holds a quarantined file (_RA re-analysis
         # records have a null path and can't be rescanned).
-        queue_id, email_uuid = await self.ex.rescan_target(case.queue_id, case.sender, case.subject)
+        queue_id, _ = await self.ex.rescan_target(case.queue_id, case.sender, case.subject)
         if queue_id is None:
             log.warning("no rescannable quarantine entry for case %s (queue %s)", case.id, case.queue_id)
             self.repo.increment_resubmit_attempts(case)
             self.repo.set_state(case, FlowState.RESUBMIT_FAILED, "no rescannable quarantine entry found")
             return
-        target = email_uuid if self.settings.ex_rescan_id_field == "email_uuid" else queue_id
+        target = queue_id  # rescan is always keyed on the queue id (the API doc mislabels it "email_uuid")
         # Diagnostic (no plaintext): lets us verify the exact bytes we hand EX match the
         # password that works typed into the appliance. A len != stripped_len means a
         # stray space/newline slipped in; compare sha8 with `printf %s 'pw' | sha256sum`.

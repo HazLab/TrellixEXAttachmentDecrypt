@@ -289,7 +289,6 @@ IP allowlist — at least one, or the webhook refuses to run.
 | `EX_PASSWORD` | Password for the EX API account. | Yes | `—` |
 | `EX_VERIFY_TLS` | Validate the appliance's TLS certificate. Off by default (EX boxes usually present a self-signed cert). | — | `false` |
 | `EX_CLIENT_TOKEN` | Optional extra `X-FeClient-Token` some appliances require alongside the login token. | — | `—` |
-| `EX_RESCAN_ID_FIELD` | Which id the rescan endpoint expects in its URL — `queue_id` or `email_uuid`. Flip if rescan returns an authorization error. | — | `queue_id` |
 | `EX_TIMEOUT` | Seconds to wait for an EX API call before giving up. | — | `60` |
 
 ### Webhook — the appliance → this service

@@ -604,7 +604,8 @@ for another appliance): `EP_LOGIN`, `EP_ALERTS`, `EP_ALERT_DETAILS`,
   `since`/`until` widen EX's default 24h window (padded by `_TIME_SKEW`).
 - `rescan_target(queue_id, sender, subject) -> (queue_id, email_uuid)` — pick the
   **rescannable** entry (one with a real `quarantine_path`; `_RA` records have a null
-  path and can't be rescanned).
+  path and can't be rescanned). The rescan is always keyed on the returned **queue id**
+  (the API doc mislabels the path param `email_uuid`).
 - `rescan(target_id, passwords)` — `POST …/rescan/<id>` with
   `{"rescan_properties": {"pwd_list": [...]}}`.
 - `has_resubmission_quarantine(queue_id, sender, subject) -> bool` — **authoritative
@@ -1414,7 +1415,6 @@ IP allowlist — at least one, or the webhook refuses to run.
 | `EX_PASSWORD` | Password for the EX API account. | Yes | `—` |
 | `EX_VERIFY_TLS` | Validate the appliance's TLS certificate. Off by default (EX boxes usually present a self-signed cert). | — | `false` |
 | `EX_CLIENT_TOKEN` | Optional extra `X-FeClient-Token` some appliances require alongside the login token. | — | `—` |
-| `EX_RESCAN_ID_FIELD` | Which id the rescan endpoint expects in its URL — `queue_id` or `email_uuid`. Flip if rescan returns an authorization error. | — | `queue_id` |
 | `EX_TIMEOUT` | Seconds to wait for an EX API call before giving up. | — | `60` |
 
 ### Webhook — the appliance → this service
@@ -1548,7 +1548,7 @@ Sign in at `/`:
 | A clean email sits in **Re-checking** for a while | The verdict for a released/clean email comes only from the poll (no push). It concludes once the original queue id leaves EX quarantine; the poll is eager (first check ~`RECHECK_DELAY`, default 10s). Lower `RECHECK_DELAY` / `RECHECK_INTERVAL` if you set them high. |
 | Recipient link says expired | Links TTL-expire (`TOKEN_TTL`); opening one auto-reissues a fresh link if still awaiting a password. |
 | Emails not sending | Check SMTP settings; failed sends go to `Email failed` and are auto-retried and resendable. Check `SMTP_TLS_MODE` and `SMTP_HELO_HOSTNAME` (some servers demand an FQDN). |
-| Rescan keeps failing | Try flipping `EX_RESCAN_ID_FIELD` between `queue_id` and `email_uuid`; check the EX account's rescan permission. Failures retry under `RESUBMIT_MAX_RETRIES`. |
+| Rescan keeps failing | Check the EX account's rescan permission and the appliance clock (see above); the rescan is keyed on the **queue id**. Failures retry under `RESUBMIT_MAX_RETRIES`. |
 | Locked out of the admin login (429) | Wait out the window (15 min), **restart** the service, or use another IP. A correct login also clears the counter. See [Security](06_security.md). |
 | Held password unreadable / secrets blank after a change | `SECRET_KEY` changed or `secret.key` was deleted — Fernet can't decrypt old values. Re-enter settings secrets; affected cases go to `RESUBMIT_FAILED`. |
 

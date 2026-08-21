@@ -91,6 +91,32 @@ function injectHelp() {
 }
 injectHelp();
 
+// Replace the default browser number spinner with themed up/down steppers.
+function themeNumberInputs() {
+  form.querySelectorAll("input[type=number]").forEach((inp) => {
+    if (inp.closest(".num-wrap")) return;
+    const wrap = document.createElement("div");
+    wrap.className = "num-wrap";
+    inp.parentNode.insertBefore(wrap, inp);
+    wrap.appendChild(inp);
+    const steppers = document.createElement("div");
+    steppers.className = "num-steppers";
+    steppers.innerHTML =
+      '<button type="button" class="up" tabindex="-1" aria-label="Increase"></button>' +
+      '<button type="button" class="down" tabindex="-1" aria-label="Decrease"></button>';
+    wrap.appendChild(steppers);
+    const bump = (up) => {
+      if (inp.disabled || inp.readOnly) return;
+      up ? inp.stepUp() : inp.stepDown();
+      inp.dispatchEvent(new Event("input", { bubbles: true }));
+      inp.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+    steppers.querySelector(".up").addEventListener("click", () => bump(true));
+    steppers.querySelector(".down").addEventListener("click", () => bump(false));
+  });
+}
+themeNumberInputs();
+
 const LABELS = {
   ex_base_url: "Trellix EX base URL", ex_username: "EX username", ex_password: "EX password",
   smtp_host: "SMTP host", smtp_from: "From address", public_base_url: "Public base URL",

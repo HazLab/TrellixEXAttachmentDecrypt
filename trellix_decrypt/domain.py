@@ -362,12 +362,16 @@ class FlowEngine:
             self.repo.set_state(case, FlowState.RECHECKING, "awaiting re-detection")
         outcome = await self.ex.resubmission_outcome(case.queue_id, case.sender, case.subject)
         if outcome == "held":
+            log.info("recheck case %s: concluded HELD (early _RA present)", case.id)
             self._finish(case, True)
             return True
         if outcome == "released":
+            log.info("recheck case %s: concluded RELEASED (original left quarantine)", case.id)
             self._finish(case, False)
             return True
         if final:  # still 'pending' at the deadline — conclude from the list
+            log.info("recheck case %s: still 'pending' at final poll — concluding from the "
+                     "quarantine list (original never left the list within the window)", case.id)
             await self._confirm_outcome(case)
             return True
         return False  # re-analysis unfinished; keep polling

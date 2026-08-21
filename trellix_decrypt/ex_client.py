@@ -233,11 +233,21 @@ class EXClient:
           yet, i.e. EX hasn't finished re-analysis; keep polling.
         """
         entries = await self._list_for_case(sender, subject)
+        # Diagnostics: log THIS email's related entries with completed_at, so we can see
+        # whether the original lingers after a clean rescan (and whether completed_at
+        # advances) vs. actually leaving the list.
+        related = [(_qid(e), e.get("completed_at")) for e in entries
+                   if _strip_ra(_qid(e)) == queue_id]
         qids = [_qid(e) for e in entries]
-        log.info("resubmission_outcome(base=%s) queue ids: %s", queue_id, qids)
         if any(q.endswith("_RA") and _strip_ra(q) == queue_id for q in qids):
-            return "held"
-        return "pending" if any(q == queue_id for q in qids) else "released"
+            outcome = "held"
+        elif any(q == queue_id for q in qids):
+            outcome = "pending"
+        else:
+            outcome = "released"
+        log.info("resubmission_outcome(base=%s) -> %s; related entries (qid, completed_at): %s",
+                 queue_id, outcome, related)
+        return outcome
 
     async def alert_uuids_for(self, queue_id: str, sender: str | None = None,
                               subject: str | None = None) -> list[str]:

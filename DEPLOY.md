@@ -367,9 +367,9 @@ IP allowlist — at least one, or the webhook refuses to run.
 |---------|--------------------------|:----:|---------|
 | `MAX_PASSWORD_ATTEMPTS` | Wrong-password rounds allowed before giving up. | — | `3` |
 | `RECHECK_DELAY` | Seconds before the first recheck poll after a resubmission. | — | `3` |
-| `RECHECK_RAMP` | Eager early poll steps (comma-separated seconds) after the first poll, before settling to `RECHECK_INTERVAL`; keeps a tight cadence through the first ~60s. Smaller/more values catch a released (clean) email faster. | — | `2,2,3,3,4,4,5,5,6,6,7,8` |
-| `RECHECK_INTERVAL` | Steady-state seconds between later recheck polls (after the eager early ramp). | — | `12` |
-| `RECHECK_MAX_ATTEMPTS` | Number of recheck polls before concluding from the list. | — | `24` |
+| `RECHECK_RAMP` | Eager early poll steps (comma-separated seconds) after the first poll. Smaller/more values catch a released (clean) email faster. | — | `2,2,3,3,4,4,5` |
+| `RECHECK_INTERVAL` | Steady seconds between polls — kept short (not a back-off) so a clean email is caught within ~one interval of EX releasing it. | — | `6` |
+| `RECHECK_MAX_ATTEMPTS` | Recheck polls before concluding from the list; sized with the interval for a ~3 min total window. | — | `32` |
 | `NOTIFY_MAX_RETRIES` | How many times to retry a failed recipient email. | — | `5` |
 | `NOTIFY_RETRY_INTERVAL` | Seconds between email retry sweeps. | — | `300` |
 | `RESUBMIT_MAX_RETRIES` | How many times to retry a failed EX rescan. | — | `5` |

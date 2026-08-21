@@ -101,13 +101,15 @@ class Settings(BaseSettings):
     # before the FIRST poll; after a short eager ramp the poll settles to
     # recheck_interval, for recheck_max_attempts polls total.
     recheck_delay: int = 3      # seconds before the FIRST poll
-    # Eager early poll steps (comma-separated seconds) after the first poll, before
-    # settling to recheck_interval — so a released/clean email is caught within seconds.
-    # The ramp keeps a tight (<=8s) cadence through the first ~60s, where most clean
-    # releases land; the residual wait after that is EX's own re-analysis time.
-    recheck_ramp: str = "2,2,3,3,4,4,5,5,6,6,7,8"
-    recheck_interval: int = 12
-    recheck_max_attempts: int = 24
+    # Eager early poll steps (comma-separated seconds) after the first poll. A clean
+    # email is caught the poll after EX drops the original from quarantine, so the steady
+    # interval stays SHORT (not a back-off) — EX can finish re-analysis at any point in the
+    # window and we catch it within ~one interval. max_attempts keeps the total window
+    # generous (~3 min) so slow MVX re-analysis isn't concluded early. Each poll is one
+    # cheap quarantine-list GET; held/wrong-password normally resolve sooner via the push.
+    recheck_ramp: str = "2,2,3,3,4,4,5"
+    recheck_interval: int = 6
+    recheck_max_attempts: int = 32
 
     # --- Reconciliation (backfill trigger alerts missed while the app was down) ---
     # On startup (and, if reconcile_interval > 0, periodically) query EX for recent

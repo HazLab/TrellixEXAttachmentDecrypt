@@ -157,6 +157,13 @@ class EXClient:
         resp = await self._request("GET", EP_QUARANTINE, params=params)
         return _as_quarantine_list(resp.json())
 
+    async def list_held(self) -> list[dict]:
+        """Every currently-quarantined entry, over the clock-INDEPENDENT window (see
+        ``_list_for_case``). Used by reconcile to backfill held emails missed while the app
+        was down — the held set is naturally bounded (only what EX still holds), and the
+        fixed window keeps a skewed EX clock from hiding entries."""
+        return await self._list_for_case(None, None)
+
     async def _list_for_case(self, sender: str | None, subject: str | None) -> list[dict]:
         """Quarantine list for a per-case lookup, over a clock-INDEPENDENT window (see
         ``_ALL_TIME_START``): overrides EX's 24h default without depending on our clock

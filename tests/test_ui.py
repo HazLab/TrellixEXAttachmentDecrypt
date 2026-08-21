@@ -66,7 +66,7 @@ def test_reconcile_endpoint_requires_auth_and_returns_result(client_ctx):
     r = client.post("/api/reconcile")
     assert r.status_code == 200
     body = r.json()
-    assert body["ok"] is True and "scanned" in body["result"]   # FakeEX -> empty scan
+    assert body["ok"] is True and "held" in body["result"]      # FakeEX -> empty scan
 
 
 def test_settings_get_masks_secrets_and_update_applies(client_ctx):

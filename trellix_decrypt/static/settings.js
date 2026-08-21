@@ -39,7 +39,7 @@ const HELP = {
   recheck_ramp: "Eager early poll steps in seconds (comma-separated) after the first poll, before settling to the recheck interval — smaller/more values catch a released (clean) email faster. Blank = 2,2,3,3,5,5,8.",
   recheck_interval: "Steady-state seconds between later recheck polls.",
   recheck_max_attempts: "Number of recheck polls before concluding the verdict from the list.",
-  reconcile_lookback: "EX alerts-query window scanned to backfill missed alerts (e.g. 1_hour, 24_hours, 48_hours).",
+  reconcile_lookback: "Window for reconcile's secondary alerts sweep (e.g. 1_hour, 24_hours, 48_hours). Reconcile is quarantine-first; this only bounds the fallback that covers held emails lacking alert linkage.",
   reconcile_interval: "Seconds between periodic reconcile sweeps (0 = run only on startup).",
   notify_max_retries: "How many times to retry a failed recipient email.",
   notify_retry_interval: "Seconds between email retry sweeps.",

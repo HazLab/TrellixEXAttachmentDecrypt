@@ -374,7 +374,7 @@ IP allowlist — at least one, or the webhook refuses to run.
 | `NOTIFY_RETRY_INTERVAL` | Seconds between email retry sweeps. | — | `300` |
 | `RESUBMIT_MAX_RETRIES` | How many times to retry a failed EX rescan. | — | `5` |
 | `RESUBMIT_RETRY_INTERVAL` | Seconds between rescan retry sweeps. | — | `120` |
-| `RECONCILE_LOOKBACK` | EX alerts-query window scanned to backfill missed alerts. | — | `48_hours` |
+| `RECONCILE_LOOKBACK` | Window for reconcile's secondary alerts sweep (reconcile is quarantine-first; this bounds only the fallback). | — | `48_hours` |
 | `RECONCILE_INTERVAL` | Seconds between periodic reconcile sweeps (0 = startup only). | — | `1800` |
 
 ### Logging

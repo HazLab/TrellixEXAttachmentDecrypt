@@ -221,6 +221,19 @@ if (tlsForm) {
     } catch (err) { tmsg.className = "save-status err"; tmsg.textContent = "Import failed: " + err.message; }
   });
 
+  document.getElementById("tls-selfsigned").addEventListener("click", async () => {
+    tmsg.className = "save-status"; tmsg.textContent = "Generating…";
+    try {
+      const fd = new FormData();
+      fd.append("hostnames", tlsForm.elements.hostnames.value);
+      const r = await fetch("/api/tls/self-signed", { method: "POST", body: fd });
+      if (r.status === 401) { window.location = "/login"; return; }
+      const j = await r.json();
+      if (j.ok) { tmsg.textContent = "Self-signed cert generated (untrusted) — restart to serve HTTPS."; loadTlsStatus(); }
+      else { tmsg.className = "save-status err"; tmsg.textContent = j.error || "Generation failed."; }
+    } catch (err) { tmsg.className = "save-status err"; tmsg.textContent = "Generation failed: " + err.message; }
+  });
+
   document.getElementById("tls-remove").addEventListener("click", async () => {
     tmsg.className = "save-status"; tmsg.textContent = "Removing…";
     try {

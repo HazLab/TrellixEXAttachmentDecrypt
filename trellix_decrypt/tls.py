@@ -12,12 +12,17 @@ certificate chain and an unencrypted PKCS#8 key — and written ``0600`` under
 
 from __future__ import annotations
 
+import datetime
+import ipaddress
 import os
 from pathlib import Path
 
 from cryptography import x509
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import (
     Encoding, NoEncryption, PrivateFormat, PublicFormat, load_pem_private_key, pkcs12)
+from cryptography.x509.oid import NameOID
 
 CERT_NAME = "cert.pem"
 KEY_NAME = "key.pem"
@@ -91,6 +96,35 @@ def install_pkcs12(settings, data: bytes, password: str = "") -> dict:
         chain += c.public_bytes(Encoding.PEM)
     key_pem = key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption())
     _write(settings, chain, key_pem)
+    return _describe(cert)
+
+
+def generate_self_signed(settings, hostnames, days: int = 825) -> dict:
+    """Create a self-signed certificate + key for the given hostnames/IPs and store it.
+
+    Convenience for a standalone/internal host or testing — the traffic is encrypted, but
+    the certificate is **untrusted** (browsers warn recipients; EX rejects the webhook if
+    its notification 'SSL Verify' is on). Opt-in only; never auto-enabled by default."""
+    hosts = [h.strip() for h in hostnames if h and h.strip()] or ["localhost"]
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    subject = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, hosts[0])])
+    san = []
+    for h in hosts:
+        try:
+            san.append(x509.IPAddress(ipaddress.ip_address(h)))
+        except ValueError:
+            san.append(x509.DNSName(h))
+    now = datetime.datetime.now(datetime.timezone.utc)
+    cert = (x509.CertificateBuilder()
+            .subject_name(subject).issuer_name(subject)
+            .public_key(key.public_key()).serial_number(x509.random_serial_number())
+            .not_valid_before(now - datetime.timedelta(minutes=5))
+            .not_valid_after(now + datetime.timedelta(days=days))
+            .add_extension(x509.SubjectAlternativeName(san), critical=False)
+            .add_extension(x509.BasicConstraints(ca=False, path_length=None), critical=True)
+            .sign(key, hashes.SHA256()))
+    _write(settings, cert.public_bytes(Encoding.PEM),
+           key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption()))
     return _describe(cert)
 
 

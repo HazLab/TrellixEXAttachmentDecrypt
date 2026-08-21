@@ -158,11 +158,17 @@
       <label>PKCS#12 file (.p12 / .pfx)<input type="file" name="p12" accept=".p12,.pfx"></label>
       <label>PKCS#12 password<input type="password" name="p12_password" autocomplete="new-password"></label>
     </div>
+    <label>…or generate a self-signed certificate — hostname(s), comma-separated
+      <input type="text" name="hostnames" placeholder="blank = host from Public base URL"></label>
     <div class="form-actions">
       <button type="submit" class="btn">Import certificate</button>
+      <button type="button" id="tls-selfsigned" class="btn ghost">Generate self-signed</button>
       <button type="button" id="tls-remove" class="btn ghost">Remove (revert to HTTP)</button>
       <span id="tls-msg" class="save-status"></span>
     </div>
+    <p class="hint">A self-signed certificate is <strong>untrusted</strong> — browsers warn recipients on the
+      one-time link, and EX rejects the webhook if its <em>SSL Verify</em> is on. Fine for an internal host or
+      testing; use a real (CA-issued) certificate or a reverse proxy for production.</p>
     <p class="hint">Once a certificate is imported the app serves <strong>HTTPS directly</strong>, so a reverse
       proxy is <em>optional</em>. Takes effect on restart. (A reverse proxy is still handy for automatic
       certificate renewal in production.) The key is stored under <code>DATA_DIR/tls/</code> with <code>0600</code>

@@ -74,8 +74,16 @@ def build(settings: Settings | None = None):
     if not eff.is_configured():
         log.warning("SETUP MODE — configuration incomplete, missing: %s. Open the admin UI to "
                     "finish setup; the webhook returns 503 until then.", ", ".join(eff.missing_required()))
-    from .tls import active_paths
-    tls_cert, _ = active_paths(eff)
+    from . import tls
+    # Opt-in: auto-generate a self-signed cert if requested and none exists yet.
+    if eff.tls_self_signed and not tls.active_paths(eff)[0]:
+        from urllib.parse import urlparse
+        host = urlparse(eff.public_base_url).hostname or eff.web_host or "localhost"
+        tls.generate_self_signed(eff, [host])
+        log.warning("TLS_SELF_SIGNED — generated a self-signed certificate for %r. It is "
+                    "UNTRUSTED (browsers warn; EX rejects the webhook if SSL Verify is on). "
+                    "Use a real certificate or a reverse proxy in production.", host)
+    tls_cert, _ = tls.active_paths(eff)
     scheme = "https" if tls_cert else "http"
     if tls_cert:
         log.info("native HTTPS enabled (cert: %s)", tls_cert)

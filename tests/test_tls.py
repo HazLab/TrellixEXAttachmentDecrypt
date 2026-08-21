@@ -87,6 +87,24 @@ def test_tls_import_endpoint(tmp_path):
     assert client.get("/api/tls").json()["active"] is False
 
 
+def test_generate_self_signed(tmp_path):
+    s = _Settings(tmp_path)
+    info = tls.generate_self_signed(s, ["decrypt.example.com", "127.0.0.1"])
+    assert "decrypt.example.com" in info["subject"]
+    cert_path, key_path = tls.active_paths(s)
+    assert cert_path and key_path
+    cert = x509.load_pem_x509_certificate(open(cert_path, "rb").read())
+    san = cert.extensions.get_extension_for_class(x509.SubjectAlternativeName).value
+    assert "decrypt.example.com" in san.get_values_for_type(x509.DNSName)
+    assert tls.status(s)["active"] is True
+
+
+def test_generate_self_signed_defaults_to_localhost(tmp_path):
+    s = _Settings(tmp_path)
+    info = tls.generate_self_signed(s, [])   # empty -> localhost
+    assert "localhost" in info["subject"]
+
+
 def test_env_paths_take_precedence(tmp_path):
     # explicit TLS_CERT_FILE/TLS_KEY_FILE win over the DATA_DIR/tls upload location
     cert_pem, key_pem, _, _ = _self_signed()

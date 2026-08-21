@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 
@@ -137,6 +138,22 @@ def build_api_router(ctx) -> APIRouter:
             log.warning("TLS import failed: %s", exc)
             return {"ok": False, "error": f"import failed: {exc}"}
         return {"ok": True, "restart_required": True, "cert": info}
+
+    @router.post("/tls/self-signed")
+    async def tls_self_signed(request: Request, hostnames: str = Form("")):
+        """Generate a self-signed cert (opt-in convenience; untrusted). Applied on restart."""
+        _guard_settings(request)
+        s = ctx.engine.settings
+        hosts = [h for h in re.split(r"[,\s]+", hostnames) if h]
+        if not hosts:
+            from urllib.parse import urlparse
+            hosts = [urlparse(s.public_base_url).hostname or s.web_host or "localhost"]
+        try:
+            info = tls.generate_self_signed(s, hosts)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("self-signed generation failed: %s", exc)
+            return {"ok": False, "error": f"generation failed: {exc}"}
+        return {"ok": True, "restart_required": True, "self_signed": True, "cert": info}
 
     @router.post("/tls/remove")
     async def tls_remove(request: Request):

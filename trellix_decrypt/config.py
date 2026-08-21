@@ -71,6 +71,10 @@ class Settings(BaseSettings):
     tls_cert_file: str = ""       # PEM certificate (chain ok)
     tls_key_file: str = ""        # PEM private key
     tls_key_password: str = ""    # password if TLS_KEY_FILE is encrypted
+    # Opt-in: if true and no cert is present, generate a SELF-SIGNED one on startup (for a
+    # standalone/internal host or testing). Untrusted — browsers warn; enable EX's SSL
+    # Verify off for the webhook, or use a real cert/proxy. Off by default.
+    tls_self_signed: bool = False
 
     # --- Webhook auth (EX HTTP notification posts here using Basic auth) ---
     webhook_username: str = ""

@@ -84,6 +84,23 @@ async def test_alert_details_for_case_unknown_case_is_empty(engine):
     assert await engine.alert_details_for_case("nope") == []
 
 
+async def test_alert_details_hides_pre_extraction_but_keeps_ra(engine):
+    # The original encrypted-attachment trigger alert is hidden (redundant); an _RA
+    # re-detection (still encrypted / wrong password) is kept.
+    case = await engine.handle_alert(_alert(queue_id="Q1"))
+    engine.ex.alert_uuids = ["orig", "ra"]
+    engine.ex.alerts = {
+        "orig": {"uuid": "orig", "name": "RISKWARE_OBJECT", "malicious": "no",
+                 "smtpMessage": {"queueId": "Q1"},
+                 "explanation": {"malwareDetected": {"malware": [{"name": "CustomPolicy.MVX.pdf"}]}}},
+        "ra": {"uuid": "ra", "name": "RISKWARE_OBJECT", "malicious": "no",
+               "smtpMessage": {"queueId": "Q1_RA"},
+               "explanation": {"malwareDetected": {"malware": [{"name": "CustomPolicy.MVX.pdf"}]}}},
+    }
+    details = await engine.alert_details_for_case(case.id)
+    assert [d["uuid"] for d in details] == ["ra"]  # original pre-extraction alert hidden
+
+
 # --- flow engine ------------------------------------------------------------
 async def test_non_trigger_alert_ignored(engine):
     # A different CustomPolicy.MVX riskware object (e.g. QR-code) must NOT trigger.

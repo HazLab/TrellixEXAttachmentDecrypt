@@ -498,7 +498,11 @@ class FlowEngine:
             return []
         uuids = await self.ex.alert_uuids_for(case.queue_id, case.sender, case.subject)
         raws = await asyncio.gather(*(self.ex.get_alert_by_uuid(u) for u in uuids))
-        return [parse_alert_detail(r) for r in raws if r]
+        details = [parse_alert_detail(r) for r in raws if r]
+        # Hide the pre-password-extraction trigger alert on the ORIGINAL record — it's the
+        # encrypted-attachment detection that landed the email in the app, so it's redundant
+        # in the drawer. Keep any _RA re-detection (a wrong-password re-encryption is useful).
+        return [d for d in details if not _is_pre_extraction_alert(d)]
 
     async def retry_failed_notifications(self):
         """Background sweep: re-attempt emails for NOTIFY_FAILED cases under the cap."""
@@ -669,6 +673,20 @@ def parse_alert(alert: dict) -> AlertEvent:
                        if (name := _text(m.get("name")) or _text(m.get("malware_name"))) is not None],
         raw=alert,
     )
+
+
+#: Marker substrings for the encrypted-attachment (pre-password-extraction) detection.
+_ENCRYPTED_MARKERS = ("custompolicy.mvx", "passextractfailed", "password_extraction_failed")
+
+
+def _is_pre_extraction_alert(detail: dict) -> bool:
+    """True for the ORIGINAL encrypted-attachment trigger alert (why the email landed in
+    the app) — hidden from the drawer as redundant. An ``_RA`` re-detection is NOT hidden."""
+    qid = detail.get("queue_id") or ""
+    if qid.endswith("_RA"):
+        return False
+    names = [(m.get("name") or "").lower() for m in detail.get("malware") or []]
+    return any(marker in n for n in names for marker in _ENCRYPTED_MARKERS)
 
 
 def parse_alert_detail(alert: dict) -> dict:

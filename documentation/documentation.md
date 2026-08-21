@@ -893,6 +893,26 @@ only when:
 
 then it caps the body at `MAX_REQUEST_BYTES` before parsing.
 
+## Transport security (HTTPS)
+
+All sensitive traffic — the admin login, the recipient's attachment **password**, and
+the EX webhook credentials — must travel over **HTTPS**. There are two supported ways to
+provide it (see §7.8):
+
+- **Native TLS** — import a certificate (PEM or PKCS#12) in **Settings → HTTPS/TLS**, or
+  set `TLS_CERT_FILE`/`TLS_KEY_FILE`. The private key is stored `0600` under
+  `DATA_DIR/tls/`; the server then serves `https://` directly.
+- **Reverse proxy** — terminate TLS in front of the app (optional; still preferred in
+  production for automatic renewal and HSTS).
+
+**Self-signed certificates** (the opt-in `TLS_SELF_SIGNED` flag, or the *Generate
+self-signed* button) encrypt the traffic but are **untrusted**: browsers warn recipients
+on the one-time link, and **EX rejects the webhook if its notification *SSL Verify* is
+enabled**. Use them only for an internal host or testing; for the public recipient links
+and the EX webhook use a **CA-issued (or internal-CA) certificate**, or terminate TLS at
+a proxy. Whichever you use, set `PUBLIC_BASE_URL` to the `https://` URL so the one-time
+links match. The private key never leaves `DATA_DIR` and is excluded from the repository.
+
 ## Rate limiting & lockout — and how to recover
 
 Two **per-IP, self-healing sliding-window** limiters (`web/ratelimit.py`). There is
@@ -1351,6 +1371,10 @@ standalone binary, a single internal host, or Windows where there's no proxy.
   The material is normalised to PEM and stored `0600` under `DATA_DIR/tls/`.
 - **From the environment:** set `TLS_CERT_FILE` and `TLS_KEY_FILE` (PEM paths), plus
   `TLS_KEY_PASSWORD` if the key is encrypted.
+- **Self-signed (opt-in):** the *Generate self-signed* button, or `TLS_SELF_SIGNED=true`
+  (generates one on startup from the `PUBLIC_BASE_URL` host if none exists). It encrypts
+  the traffic but is **untrusted** — browsers warn and EX rejects the webhook if its SSL
+  Verify is on. For an internal host / testing only (see Security → Transport security).
 - With a cert present the server starts on **`https://`**; otherwise it serves plain HTTP.
   **Restart to apply**, and set `PUBLIC_BASE_URL` to `https://…`.
 

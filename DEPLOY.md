@@ -43,9 +43,11 @@ at a **reverse proxy** (now optional). Behind a trusted proxy, set
 
 > **Native HTTPS:** to serve TLS without a proxy, import a **PEM** cert+key or a
 > **PKCS#12 / `.pfx`** bundle under **Settings → HTTPS/TLS** (or set `TLS_CERT_FILE` /
-> `TLS_KEY_FILE` / `TLS_KEY_PASSWORD`). Stored `0600` under `DATA_DIR/tls/`; **restart to
-> apply**, and set `PUBLIC_BASE_URL` to `https://…`. A proxy is still nice for automatic
-> cert renewal.
+> `TLS_KEY_FILE` / `TLS_KEY_PASSWORD`). For an internal host/testing you can **generate a
+> self-signed** cert (button, or `TLS_SELF_SIGNED=true`) — untrusted, so browsers warn and
+> EX rejects the webhook if its SSL Verify is on. Material is stored `0600` under
+> `DATA_DIR/tls/`; **restart to apply**, and set `PUBLIC_BASE_URL` to `https://…`. A proxy
+> is still nice for automatic cert renewal.
 
 ## 2. Persistent state — `DATA_DIR` (read first)
 

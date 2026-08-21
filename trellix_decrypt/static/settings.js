@@ -36,6 +36,7 @@ const HELP = {
   trigger_malware_names: "Comma-separated malware names that trigger the flow (the encrypted-attachment policy emits CustomPolicy.MVX.<ext>). Empty disables triggering.",
   max_password_attempts: "How many wrong-password rounds before giving up (cap 5).",
   recheck_delay: "Seconds before the first recheck poll after a resubmission.",
+  recheck_ramp: "Eager early poll steps in seconds (comma-separated) after the first poll, before settling to the recheck interval — smaller/more values catch a released (clean) email faster. Blank = 2,2,3,3,5,5,8.",
   recheck_interval: "Steady-state seconds between later recheck polls.",
   recheck_max_attempts: "Number of recheck polls before concluding the verdict from the list.",
   reconcile_lookback: "EX alerts-query window scanned to backfill missed alerts (e.g. 1_hour, 24_hours, 48_hours).",

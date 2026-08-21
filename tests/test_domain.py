@@ -416,22 +416,35 @@ async def test_wrong_password_retries_then_gives_up(engine):
 
 
 def _raw_alert(qid, rcpt="u@corp.test", alert_name="RISKWARE_OBJECT", malware=TRIGGER_MALWARE_NAME):
-    """A raw EX alerts-query dict (what reconcile parses out of get_alerts)."""
+    """A raw EX alert dict (as returned by get_alert_by_uuid / the alerts query)."""
     return {"name": alert_name, "malicious": "no",
             "dst": {"smtpTo": rcpt},
             "smtpMessage": {"queueId": qid, "subject": "Invoice"},
             "explanation": {"malwareDetected": {"malware": [{"name": malware}]}}}
 
 
-async def test_reconcile_backfills_only_new_matching_alerts(engine):
-    engine.ex.alerts_payload = {"alert": [
-        _raw_alert("Q-A"),                                # new + matches -> create + email
-        _raw_alert("Q-B", alert_name="MALWARE_OBJECT"),   # wrong alert name -> skip
-        _raw_alert("Q-C", malware="Other.thing"),         # wrong malware -> skip
-        _raw_alert("Q-D_RA"),                             # _RA re-detection -> skip (recheck owns it)
-    ]}
+def _held(qid, alert_uuids):
+    """A raw EX quarantine list entry (currently held)."""
+    return {"queue_id": qid, "alert_uuids": list(alert_uuids)}
+
+
+async def test_reconcile_backfills_only_held_matching_emails(engine):
+    # Quarantine-first: the held set is authoritative; each entry's trigger is confirmed
+    # from its alerts (fetched by UUID).
+    engine.ex.held = [
+        _held("Q-A", ["UA"]),        # new + matches -> create + email
+        _held("Q-B", ["UB"]),        # wrong alert name -> skip
+        _held("Q-C", ["UC"]),        # wrong malware -> skip
+        _held("Q-D_RA", ["UD"]),     # _RA re-detection -> skip (recheck owns it)
+    ]
+    engine.ex.alerts = {
+        "UA": _raw_alert("Q-A"),
+        "UB": _raw_alert("Q-B", alert_name="MALWARE_OBJECT"),
+        "UC": _raw_alert("Q-C", malware="Other.thing"),
+        "UD": _raw_alert("Q-D_RA"),
+    }
     res = await engine.reconcile()
-    assert res["created"] == 1 and res["scanned"] == 4
+    assert res["created"] == 1 and res["held"] == 4
     assert engine.repo.find_case_by_queue_id("Q-A") is not None
     assert engine.repo.find_case_by_queue_id("Q-B") is None
     assert engine.repo.find_case_by_queue_id("Q-C") is None
@@ -439,24 +452,31 @@ async def test_reconcile_backfills_only_new_matching_alerts(engine):
     assert len(engine.mailer.sent) == 1                   # emailed the backfilled recipient
 
 
-async def test_reconcile_fetches_detail_when_list_lacks_malware(engine):
-    # EX list row matches the trigger alert name but omits the malware explanation
-    # (as lower info_levels / some box builds do); the full alert (fetched by uuid)
-    # carries it. Reconcile must fall back to the detail and still create the case.
-    engine.ex.alerts_payload = {"alert": [
-        {"uuid": "U1", "name": "RISKWARE_OBJECT", "malicious": "no",
-         "dst": {"smtpTo": "u@corp.test"},
-         "smtpMessage": {"queueId": "Q-DET", "subject": "Invoice"}},   # no explanation block
-    ]}
-    engine.ex.alerts = {"U1": _raw_alert("Q-DET")}                     # detail has the malware
+async def test_reconcile_ignores_alerted_but_not_quarantined(engine):
+    # A trigger alert exists in the alerts list, but the email is NOT held (alert-but-allow)
+    # -> nothing to recover, so no case and no email. This is the quarantine-first win.
+    engine.ex.held = []
+    engine.ex.alerts_payload = {"alert": [_raw_alert("Q-ALLOW")]}
+    res = await engine.reconcile()
+    assert res["created"] == 0
+    assert engine.repo.find_case_by_queue_id("Q-ALLOW") is None
+    assert len(engine.mailer.sent) == 0
+
+
+async def test_reconcile_alerts_fallback_when_entry_lacks_uuid_linkage(engine):
+    # Held entry carries NO alert_uuids, so quarantine-first can't confirm the trigger;
+    # the alerts fallback (constrained to the held set) recovers it.
+    engine.ex.held = [_held("Q-NOUUID", [])]
+    engine.ex.alerts_payload = {"alert": [_raw_alert("Q-NOUUID")]}
     res = await engine.reconcile()
     assert res["created"] == 1
-    assert engine.repo.find_case_by_queue_id("Q-DET") is not None
+    assert engine.repo.find_case_by_queue_id("Q-NOUUID") is not None
     assert len(engine.mailer.sent) == 1
 
 
 async def test_reconcile_is_idempotent(engine):
-    engine.ex.alerts_payload = {"alert": [_raw_alert("Q-A")]}
+    engine.ex.held = [_held("Q-A", ["UA"])]
+    engine.ex.alerts = {"UA": _raw_alert("Q-A")}
     await engine.reconcile()
     r2 = await engine.reconcile()                         # second run: already known
     assert r2["created"] == 0 and r2["already_known"] == 1

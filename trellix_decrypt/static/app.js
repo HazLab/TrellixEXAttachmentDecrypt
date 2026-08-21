@@ -233,7 +233,7 @@ async function reconcile() {
     if (r.ok) {
       const s = r.result || {};
       out.className = "banner ok";
-      out.textContent = `Reconcile done — scanned ${s.scanned || 0}, created ${s.created || 0}, `
+      out.textContent = `Reconcile done — held ${s.held || 0}, created ${s.created || 0}, `
         + `already known ${s.already_known || 0}` + (s.note ? ` (${s.note})` : "");
       if (s.created) refresh();
     } else {

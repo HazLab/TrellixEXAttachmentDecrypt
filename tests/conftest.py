@@ -68,6 +68,9 @@ class FakeEX:
     async def get_alerts(self, **filters):
         return getattr(self, "alerts_payload", {"alert": []})
 
+    async def list_held(self):
+        return list(getattr(self, "held", []))
+
     async def aclose(self):
         pass
 

@@ -379,61 +379,99 @@ class FlowEngine:
         for case_id in self.repo.list_resubmit_pending_ids(self.settings.resubmit_max_retries):
             self.scheduler.schedule_resubmit(case_id)
 
-    async def reconcile(self, duration: str | None = None) -> dict:
-        """Backfill trigger alerts missed while the app was down.
+    async def _quarantine_trigger_event(self, entry: dict) -> "AlertEvent | None":
+        """For a held quarantine entry, fetch its referenced alerts (full detail by UUID)
+        and return the first one that matches the trigger rule — the event we'd have gotten
+        from the webhook. None if the entry references no matching trigger alert (e.g. a
+        malware-object quarantine, or an entry with no ``alert_uuids`` linkage)."""
+        for uuid in _entry_alert_uuids(entry):
+            detail = await self.ex.get_alert_by_uuid(uuid)
+            if not detail:
+                continue
+            ev = parse_alert(detail)
+            if self.rules.matches(ev):
+                return ev
+        return None
 
-        Queries EX for recent alerts and starts the flow for any matching email we have
-        no case for. **Idempotent**: dedups by queue id and skips ``_RA`` re-detections
-        (those are recovered by the recheck poll), so it is safe to run repeatedly and
-        alongside EX's own HTTP-notification retries — it never creates duplicates or
-        re-emails an existing case. Returns a summary dict for logging/UI. In-flight
-        cases are already recovered separately by ``resume_pending`` + the recheck poll;
-        this covers only *first-time* alerts that never reached the webhook."""
+    async def reconcile(self, duration: str | None = None) -> dict:
+        """Backfill trigger cases missed while the app was down — **quarantine-first**.
+
+        The authoritative set of emails that need recovery is what EX is *actually holding*,
+        so we start from the quarantine list (a riskware rule can alert without quarantining,
+        so an alerts-only scan risks emailing about already-delivered mail). For each held,
+        non-``_RA`` entry we have no case for, we confirm the trigger from the entry's own
+        alerts (fetched by UUID → full malware detail) and start the flow.
+
+        A **secondary alerts sweep** then covers the rare held entry whose quarantine record
+        carries no ``alert_uuids`` linkage: it matches trigger alerts by queue id but only
+        for emails that are *also in the held set*, so it never fires on alert-but-allow mail.
+
+        **Idempotent**: dedups by queue id and skips ``_RA`` re-detections (owned by the
+        recheck poll), so it is safe to run repeatedly and alongside EX's own notification
+        retries — never duplicating or re-emailing. The quarantine window is clock-independent
+        (see ``list_held``); ``duration`` bounds only the fallback alerts query."""
         if not self.settings.ex_base_url:
-            return {"scanned": 0, "created": 0, "already_known": 0, "skipped": 0,
+            return {"held": 0, "created": 0, "already_known": 0, "skipped": 0,
                     "note": "EX not configured"}
         duration = duration or self.settings.reconcile_lookback
-        # info_level=extended so the alerts query embeds the full envelope AND the
-        # explanation.malwareDetected block. At lower levels EX omits the malware detail
-        # from the LIST, which would leave malware_names empty and skip every alert. If a
-        # box rejects extended for this window, fall back to a plain query — the per-alert
-        # UUID detail fetch below then recovers the malware names.
+        created = already = 0
+        handled: set[str] = set()  # candidate queue ids created or confirmed-known this run
+
+        # --- Primary: quarantine-first ---
         try:
-            raw = await self.ex.get_alerts(duration=duration, info_level="extended")
+            held = await self.ex.list_held()
         except Exception:
-            log.warning("reconcile: extended alerts query failed, retrying at default level",
-                        exc_info=True)
-            raw = await self.ex.get_alerts(duration=duration)
-        alerts = iter_alerts(raw)
-        log.info("reconcile(duration=%s): EX returned %d alert(s)", duration, len(alerts))
-        created = already = skipped = 0
-        for a in alerts:
-            ev = parse_alert(a)
-            # _RA re-detections are handled by the recheck poll, not here.
-            if ev.queue_id.endswith("_RA"):
-                skipped += 1
+            log.warning("reconcile: quarantine list failed", exc_info=True)
+            held = []
+        held_qids = {q for e in held if (q := _entry_queue_id(e)) and not q.endswith("_RA")}
+        log.info("reconcile: %d held entr(y/ies), %d candidate queue id(s)",
+                 len(held), len(held_qids))
+        for entry in held:
+            qid = _entry_queue_id(entry)
+            if not qid or qid.endswith("_RA") or qid in handled:
                 continue
-            # Belt-and-suspenders: if the top-level alert name matches the trigger but the
-            # list row carried no malware detail (some EX info_levels/box builds still trim
-            # it from the list), fetch the full alert by UUID and re-parse before deciding.
-            if self.rules.alert_name_matches(ev.alert_name) and not ev.malware_names:
-                uuid = _text(a.get("uuid"))
-                detail = await self.ex.get_alert_by_uuid(uuid) if uuid else None
-                if detail:
-                    ev = parse_alert(detail)
-            if not ev.queue_id or not ev.recipient or not self.rules.matches(ev):
-                log.debug("reconcile skip queue=%r name=%r malware=%r recipient=%r",
-                          ev.queue_id, ev.alert_name, ev.malware_names, ev.recipient)
-                skipped += 1
-                continue
-            if self.repo.find_case_by_queue_id(ev.queue_id) is not None:
+            if self.repo.find_case_by_queue_id(qid) is not None:
                 already += 1
+                handled.add(qid)
                 continue
+            ev = await self._quarantine_trigger_event(entry)
+            if ev is None or not ev.recipient:
+                log.debug("reconcile skip held queue=%r (no matching trigger alert / recipient)", qid)
+                continue  # left unhandled → counted as skipped below (fallback may still catch it)
+            handled.add(qid)
             if await self.handle_alert(ev) is not None:  # creates the case + emails
                 created += 1
-        summary = {"scanned": len(alerts), "created": created,
+
+        # --- Fallback: alerts sweep, constrained to still-uncreated held emails ---
+        remaining = held_qids - handled
+        if remaining:
+            try:
+                raw = await self.ex.get_alerts(duration=duration, info_level="extended")
+            except Exception:
+                log.warning("reconcile: extended alerts query failed, retrying at default level",
+                            exc_info=True)
+                raw = await self.ex.get_alerts(duration=duration)
+            for a in iter_alerts(raw):
+                ev = parse_alert(a)
+                if ev.queue_id in handled or ev.queue_id not in remaining:
+                    continue
+                if not ev.malware_names:  # some info_levels trim malware from the list row
+                    uuid = _text(a.get("uuid"))
+                    detail = await self.ex.get_alert_by_uuid(uuid) if uuid else None
+                    if detail:
+                        ev = parse_alert(detail)
+                if not ev.recipient or not self.rules.matches(ev):
+                    continue
+                handled.add(ev.queue_id)
+                if await self.handle_alert(ev) is not None:
+                    created += 1
+
+        # Held candidates we neither created nor already had a case for (no confirmable
+        # trigger, or missing recipient) — reported for visibility.
+        skipped = len(held_qids - handled)
+        summary = {"held": len(held), "created": created,
                    "already_known": already, "skipped": skipped}
-        log.info("reconcile(duration=%s): %s", duration, summary)
+        log.info("reconcile: %s", summary)
         return summary
 
     async def resend(self, case_id: str):
@@ -579,6 +617,16 @@ def _malware_entries(alert: dict) -> list[dict]:
     if isinstance(entries, dict):
         entries = [entries]
     return [e for e in entries if isinstance(e, dict)]
+
+
+def _entry_queue_id(entry: dict) -> str:
+    """Queue id of a raw EX quarantine list entry (camelCase or snake_case)."""
+    return _text(_first(entry.get("queue_id"), entry.get("queueId"))) or ""
+
+
+def _entry_alert_uuids(entry: dict) -> list[str]:
+    """Alert UUIDs a quarantine entry references (may be several; may be absent)."""
+    return [str(u) for u in (entry.get("alert_uuids") or entry.get("alertUuids") or []) if u]
 
 
 def iter_alerts(payload: dict) -> list[dict]:

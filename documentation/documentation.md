@@ -1389,26 +1389,30 @@ yourself.
 ### 7.9 Recovery after downtime (reconcile)
 
 If the service is down when EX posts an alert (and EX doesn't redeliver it), that email
-would be missed. To cover this, the app **reconciles** with EX:
+would be missed. To cover this, the app **reconciles** with EX — **quarantine-first**:
 
-- **On startup** it queries EX for recent trigger alerts and creates any case it's
-  missing — **idempotent** (dedup by queue id; skips `_RA` re-detections), so it never
-  duplicates or re-emails, and is safe alongside EX's own notification retries.
+- **On startup** it reads EX's **quarantine list** (the authoritative set of emails EX is
+  actually holding), and for every held, non-`_RA` email it has no case for, it confirms
+  the trigger from that email's own alerts (fetched by UUID → full malware/signature
+  detail) and starts the flow. Because it keys off what is *held*, it never acts on an
+  email that merely alerted but was still delivered (alert-but-allow).
+- **Idempotent** (dedup by queue id; skips `_RA` re-detections), so it never duplicates or
+  re-emails, and is safe alongside EX's own notification retries.
 - **Periodically** too, if `RECONCILE_INTERVAL` > 0 (default **1800s** = 30 min;
   set `0` for startup-only).
 - **On demand** via the **Reconcile** button on the dashboard.
 
-The look-back window is **`RECONCILE_LOOKBACK`** — an EX alerts-query duration, default
-**`48_hours`** (e.g. `1_hour`, `24_hours`, `48_hours`). Both `RECONCILE_LOOKBACK` and
-`RECONCILE_INTERVAL` are **configurable** via the environment or the Settings UI. (This
-covers first-time alerts missed while down; in-flight cases are recovered separately by
-the recheck poll on restart.)
+A **secondary alerts sweep** then covers the rare held email whose quarantine record
+carries no alert linkage: it matches trigger alerts by queue id, but **only** for emails
+that are also in the held set, so it too never fires on alert-but-allow mail. That sweep is
+the only part that uses the **`RECONCILE_LOOKBACK`** window (an EX alerts-query duration,
+default **`48_hours`**; e.g. `1_hour`, `24_hours`, `48_hours`) — and it runs at
+`info_level=extended` so the rows carry malware detail. The quarantine read itself uses a
+**clock-independent** window, so a skewed EX clock can't hide a held entry.
 
-The alerts query runs at **`info_level=extended`** so each row carries the malware/signature
-detail the trigger match needs — lower levels omit it from the list, which would make
-reconcile match nothing. For any alert whose top-level name matches the trigger but whose
-row still lacks that detail, the app fetches the full alert by UUID before deciding, so a
-match is never missed on a box that trims the list.
+Both `RECONCILE_LOOKBACK` and `RECONCILE_INTERVAL` are **configurable** via the environment
+or the Settings UI. (This covers first-time emails missed while down; in-flight cases are
+recovered separately by the recheck poll on restart.)
 
 ## 8. Settings reference (in the UI)
 
@@ -1524,7 +1528,7 @@ IP allowlist — at least one, or the webhook refuses to run.
 | `NOTIFY_RETRY_INTERVAL` | Seconds between email retry sweeps. | — | `300` |
 | `RESUBMIT_MAX_RETRIES` | How many times to retry a failed EX rescan. | — | `5` |
 | `RESUBMIT_RETRY_INTERVAL` | Seconds between rescan retry sweeps. | — | `120` |
-| `RECONCILE_LOOKBACK` | EX alerts-query window scanned to backfill missed alerts. | — | `48_hours` |
+| `RECONCILE_LOOKBACK` | Window for reconcile's secondary alerts sweep (reconcile is quarantine-first; this bounds only the fallback). | — | `48_hours` |
 | `RECONCILE_INTERVAL` | Seconds between periodic reconcile sweeps (0 = startup only). | — | `1800` |
 
 ### Logging

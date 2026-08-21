@@ -48,3 +48,10 @@ secret.key
 # and any intermediate render artifacts local only.
 documentation/*.docx
 documentation/_diagrams/
+
+# TLS material for native HTTPS — never commit
+tls/
+*.pem
+*.key
+*.p12
+*.pfx

@@ -65,6 +65,13 @@ class Settings(BaseSettings):
     token_ttl: int = 86400  # seconds
     ui_password: str = ""  # admin password gating the dashboard/settings UI (UI_PASSWORD)
 
+    # --- Native HTTPS (optional; else a reverse proxy terminates TLS) ---
+    # Explicit PEM paths win; otherwise the app uses a cert/key imported via the admin UI
+    # into DATA_DIR/tls/. With neither, it serves plain HTTP. Applied at startup (restart).
+    tls_cert_file: str = ""       # PEM certificate (chain ok)
+    tls_key_file: str = ""        # PEM private key
+    tls_key_password: str = ""    # password if TLS_KEY_FILE is encrypted
+
     # --- Webhook auth (EX HTTP notification posts here using Basic auth) ---
     webhook_username: str = ""
     webhook_password: str = ""

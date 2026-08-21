@@ -176,12 +176,22 @@ function renderAlertDetails(r) {
     const mal = (a.malware || []).map((m) => `
       <div class="ax-mal"><span class="ax-mal-name">${esc(m.name || "—")}</span>
       ${m.sha256 ? `<code class="mono ax-hash" title="${esc(m.sha256)}">${esc(m.sha256.slice(0, 16))}…</code>` : ""}</div>`).join("");
-    const verdict = a.malicious
-      ? `<span class="badge quarantined">malicious</span>`
-      : `<span class="badge passed">clean</span>`;
+    // These alerts come from a quarantined record, so they're detections — never label
+    // them "clean". The encrypted-attachment alert is the pre-password-extraction one.
+    const names = (a.malware || []).map((m) => (m.name || "").toLowerCase());
+    const encrypted = names.some((n) =>
+      n.includes("custompolicy.mvx") || n.includes("passextractfailed") || n.includes("password_extraction_failed"));
+    const riskware = (a.name || "").toLowerCase().includes("riskware");
+    let verdict, tag = "";
+    if (a.malicious) verdict = `<span class="badge quarantined">malicious</span>`;
+    else if (encrypted) {
+      verdict = `<span class="badge rechecking">extraction failed</span>`;
+      tag = `<span class="ax-tag">pre-password-extraction alert</span>`;
+    } else if (riskware) verdict = `<span class="badge rechecking">riskware</span>`;
+    else verdict = `<span class="badge received">detected</span>`;
     return `<div class="ax-alert">
       <div class="ax-head">${esc(a.name || "alert")} ${verdict}
-        ${a.severity ? `<span class="ax-sev">${esc(a.severity)}</span>` : ""}</div>
+        ${a.severity ? `<span class="ax-sev">${esc(a.severity)}</span>` : ""}${tag}</div>
       <dl class="kv ax-kv">
         ${a.action ? `<dt>Action</dt><dd>${esc(a.action)}</dd>` : ""}
         ${a.occurred ? `<dt>Occurred</dt><dd class="mono">${esc(a.occurred)}</dd>` : ""}

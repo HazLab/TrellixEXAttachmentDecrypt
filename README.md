@@ -50,7 +50,7 @@ Full variable list is in `env.example`. Key ones:
 ```bash
 # Trellix EX appliance
 EX_BASE_URL=https://ex.example.com
-EX_USERNAME=api_analyst        # account with API Analyst role
+EX_USERNAME=admin              # an EX account with the Admin role
 EX_PASSWORD=...
 EX_VERIFY_TLS=true
 EX_CLIENT_TOKEN=               # optional X-FeClient-Token from Trellix

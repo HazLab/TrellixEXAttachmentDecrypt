@@ -19,7 +19,7 @@ const RESTART = new Set(["web_host", "web_port", "https_enabled", "https_port", 
 const HELP = {
   ui_password: "Password for signing in to this dashboard. Required — setting it for the first time ends setup mode.",
   ex_base_url: "Base URL of the Trellix EX appliance, e.g. https://ex.example.com.",
-  ex_username: "EX API account username (needs the API Analyst role).",
+  ex_username: "EX API account username (must be an Admin user).",
   ex_password: "Password for the EX API account. Leave blank to keep the current one; tick remove to clear.",
   ex_verify_tls: "Verify the EX TLS certificate. Off by default — EX appliances commonly use self-signed certs.",
   ex_client_token: "Optional X-FeClient-Token issued by Trellix. Leave blank if unused.",

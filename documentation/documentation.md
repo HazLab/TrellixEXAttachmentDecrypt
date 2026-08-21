@@ -1375,8 +1375,11 @@ standalone binary, a single internal host, or Windows where there's no proxy.
   (generates one on startup from the `PUBLIC_BASE_URL` host if none exists). It encrypts
   the traffic but is **untrusted** — browsers warn and EX rejects the webhook if its SSL
   Verify is on. For an internal host / testing only (see Security → Transport security).
-- With a cert present the server starts on **`https://`**; otherwise it serves plain HTTP.
-  **Restart to apply**, and set `PUBLIC_BASE_URL` to `https://…`.
+- **Turn it on:** enable **Serve HTTPS** (Settings → **Network**, or `HTTPS_ENABLED=true`)
+  and set the **HTTP port** / **HTTPS port** (`WEB_PORT` / `HTTPS_PORT`, defaults 8080 /
+  8443). With HTTPS on and a cert present the app binds `https://` on the HTTPS port;
+  otherwise it serves plain HTTP on the HTTP port (also the fallback if you enable HTTPS
+  without a cert). **Restart to apply**, and set `PUBLIC_BASE_URL` to `https://…`.
 
 A reverse proxy is still worthwhile in production for **automatic certificate renewal**
 (e.g. Let's Encrypt) and HSTS; native TLS is the simpler path when you manage the cert
@@ -1444,7 +1447,9 @@ IP allowlist — at least one, or the webhook refuses to run.
 | `UI_PASSWORD` | Password for the admin dashboard. Setting it the first time ends setup mode. | Yes | `—` |
 | `TOKEN_TTL` | Seconds a one-time recipient link stays valid before expiring. | — | `86400` |
 | `WEB_HOST` | Interface this service binds to (`0.0.0.0` = all). *Restart to apply.* | — | `0.0.0.0` |
-| `WEB_PORT` | Port this service listens on. In Docker set `WEB_PORT`/`HOST_PORT` (§6). *Restart to apply.* | — | `8080` |
+| `WEB_PORT` | Plain-**HTTP** port this service listens on (when HTTPS is off). In Docker set `WEB_PORT`/`HOST_PORT` (§6). *Restart to apply.* | — | `8080` |
+| `HTTPS_ENABLED` | Serve **HTTPS** (needs a cert — imported or self-signed) on `HTTPS_PORT`; otherwise plain HTTP on `WEB_PORT`. *Restart to apply.* | — | `false` |
+| `HTTPS_PORT` | Port to bind when HTTPS is enabled. *Restart to apply.* | — | `8443` |
 | `SECRET_KEY` | Signs links/sessions and encrypts stored secrets. Auto-generated if unset; environment-only (not in the UI). | — | `auto-generated` |
 | `DATA_DIR` | Directory for persistent state — `secret.key` and the default SQLite DB (§2). | — | `working dir` |
 | `DB_URL` | Database URL (§4). Environment-only. | — | `sqlite:///trellix_decrypt.sqlite3` |

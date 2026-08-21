@@ -103,9 +103,11 @@ class Settings(BaseSettings):
     recheck_delay: int = 3      # seconds before the FIRST poll
     # Eager early poll steps (comma-separated seconds) after the first poll, before
     # settling to recheck_interval — so a released/clean email is caught within seconds.
-    recheck_ramp: str = "2,2,3,3,5,5,8"
-    recheck_interval: int = 15
-    recheck_max_attempts: int = 18
+    # The ramp keeps a tight (<=8s) cadence through the first ~60s, where most clean
+    # releases land; the residual wait after that is EX's own re-analysis time.
+    recheck_ramp: str = "2,2,3,3,4,4,5,5,6,6,7,8"
+    recheck_interval: int = 12
+    recheck_max_attempts: int = 24
 
     # --- Reconciliation (backfill trigger alerts missed while the app was down) ---
     # On startup (and, if reconcile_interval > 0, periodically) query EX for recent

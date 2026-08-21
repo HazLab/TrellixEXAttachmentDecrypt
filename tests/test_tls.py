@@ -105,6 +105,36 @@ def test_generate_self_signed_defaults_to_localhost(tmp_path):
     assert "localhost" in info["subject"]
 
 
+class _Serve(_Settings):
+    def __init__(self, data_dir, **kw):
+        super().__init__(data_dir)
+        self.web_port = 8080
+        self.https_port = 8443
+        self.https_enabled = False
+        for k, v in kw.items():
+            setattr(self, k, v)
+
+
+def test_serving_http_by_default(tmp_path):
+    s = _Serve(tmp_path)
+    scheme, port, ssl = tls.serving(s)
+    assert scheme == "http" and port == 8080 and ssl == {}
+
+
+def test_serving_https_when_enabled_with_cert(tmp_path):
+    s = _Serve(tmp_path, https_enabled=True)
+    cert_pem, key_pem, _, _ = _self_signed()
+    tls.install_pem(s, cert_pem, key_pem)
+    scheme, port, ssl = tls.serving(s)
+    assert scheme == "https" and port == 8443 and "ssl_certfile" in ssl
+
+
+def test_serving_falls_back_to_http_when_https_enabled_without_cert(tmp_path):
+    s = _Serve(tmp_path, https_enabled=True)
+    scheme, port, ssl = tls.serving(s)
+    assert scheme == "http" and port == 8080 and ssl == {}
+
+
 def test_env_paths_take_precedence(tmp_path):
     # explicit TLS_CERT_FILE/TLS_KEY_FILE win over the DATA_DIR/tls upload location
     cert_pem, key_pem, _, _ = _self_signed()

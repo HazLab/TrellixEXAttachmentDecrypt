@@ -105,11 +105,13 @@
   </fieldset>
 
   <fieldset>
-    <legend>Infrastructure <span class="tag">restart to apply</span></legend>
+    <legend>Network <span class="tag">restart to apply</span></legend>
     <label>Bind host<input name="web_host" placeholder="0.0.0.0"></label>
-    <label>Bind port<input name="web_port" type="number"></label>
-    <p class="hint">The database URL (<code>DB_URL</code>) is set via the environment only — it points at this
-      very database, so it can't be changed from within it.</p>
+    <label>HTTP port<input name="web_port" type="number"></label>
+    <label class="check"><input name="https_enabled" type="checkbox"> Serve HTTPS (needs a certificate — import or generate below)</label>
+    <label>HTTPS port<input name="https_port" type="number"></label>
+    <p class="hint">With <em>Serve HTTPS</em> on, the app binds the HTTPS port using the certificate below; otherwise
+      it serves plain HTTP on the HTTP port. The database URL (<code>DB_URL</code>) is environment-only.</p>
   </fieldset>
 
   <fieldset>

@@ -25,7 +25,8 @@ RUN mkdir -p /data && chown appuser:appuser /data
 VOLUME ["/data"]
 USER appuser
 EXPOSE 8080
-# Healthcheck honours WEB_PORT so it still works if you change the listen port.
+# Healthcheck honours WEB_PORT / HTTPS_ENABLED / HTTPS_PORT so it follows the listen
+# port and scheme (self-signed certs are accepted).
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-    CMD python -c "import os,urllib.request,sys; p=os.environ.get('WEB_PORT','8080'); sys.exit(0 if urllib.request.urlopen(f'http://127.0.0.1:{p}/healthz',timeout=3).status==200 else 1)"
+    CMD python -c "import os,ssl,urllib.request,sys; https=os.environ.get('HTTPS_ENABLED','').lower() in ('1','true','yes','on'); port=os.environ.get('HTTPS_PORT','8443') if https else os.environ.get('WEB_PORT','8080'); url=('https' if https else 'http')+f'://127.0.0.1:{port}/healthz'; ctx=ssl._create_unverified_context() if https else None; sys.exit(0 if urllib.request.urlopen(url,timeout=3,context=ctx).status==200 else 1)"
 CMD ["python", "-m", "trellix_decrypt"]

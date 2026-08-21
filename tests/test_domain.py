@@ -439,6 +439,22 @@ async def test_reconcile_backfills_only_new_matching_alerts(engine):
     assert len(engine.mailer.sent) == 1                   # emailed the backfilled recipient
 
 
+async def test_reconcile_fetches_detail_when_list_lacks_malware(engine):
+    # EX list row matches the trigger alert name but omits the malware explanation
+    # (as lower info_levels / some box builds do); the full alert (fetched by uuid)
+    # carries it. Reconcile must fall back to the detail and still create the case.
+    engine.ex.alerts_payload = {"alert": [
+        {"uuid": "U1", "name": "RISKWARE_OBJECT", "malicious": "no",
+         "dst": {"smtpTo": "u@corp.test"},
+         "smtpMessage": {"queueId": "Q-DET", "subject": "Invoice"}},   # no explanation block
+    ]}
+    engine.ex.alerts = {"U1": _raw_alert("Q-DET")}                     # detail has the malware
+    res = await engine.reconcile()
+    assert res["created"] == 1
+    assert engine.repo.find_case_by_queue_id("Q-DET") is not None
+    assert len(engine.mailer.sent) == 1
+
+
 async def test_reconcile_is_idempotent(engine):
     engine.ex.alerts_payload = {"alert": [_raw_alert("Q-A")]}
     await engine.reconcile()

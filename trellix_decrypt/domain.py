@@ -393,14 +393,37 @@ class FlowEngine:
             return {"scanned": 0, "created": 0, "already_known": 0, "skipped": 0,
                     "note": "EX not configured"}
         duration = duration or self.settings.reconcile_lookback
-        raw = await self.ex.get_alerts(duration=duration)
-        events = [parse_alert(a) for a in iter_alerts(raw)]
+        # info_level=extended so the alerts query embeds the full envelope AND the
+        # explanation.malwareDetected block. At lower levels EX omits the malware detail
+        # from the LIST, which would leave malware_names empty and skip every alert. If a
+        # box rejects extended for this window, fall back to a plain query — the per-alert
+        # UUID detail fetch below then recovers the malware names.
+        try:
+            raw = await self.ex.get_alerts(duration=duration, info_level="extended")
+        except Exception:
+            log.warning("reconcile: extended alerts query failed, retrying at default level",
+                        exc_info=True)
+            raw = await self.ex.get_alerts(duration=duration)
+        alerts = iter_alerts(raw)
+        log.info("reconcile(duration=%s): EX returned %d alert(s)", duration, len(alerts))
         created = already = skipped = 0
-        for ev in events:
-            # Only first-time trigger alerts with a full envelope; _RA re-detections are
-            # handled by the recheck poll, not here.
-            if (not ev.queue_id or not ev.recipient or ev.queue_id.endswith("_RA")
-                    or not self.rules.matches(ev)):
+        for a in alerts:
+            ev = parse_alert(a)
+            # _RA re-detections are handled by the recheck poll, not here.
+            if ev.queue_id.endswith("_RA"):
+                skipped += 1
+                continue
+            # Belt-and-suspenders: if the top-level alert name matches the trigger but the
+            # list row carried no malware detail (some EX info_levels/box builds still trim
+            # it from the list), fetch the full alert by UUID and re-parse before deciding.
+            if self.rules.alert_name_matches(ev.alert_name) and not ev.malware_names:
+                uuid = _text(a.get("uuid"))
+                detail = await self.ex.get_alert_by_uuid(uuid) if uuid else None
+                if detail:
+                    ev = parse_alert(detail)
+            if not ev.queue_id or not ev.recipient or not self.rules.matches(ev):
+                log.debug("reconcile skip queue=%r name=%r malware=%r recipient=%r",
+                          ev.queue_id, ev.alert_name, ev.malware_names, ev.recipient)
                 skipped += 1
                 continue
             if self.repo.find_case_by_queue_id(ev.queue_id) is not None:
@@ -408,7 +431,7 @@ class FlowEngine:
                 continue
             if await self.handle_alert(ev) is not None:  # creates the case + emails
                 created += 1
-        summary = {"scanned": len(events), "created": created,
+        summary = {"scanned": len(alerts), "created": created,
                    "already_known": already, "skipped": skipped}
         log.info("reconcile(duration=%s): %s", duration, summary)
         return summary

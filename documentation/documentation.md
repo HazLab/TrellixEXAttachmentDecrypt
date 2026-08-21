@@ -1404,6 +1404,12 @@ The look-back window is **`RECONCILE_LOOKBACK`** — an EX alerts-query duration
 covers first-time alerts missed while down; in-flight cases are recovered separately by
 the recheck poll on restart.)
 
+The alerts query runs at **`info_level=extended`** so each row carries the malware/signature
+detail the trigger match needs — lower levels omit it from the list, which would make
+reconcile match nothing. For any alert whose top-level name matches the trigger but whose
+row still lacks that detail, the app fetches the full alert by UUID before deciding, so a
+match is never missed on a box that trims the list.
+
 ## 8. Settings reference (in the UI)
 
 Every field has a **?** help icon — hover (or focus) it for an explanation and whether a

@@ -165,6 +165,11 @@ both follow it) and `HOST_PORT` (the published host port) in `.env`; compose map
 `docker compose up -d`, reachable at `http://host:9000`. In Docker set the port this way
 rather than in the Settings UI, so the port mapping and healthcheck stay in sync.
 
+**HTTPS in Docker:** set `HTTPS_ENABLED=true` and set `HTTPS_PORT` **equal to** `WEB_PORT`
+(and to `HOST_PORT`) so the single compose mapping and the healthcheck line up — the
+healthcheck follows the scheme automatically. Or, more commonly, keep the container on
+HTTP and terminate TLS at your ingress/reverse proxy.
+
 **Plain `docker run`** (bring your own volume):
 
 ```bash
@@ -317,7 +322,9 @@ IP allowlist — at least one, or the webhook refuses to run.
 | `UI_PASSWORD` | Password for the admin dashboard. Setting it the first time ends setup mode. | Yes | `—` |
 | `TOKEN_TTL` | Seconds a one-time recipient link stays valid before expiring. | — | `86400` |
 | `WEB_HOST` | Interface this service binds to (`0.0.0.0` = all). *Restart to apply.* | — | `0.0.0.0` |
-| `WEB_PORT` | Port this service listens on. In Docker set `WEB_PORT`/`HOST_PORT` (§6). *Restart to apply.* | — | `8080` |
+| `WEB_PORT` | Plain-**HTTP** port this service listens on (when HTTPS is off). In Docker set `WEB_PORT`/`HOST_PORT` (§6). *Restart to apply.* | — | `8080` |
+| `HTTPS_ENABLED` | Serve **HTTPS** (needs a cert — imported or self-signed) on `HTTPS_PORT`; otherwise plain HTTP on `WEB_PORT`. *Restart to apply.* | — | `false` |
+| `HTTPS_PORT` | Port to bind when HTTPS is enabled. *Restart to apply.* | — | `8443` |
 | `SECRET_KEY` | Signs links/sessions and encrypts stored secrets. Auto-generated if unset; environment-only (not in the UI). | — | `auto-generated` |
 | `DATA_DIR` | Directory for persistent state — `secret.key` and the default SQLite DB (§2). | — | `working dir` |
 | `DB_URL` | Database URL (§4). Environment-only. | — | `sqlite:///trellix_decrypt.sqlite3` |

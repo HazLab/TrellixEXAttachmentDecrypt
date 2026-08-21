@@ -14,9 +14,10 @@ and database require. For the full architecture and operations reference see
 | Executable | Hosts without Python | Nothing — a single binary |
 
 All three run the same app and share the same configuration and persistence rules
-(below). Whichever you pick, terminate **HTTPS at a reverse proxy** in front of the
-service; if that proxy is trusted, set `TRUST_FORWARDED_FOR=true` so rate limits key
-on the real client IP.
+(below). For HTTPS you have two options — **import a certificate** so the app serves TLS
+natively (Settings → HTTPS/TLS, or `TLS_CERT_FILE`/`TLS_KEY_FILE`), **or** terminate TLS
+at a **reverse proxy** (now optional). Behind a trusted proxy, set
+`TRUST_FORWARDED_FOR=true` so rate limits key on the real client IP.
 
 ## 1. Before you start
 
@@ -34,9 +35,17 @@ on the real client IP.
 ### On the app host
 
 - A host that can reach the **EX WSAPI** and an **SMTP** relay.
-- A public hostname for the recipient links (`PUBLIC_BASE_URL`), fronted by a reverse
-  proxy that terminates TLS and forwards to the service (default port 8080).
+- A public hostname for the recipient links (`PUBLIC_BASE_URL`), reachable over **HTTPS** —
+  either by **importing a certificate** (native TLS; Settings → HTTPS/TLS or
+  `TLS_CERT_FILE`/`TLS_KEY_FILE`) or via a **reverse proxy** that terminates TLS (optional;
+  default app port 8080).
 - The EX appliance must be able to POST to `https://<host>/webhook/ex-alert`.
+
+> **Native HTTPS:** to serve TLS without a proxy, import a **PEM** cert+key or a
+> **PKCS#12 / `.pfx`** bundle under **Settings → HTTPS/TLS** (or set `TLS_CERT_FILE` /
+> `TLS_KEY_FILE` / `TLS_KEY_PASSWORD`). Stored `0600` under `DATA_DIR/tls/`; **restart to
+> apply**, and set `PUBLIC_BASE_URL` to `https://…`. A proxy is still nice for automatic
+> cert renewal.
 
 ## 2. Persistent state — `DATA_DIR` (read first)
 
@@ -310,6 +319,9 @@ IP allowlist — at least one, or the webhook refuses to run.
 | `SECRET_KEY` | Signs links/sessions and encrypts stored secrets. Auto-generated if unset; environment-only (not in the UI). | — | `auto-generated` |
 | `DATA_DIR` | Directory for persistent state — `secret.key` and the default SQLite DB (§2). | — | `working dir` |
 | `DB_URL` | Database URL (§4). Environment-only. | — | `sqlite:///trellix_decrypt.sqlite3` |
+| `TLS_CERT_FILE` | PEM certificate (chain OK) to serve **HTTPS natively**; blank uses a cert imported in Settings → HTTPS/TLS, else plain HTTP. *Restart to apply.* | — | `—` |
+| `TLS_KEY_FILE` | PEM private key paired with `TLS_CERT_FILE`. *Restart to apply.* | — | `—` |
+| `TLS_KEY_PASSWORD` | Password if `TLS_KEY_FILE` is encrypted. | — | `—` |
 
 ### What triggers the flow
 

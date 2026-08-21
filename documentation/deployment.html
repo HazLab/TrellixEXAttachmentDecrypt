@@ -72,10 +72,20 @@ tbody tr:nth-child(even){background:var(--surface-2)}tbody tr:last-child td{bord
 <div class="table-wrap"><table><thead><tr><th>Method</th><th>Best for</th><th>Needs on the host</th></tr></thead><tbody><tr><td>From source</td><td>Dev, or servers that already run Python</td><td>Python ≥ 3.11 + pip</td></tr><tr><td>Docker</td><td>Most production installs</td><td>Docker (+ Compose)</td></tr><tr><td>Executable</td><td>Hosts without Python</td><td>Nothing — a single binary</td></tr></tbody></table></div>
 <p class="lead">All three run the same app and share the same configuration and persistence rules (below). Whichever you pick, terminate <strong>HTTPS at a reverse proxy</strong> in front of the service; if that proxy is trusted, set <code>TRUST_FORWARDED_FOR=true</code> so rate limits key on the real client IP.</p>
 <h2 id="1-before-you-start">1. Before you start</h2>
+<h3 id="on-the-trellix-ex-appliance">On the Trellix EX appliance</h3>
 <ul>
-<li>A host that can reach your <strong>Trellix EX</strong> appliance and an <strong>SMTP</strong> relay.</li>
+<li><strong>EX version 11.0.0 or later</strong> (latest recommended, for the newest rescan improvements).</li>
+<li>An <strong>MVX engine available</strong> — integrated mode (built-in), sensor mode (enrolled in a separate IVX cluster), or hybrid.</li>
+<li>The <strong>MTA in block mode</strong>.</li>
+<li><strong>Riskware policy 65066</strong> (<code>PassExtractFailed</code>) <strong>enabled and set to quarantine</strong>.</li>
+<li>This service registered as an <strong>HTTP notification server</strong> on EX, pointing at the webhook (see the &quot;Point EX at the webhook&quot; section of the main guide).</li>
+<li>An <strong>EX API account</strong> with the <strong>API Analyst</strong> role.</li>
+</ul>
+<h3 id="on-the-app-host">On the app host</h3>
+<ul>
+<li>A host that can reach the <strong>EX WSAPI</strong> and an <strong>SMTP</strong> relay.</li>
 <li>A public hostname for the recipient links (<code>PUBLIC_BASE_URL</code>), fronted by a reverse proxy that terminates TLS and forwards to the service (default port 8080).</li>
-<li>The EX appliance must be able to POST to <code>https://&lt;host&gt;/webhook/ex-alert</code> (see the &quot;Point EX at the webhook&quot; section of the main guide).</li>
+<li>The EX appliance must be able to POST to <code>https://&lt;host&gt;/webhook/ex-alert</code>.</li>
 </ul>
 <h2 id="2-persistent-state-data-dir-read-first">2. Persistent state — <code>DATA_DIR</code> (read first)</h2>
 <p class="lead">Two things <strong>must survive restarts</strong>, or sign-in sessions break and stored encrypted settings become unreadable:</p>

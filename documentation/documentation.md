@@ -983,12 +983,31 @@ service. For the security rationale behind these steps see [Security](06_securit
 
 ## 1. Prerequisites
 
-- **Python ≥ 3.11**.
-- Network reachability to your **Trellix EX** appliance (WSAPI) and an **SMTP**
-  relay for outbound mail.
-- An EX API account with the **API Analyst** role.
+### On the Trellix EX appliance
+
+- **EX version 11.0.0 or later** — the latest release is recommended, for the newest
+  improvements to the rescan feature.
+- An **MVX engine available** — either **integrated mode** (built-in), **sensor mode**
+  (enrolled in a separate IVX cluster), or **hybrid**.
+- The **MTA must be in block mode**.
+- **Riskware policy 65066** (`PassExtractFailed`, password-extraction-failed) must be
+  **enabled and set to quarantine** — this is what quarantines the encrypted attachments
+  (see [Overview](#doc-01_overview)).
+- This service registered as an **HTTP notification server** on EX, pointing at the
+  webhook (see §4, "Point EX at the webhook").
+- An **EX API account** with the **API Analyst** role (this service uses it to call the
+  EX WSAPI).
+- Network path both ways: EX able to POST to the webhook, and this service able to reach
+  the EX WSAPI.
+
+### On the app host
+
+- **Python ≥ 3.11** (from source), or **Docker**, or the **prebuilt binary** — per your
+  chosen deployment method.
+- Reachability to the **EX WSAPI** and an **SMTP** relay for outbound mail.
+- A public hostname (`PUBLIC_BASE_URL`) fronted by a **reverse proxy terminating HTTPS**
+  (recommended).
 - (Optional) an **IMAP** mailbox for the `SMTP_FROM` sender, to detect bounces.
-- A **reverse proxy** terminating HTTPS in front of the service (recommended).
 
 ## 2. Install
 

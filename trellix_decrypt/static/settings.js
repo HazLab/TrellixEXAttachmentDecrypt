@@ -14,8 +14,8 @@ form.querySelectorAll(".rm").forEach((pill) => {
 });
 
 // Per-field help: a "?" with a hover/focus tooltip explaining each option.
-const RESTART = new Set(["web_host", "web_port", "log_level", "log_file", "log_file_max_bytes",
-  "log_file_backups", "login_rate_limit", "login_rate_window", "form_rate_limit", "form_rate_window"]);
+const RESTART = new Set(["web_host", "web_port", "https_enabled", "https_port", "log_level", "log_file",
+  "log_file_max_bytes", "log_file_backups", "login_rate_limit", "login_rate_window", "form_rate_limit", "form_rate_window"]);
 const HELP = {
   ui_password: "Password for signing in to this dashboard. Required — setting it for the first time ends setup mode.",
   ex_base_url: "Base URL of the Trellix EX appliance, e.g. https://ex.example.com.",
@@ -64,7 +64,9 @@ const HELP = {
   trust_forwarded_for: "Trust X-Forwarded-For for the client IP. Enable only behind a trusted reverse proxy (otherwise spoofable).",
   max_request_bytes: "Reject webhook/form request bodies larger than this many bytes (DoS guard).",
   web_host: "Network interface the server binds to (0.0.0.0 = all).",
-  web_port: "Port the server listens on. In Docker set the WEB_PORT env var instead, so the mapping/healthcheck stay in sync.",
+  web_port: "Port the server listens on for plain HTTP. In Docker set WEB_PORT via env so the mapping/healthcheck stay in sync.",
+  https_enabled: "Serve HTTPS (needs a certificate, imported or self-signed) on the HTTPS port; otherwise plain HTTP on the HTTP port.",
+  https_port: "Port the server listens on when HTTPS is enabled (e.g. 8443).",
   log_level: "Logging verbosity: DEBUG, INFO, WARNING, or ERROR.",
   log_file: "File to write logs to (blank = console only).",
   log_file_max_bytes: "Rotate the log file when it reaches this size (bytes).",

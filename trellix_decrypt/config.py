@@ -75,6 +75,10 @@ class Settings(BaseSettings):
     # standalone/internal host or testing). Untrusted — browsers warn; enable EX's SSL
     # Verify off for the webhook, or use a real cert/proxy. Off by default.
     tls_self_signed: bool = False
+    # Serve HTTPS (needs a cert — imported or self-signed) on https_port; otherwise serve
+    # plain HTTP on web_port. Restart to apply.
+    https_enabled: bool = False
+    https_port: int = 8443
 
     # --- Webhook auth (EX HTTP notification posts here using Basic auth) ---
     webhook_username: str = ""

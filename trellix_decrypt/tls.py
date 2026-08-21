@@ -49,6 +49,21 @@ def active_paths(settings) -> tuple[str | None, str | None]:
     return None, None
 
 
+def serving(settings) -> tuple[str, int, dict]:
+    """How the server should bind: (scheme, port, uvicorn-ssl-kwargs).
+
+    HTTPS when ``https_enabled`` and a cert is available → ``https_port``; otherwise plain
+    HTTP on ``web_port`` (also the fallback if HTTPS is requested without a cert)."""
+    if settings.https_enabled:
+        cert, key = active_paths(settings)
+        if cert and key:
+            ssl = {"ssl_certfile": cert, "ssl_keyfile": key}
+            if settings.tls_key_password:
+                ssl["ssl_keyfile_password"] = settings.tls_key_password
+            return "https", settings.https_port, ssl
+    return "http", settings.web_port, {}
+
+
 def _write(settings, cert_pem: bytes, key_pem: bytes) -> None:
     d = tls_dir(settings)
     d.mkdir(parents=True, exist_ok=True)

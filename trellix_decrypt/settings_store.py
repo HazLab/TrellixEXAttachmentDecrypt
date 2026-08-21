@@ -36,7 +36,7 @@ EDITABLE = (
     # Infrastructure — persisted, applied on restart (see RESTART_REQUIRED). Note:
     # db_url is deliberately NOT here — it points at this very database, so it can't
     # round-trip through it; set it via the environment only.
-    "web_host", "web_port",
+    "web_host", "web_port", "https_enabled", "https_port",
     "log_level", "log_file", "log_file_max_bytes", "log_file_backups",
 )
 SECRET_KEYS = frozenset({"ex_password", "smtp_password", "ex_client_token", "webhook_password",
@@ -45,7 +45,7 @@ LIST_KEYS = frozenset({"trigger_malware_names", "webhook_ip_allowlist"})
 #: Editable, but the running process only picks these up on restart (bind host/port,
 #: DB engine, logging handlers, and rate-limiter windows are wired once at startup).
 RESTART_REQUIRED = frozenset({
-    "web_host", "web_port",
+    "web_host", "web_port", "https_enabled", "https_port",
     "log_level", "log_file", "log_file_max_bytes", "log_file_backups",
     "login_rate_limit", "login_rate_window", "form_rate_limit", "form_rate_window",
 })

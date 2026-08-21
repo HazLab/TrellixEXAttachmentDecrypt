@@ -465,13 +465,18 @@ exactly `<queue_id>_RA`?** Present → held; absent → delivered.
 
 ## Journey 4 — Recheck poll (concludes clean/released emails)
 
-A **held** email resolves almost instantly from the pushed `_RA` re-detection. A
-**released/clean** email sends **no push**, so it is found only by the recheck poll.
-The poll therefore reads a three-state verdict from the quarantine list each time
-(`resubmission_outcome`) and concludes **as soon as it is decisive** — it does not wait
-for the final poll — so a clean email doesn't linger in `RECHECKING`. Polling is
-**eager**: the first check is soon after resubmission, then it backs off to
-`recheck_interval`.
+A **held** email resolves quickly from the `_RA` re-quarantine (a wrong password produces
+an `_RA`, typically ~1–2 min after the rescan). A **released/clean** email sends **no
+push** and produces **no `_RA`**, so it is found only by the recheck poll. Each poll reads
+a three-state verdict from the quarantine list (`resubmission_outcome`): `held` (an `_RA`
+is present) and `released` (the original queue id has **left** quarantine) conclude
+immediately; `pending` keeps polling. On appliances where the original entry **lingers**
+after a clean release (it never leaves the list), the `released` fast-path can't fire, so
+the clean verdict is reached at the **end of the window** — once no `_RA` has appeared,
+`_confirm_outcome` concludes it clean. The floor for a clean verdict is therefore EX's
+re-analysis time (long enough to be sure no `_RA` is coming), not our poll cadence. Polling
+is tight (short `recheck_interval`) across the whole window so a release is caught within
+~one interval wherever it lands.
 
 ```mermaid
 sequenceDiagram
@@ -1553,7 +1558,9 @@ Sign in at `/`:
 - **Case list** — searchable, auto-refreshing, with status badges and a
   password-failure counter.
 - **Case drawer** — lifecycle stepper + event timeline; and, best-effort, full EX
-  alert detail fetched by UUID.
+  alert detail fetched by UUID. The original pre-password-extraction trigger alert (the
+  encrypted-attachment detection that landed the email in the app) is **hidden** as
+  redundant; any `_RA` re-detection is shown.
 - **Actions** — **Resend** a link (for `Email failed` / `Awaiting` / `Bounced`
   cases), **Rescan** (re-run a pending resubmission), and **Reconcile** (top of the
   page) — on-demand backfill of any trigger alerts missed while the app was down
@@ -1574,7 +1581,7 @@ Sign in at `/`:
 | Webhook returns **401** | Missing/bad Basic auth, or webhook auth not configured. |
 | Webhook returns **403** | Source IP not in `WEBHOOK_IP_ALLOWLIST`. |
 | Everything reads **Released** / **Quarantined** wrongly, or rescan says "queue id not found" | Check the **EX appliance clock**. Per-case lookups use a clock-independent window, but a badly wrong EX clock has caused rescans to fail; fixing the clock resolves it. |
-| A clean email sits in **Re-checking** for a while | The verdict for a released/clean email comes only from the poll (no push). It concludes once the original queue id leaves EX quarantine; the poll is eager — a rapid early ramp (first check ~`RECHECK_DELAY`, default 3s, then a steady tight `RECHECK_INTERVAL` (default 6s) across the whole window, so a release is caught within ~6s of EX dropping the original from quarantine). To catch it even faster, add more/smaller `RECHECK_RAMP` steps and/or lower `RECHECK_INTERVAL`. Any residual lag after that is EX-side — the time for the original queue id to leave the quarantine list after release. |
+| A clean email sits in **Re-checking** for a while | A released/clean email sends **no push**, so its verdict comes only from the recheck poll. The poll concludes it two ways: the fast path is the original queue id **leaving** quarantine; but on some appliances the original entry **lingers** after a clean release and never leaves — there, the email is concluded **clean at the end of the recheck window**, once no `_RA` re-quarantine has appeared (a wrong password instead produces an `_RA`, usually ~1–2 min after the rescan). So the floor for a clean verdict is roughly EX's re-analysis time, not our polling. **First check the *effective* `RECHECK_DELAY` / `RECHECK_INTERVAL`** — a value saved in the Settings DB overrides the env/default, and a stale large `RECHECK_DELAY` (e.g. 120) delays the first poll by that many seconds. Defaults are `RECHECK_DELAY=3`, `RECHECK_INTERVAL=6`; to shorten the window (conclude clean sooner, at a little more risk of a very late `_RA`) lower `RECHECK_MAX_ATTEMPTS`. Tight polling is chattier against EX — raise `RECHECK_INTERVAL` to trade snappiness for fewer calls. |
 | Recipient link says expired | Links TTL-expire (`TOKEN_TTL`); opening one auto-reissues a fresh link if still awaiting a password. |
 | Emails not sending | Check SMTP settings; failed sends go to `Email failed` and are auto-retried and resendable. Check `SMTP_TLS_MODE` and `SMTP_HELO_HOSTNAME` (some servers demand an FQDN). |
 | Rescan keeps failing | Check the EX account's rescan permission and the appliance clock (see above); the rescan is keyed on the **queue id**. Failures retry under `RESUBMIT_MAX_RETRIES`. |

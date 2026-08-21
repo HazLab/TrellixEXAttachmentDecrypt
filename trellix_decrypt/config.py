@@ -100,9 +100,12 @@ class Settings(BaseSettings):
     # poll — kept eager so it doesn't sit in "rechecking". recheck_delay is the wait
     # before the FIRST poll; after a short eager ramp the poll settles to
     # recheck_interval, for recheck_max_attempts polls total.
-    recheck_delay: int = 5
-    recheck_interval: int = 20
-    recheck_max_attempts: int = 15
+    recheck_delay: int = 3      # seconds before the FIRST poll
+    # Eager early poll steps (comma-separated seconds) after the first poll, before
+    # settling to recheck_interval — so a released/clean email is caught within seconds.
+    recheck_ramp: str = "2,2,3,3,5,5,8"
+    recheck_interval: int = 15
+    recheck_max_attempts: int = 18
 
     # --- Reconciliation (backfill trigger alerts missed while the app was down) ---
     # On startup (and, if reconcile_interval > 0, periodically) query EX for recent

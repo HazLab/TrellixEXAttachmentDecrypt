@@ -12,6 +12,26 @@ import logging
 
 log = logging.getLogger(__name__)
 
+#: Fallback eager ramp if recheck_ramp is blank/unparseable (seconds after the first poll).
+_DEFAULT_RAMP = [2, 2, 3, 3, 5, 5, 8]
+
+
+def _parse_ramp(spec: str) -> list[int]:
+    """Parse the comma-separated recheck_ramp (e.g. "2,2,3,3,5,5,8") into positive
+    second-delays. Bad/blank input falls back to a sane eager default."""
+    steps = []
+    for part in str(spec or "").split(","):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            n = int(part)
+        except ValueError:
+            continue
+        if n > 0:
+            steps.append(n)
+    return steps or list(_DEFAULT_RAMP)
+
 
 class RecheckScheduler:
     def __init__(self):
@@ -100,7 +120,8 @@ class RecheckScheduler:
         # Eager backoff: a released/clean email sends no push, so poll rapidly at first to
         # catch the release (the original queue id leaving quarantine) within seconds, then
         # settle to recheck_interval. Held emails usually resolve even sooner via the _RA push.
-        ramp = [max(1, s.recheck_delay), 3, 3, 5, 5, 8, 10, 15]
+        # ramp = first delay (recheck_delay) + the configurable early steps (recheck_ramp).
+        ramp = [max(1, s.recheck_delay), *_parse_ramp(s.recheck_ramp)]
         delays = ramp + [interval] * max(0, s.recheck_max_attempts - len(ramp))
         for i, delay in enumerate(delays):
             await asyncio.sleep(delay)

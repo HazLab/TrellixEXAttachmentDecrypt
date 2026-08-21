@@ -1510,9 +1510,10 @@ IP allowlist — at least one, or the webhook refuses to run.
 | Setting | What it is / what it's for | Req. | Default |
 |---------|--------------------------|:----:|---------|
 | `MAX_PASSWORD_ATTEMPTS` | Wrong-password rounds allowed before giving up. | — | `3` |
-| `RECHECK_DELAY` | Seconds before the first recheck poll after a resubmission. | — | `5` |
-| `RECHECK_INTERVAL` | Steady-state seconds between later recheck polls (after an eager early ramp). | — | `20` |
-| `RECHECK_MAX_ATTEMPTS` | Number of recheck polls before concluding from the list. | — | `15` |
+| `RECHECK_DELAY` | Seconds before the first recheck poll after a resubmission. | — | `3` |
+| `RECHECK_RAMP` | Eager early poll steps (comma-separated seconds) after the first poll, before settling to `RECHECK_INTERVAL`. Smaller/more values catch a released (clean) email faster. | — | `2,2,3,3,5,5,8` |
+| `RECHECK_INTERVAL` | Steady-state seconds between later recheck polls (after the eager early ramp). | — | `15` |
+| `RECHECK_MAX_ATTEMPTS` | Number of recheck polls before concluding from the list. | — | `18` |
 | `NOTIFY_MAX_RETRIES` | How many times to retry a failed recipient email. | — | `5` |
 | `NOTIFY_RETRY_INTERVAL` | Seconds between email retry sweeps. | — | `300` |
 | `RESUBMIT_MAX_RETRIES` | How many times to retry a failed EX rescan. | — | `5` |
@@ -1563,7 +1564,7 @@ Sign in at `/`:
 | Webhook returns **401** | Missing/bad Basic auth, or webhook auth not configured. |
 | Webhook returns **403** | Source IP not in `WEBHOOK_IP_ALLOWLIST`. |
 | Everything reads **Released** / **Quarantined** wrongly, or rescan says "queue id not found" | Check the **EX appliance clock**. Per-case lookups use a clock-independent window, but a badly wrong EX clock has caused rescans to fail; fixing the clock resolves it. |
-| A clean email sits in **Re-checking** for a while | The verdict for a released/clean email comes only from the poll (no push). It concludes once the original queue id leaves EX quarantine; the poll is eager — a rapid early ramp (first check ~`RECHECK_DELAY`, default 5s, then every few seconds). Lower `RECHECK_DELAY` / `RECHECK_INTERVAL` if you set them high. |
+| A clean email sits in **Re-checking** for a while | The verdict for a released/clean email comes only from the poll (no push). It concludes once the original queue id leaves EX quarantine; the poll is eager — a rapid early ramp (first check ~`RECHECK_DELAY`, default 3s, then the `RECHECK_RAMP` steps `2,2,3,3,5,5,8`, so ~8 checks within the first ~30s). To catch it even faster, add more/smaller `RECHECK_RAMP` steps and/or lower `RECHECK_INTERVAL`. Any residual lag after that is EX-side — the time for the original queue id to leave the quarantine list after release. |
 | Recipient link says expired | Links TTL-expire (`TOKEN_TTL`); opening one auto-reissues a fresh link if still awaiting a password. |
 | Emails not sending | Check SMTP settings; failed sends go to `Email failed` and are auto-retried and resendable. Check `SMTP_TLS_MODE` and `SMTP_HELO_HOSTNAME` (some servers demand an FQDN). |
 | Rescan keeps failing | Check the EX account's rescan permission and the appliance clock (see above); the rescan is keyed on the **queue id**. Failures retry under `RESUBMIT_MAX_RETRIES`. |

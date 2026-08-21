@@ -74,7 +74,14 @@ def build(settings: Settings | None = None):
     if not eff.is_configured():
         log.warning("SETUP MODE — configuration incomplete, missing: %s. Open the admin UI to "
                     "finish setup; the webhook returns 503 until then.", ", ".join(eff.missing_required()))
-    log.info("serving on http://%s:%s — password links built from PUBLIC_BASE_URL=%s "
+    from .tls import active_paths
+    tls_cert, _ = active_paths(eff)
+    scheme = "https" if tls_cert else "http"
+    if tls_cert:
+        log.info("native HTTPS enabled (cert: %s)", tls_cert)
+    else:
+        log.info("serving plain HTTP — terminate TLS at a reverse proxy, or import a cert in Settings")
+    log.info("serving on %s://%s:%s — password links built from PUBLIC_BASE_URL=%s "
              "(scheme/host/port must match how recipients reach this server)",
-             eff.web_host, eff.web_port, eff.public_base_url)
+             scheme, eff.web_host, eff.web_port, eff.public_base_url)
     return create_app(ctx), eff

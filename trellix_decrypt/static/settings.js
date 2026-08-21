@@ -176,3 +176,67 @@ form.addEventListener("submit", async (e) => {
 });
 
 api("/api/settings").then((res) => { fill(res.settings); renderBanner(res); }).catch(() => {});
+
+// ---- HTTPS / TLS import ----
+const tlsForm = document.getElementById("tls-form");
+if (tlsForm) {
+  const mode = document.getElementById("tls-mode");
+  const pem = document.getElementById("tls-pem");
+  const p12 = document.getElementById("tls-p12");
+  const tstatus = document.getElementById("tls-status");
+  const tmsg = document.getElementById("tls-msg");
+
+  function syncMode() {
+    const isP12 = mode.value === "p12";
+    p12.hidden = !isP12; pem.hidden = isP12;
+  }
+  mode.addEventListener("change", syncMode); syncMode();
+
+  async function loadTlsStatus() {
+    try {
+      const s = await api("/api/tls");
+      if (s.active) {
+        tstatus.innerHTML = `HTTPS is <strong>active</strong> (${s.source}). `
+          + (s.subject ? `Certificate: ${esc(s.subject)}` : "")
+          + (s.not_after ? ` · expires ${esc(s.not_after)}` : "");
+      } else {
+        tstatus.textContent = "HTTPS is not configured — serving plain HTTP (reverse proxy or import a certificate).";
+      }
+    } catch (e) { tstatus.textContent = ""; }
+  }
+
+  tlsForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    tmsg.className = "save-status"; tmsg.textContent = "Importing…";
+    try {
+      const r = await fetch("/api/tls", { method: "POST", body: new FormData(tlsForm) });
+      if (r.status === 401) { window.location = "/login"; return; }
+      const j = await r.json();
+      if (j.ok) {
+        tmsg.textContent = "Imported — restart the service to serve HTTPS.";
+        tlsForm.reset(); syncMode(); loadTlsStatus();
+      } else {
+        tmsg.className = "save-status err"; tmsg.textContent = j.error || "Import failed.";
+      }
+    } catch (err) { tmsg.className = "save-status err"; tmsg.textContent = "Import failed: " + err.message; }
+  });
+
+  document.getElementById("tls-remove").addEventListener("click", async () => {
+    tmsg.className = "save-status"; tmsg.textContent = "Removing…";
+    try {
+      const j = await post("/api/tls/remove");
+      tmsg.textContent = j.ok ? "Removed — restart to revert to HTTP." : "Remove failed.";
+      loadTlsStatus();
+    } catch (err) { tmsg.className = "save-status err"; tmsg.textContent = "Remove failed: " + err.message; }
+  });
+
+  async function post(path) {
+    const r = await fetch(path, { method: "POST" });
+    if (r.status === 401) { window.location = "/login"; throw new Error("unauth"); }
+    return r.json();
+  }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+  loadTlsStatus();
+}

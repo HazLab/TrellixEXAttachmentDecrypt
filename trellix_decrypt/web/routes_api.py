@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 
+from .. import tls
 from . import auth
 from ..settings_store import EDITABLE
 from .routes_dashboard import in_setup_mode
@@ -109,6 +110,39 @@ def build_api_router(ctx) -> APIRouter:
         await ctx.engine.resubmit_case(case_id)  # no-op unless it still holds the password
         case = ctx.repo.case_detail(case_id)
         return {"state": case["state"] if case else None}
+
+    @router.get("/tls")
+    async def tls_status(request: Request):
+        _guard_settings(request)
+        return tls.status(ctx.engine.settings)
+
+    @router.post("/tls")
+    async def tls_import(request: Request, mode: str = Form("pem"),
+                         cert: UploadFile | None = File(None), key: UploadFile | None = File(None),
+                         key_password: str = Form(""),
+                         p12: UploadFile | None = File(None), p12_password: str = Form("")):
+        """Import the TLS cert/key (PEM pair, or a PKCS#12/.pfx bundle). Applied on restart."""
+        _guard_settings(request)
+        s = ctx.engine.settings
+        try:
+            if mode == "p12" or p12 is not None:
+                if p12 is None:
+                    raise ValueError("no PKCS#12 file provided")
+                info = tls.install_pkcs12(s, await p12.read(), p12_password)
+            else:
+                if cert is None or key is None:
+                    raise ValueError("both a certificate and a key file are required")
+                info = tls.install_pem(s, await cert.read(), await key.read(), key_password)
+        except Exception as exc:  # noqa: BLE001 — surface a clean message to the UI
+            log.warning("TLS import failed: %s", exc)
+            return {"ok": False, "error": f"import failed: {exc}"}
+        return {"ok": True, "restart_required": True, "cert": info}
+
+    @router.post("/tls/remove")
+    async def tls_remove(request: Request):
+        _guard_settings(request)
+        tls.remove(ctx.engine.settings)
+        return {"ok": True, "restart_required": True}
 
     @router.get("/settings")
     async def get_settings(request: Request):

@@ -496,12 +496,22 @@ td code,th code{font-size:12.5px}
 <p>A practical, step-by-step guide to installing, configuring, and operating the service. For the security rationale behind these steps see <a href="#doc-06_security">Security</a>.</p>
 <hr>
 <h2 id="07_user_guide-1-prerequisites">1. Prerequisites</h2>
+<h3 id="07_user_guide-on-the-trellix-ex-appliance">On the Trellix EX appliance</h3>
 <ul>
-<li><strong>Python ≥ 3.11</strong>.</li>
-<li>Network reachability to your <strong>Trellix EX</strong> appliance (WSAPI) and an <strong>SMTP</strong> relay for outbound mail.</li>
-<li>An EX API account with the <strong>API Analyst</strong> role.</li>
+<li><strong>EX version 11.0.0 or later</strong> — the latest release is recommended, for the newest improvements to the rescan feature.</li>
+<li>An <strong>MVX engine available</strong> — either <strong>integrated mode</strong> (built-in), <strong>sensor mode</strong> (enrolled in a separate IVX cluster), or <strong>hybrid</strong>.</li>
+<li>The <strong>MTA must be in block mode</strong>.</li>
+<li><strong>Riskware policy 65066</strong> (<code>PassExtractFailed</code>, password-extraction-failed) must be <strong>enabled and set to quarantine</strong> — this is what quarantines the encrypted attachments (see <a href="#doc-01_overview">Overview</a>).</li>
+<li>This service registered as an <strong>HTTP notification server</strong> on EX, pointing at the webhook (see §4, &quot;Point EX at the webhook&quot;).</li>
+<li>An <strong>EX API account</strong> with the <strong>API Analyst</strong> role (this service uses it to call the EX WSAPI).</li>
+<li>Network path both ways: EX able to POST to the webhook, and this service able to reach the EX WSAPI.</li>
+</ul>
+<h3 id="07_user_guide-on-the-app-host">On the app host</h3>
+<ul>
+<li><strong>Python ≥ 3.11</strong> (from source), or <strong>Docker</strong>, or the <strong>prebuilt binary</strong> — per your chosen deployment method.</li>
+<li>Reachability to the <strong>EX WSAPI</strong> and an <strong>SMTP</strong> relay for outbound mail.</li>
+<li>A public hostname (<code>PUBLIC_BASE_URL</code>) fronted by a <strong>reverse proxy terminating HTTPS</strong> (recommended).</li>
 <li>(Optional) an <strong>IMAP</strong> mailbox for the <code>SMTP_FROM</code> sender, to detect bounces.</li>
-<li>A <strong>reverse proxy</strong> terminating HTTPS in front of the service (recommended).</li>
 </ul>
 <h2 id="07_user_guide-2-install">2. Install</h2>
 <pre class="code"><code>python -m venv .venv &amp;&amp; source .venv/bin/activate

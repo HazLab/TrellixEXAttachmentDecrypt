@@ -20,11 +20,23 @@ on the real client IP.
 
 ## 1. Before you start
 
-- A host that can reach your **Trellix EX** appliance and an **SMTP** relay.
-- A public hostname for the recipient links (`PUBLIC_BASE_URL`), fronted by a
-  reverse proxy that terminates TLS and forwards to the service (default port 8080).
-- The EX appliance must be able to POST to `https://<host>/webhook/ex-alert`
-  (see the "Point EX at the webhook" section of the main guide).
+### On the Trellix EX appliance
+
+- **EX version 11.0.0 or later** (latest recommended, for the newest rescan improvements).
+- An **MVX engine available** — integrated mode (built-in), sensor mode (enrolled in a
+  separate IVX cluster), or hybrid.
+- The **MTA in block mode**.
+- **Riskware policy 65066** (`PassExtractFailed`) **enabled and set to quarantine**.
+- This service registered as an **HTTP notification server** on EX, pointing at the
+  webhook (see the "Point EX at the webhook" section of the main guide).
+- An **EX API account** with the **API Analyst** role.
+
+### On the app host
+
+- A host that can reach the **EX WSAPI** and an **SMTP** relay.
+- A public hostname for the recipient links (`PUBLIC_BASE_URL`), fronted by a reverse
+  proxy that terminates TLS and forwards to the service (default port 8080).
+- The EX appliance must be able to POST to `https://<host>/webhook/ex-alert`.
 
 ## 2. Persistent state — `DATA_DIR` (read first)
 

@@ -270,7 +270,8 @@ flowchart LR
     KEY -.keys.-> DB
 ```
 
-- **HTTPS** is terminated by a reverse proxy in front of the service.
+- **HTTPS** is served either **natively** by the app (import a certificate) or
+  terminated by a **reverse proxy** in front of the service (optional).
 - The **webhook** requires HTTP Basic auth and/or a source-IP allowlist.
 - The **password form** is public by necessity but guarded by unguessable signed
   tokens and a per-IP+token rate limit.
@@ -1005,8 +1006,9 @@ service. For the security rationale behind these steps see [Security](06_securit
 - **Python ≥ 3.11** (from source), or **Docker**, or the **prebuilt binary** — per your
   chosen deployment method.
 - Reachability to the **EX WSAPI** and an **SMTP** relay for outbound mail.
-- A public hostname (`PUBLIC_BASE_URL`) fronted by a **reverse proxy terminating HTTPS**
-  (recommended).
+- A public hostname (`PUBLIC_BASE_URL`) reachable over **HTTPS** — either **import a
+  certificate** for native HTTPS (Settings → HTTPS/TLS), or front the service with a
+  **reverse proxy** that terminates TLS (optional).
 - (Optional) an **IMAP** mailbox for the `SMTP_FROM` sender, to detect bounces.
 
 ## 2. Install
@@ -1184,9 +1186,10 @@ The flow fires only when an alert's top-level **name** equals `TRIGGER_ALERT_NAM
 ## 7. Run in production
 
 Three ways to run it — **from source**, **Docker**, or a **prebuilt executable** —
-each self-contained below. In every case: put the service behind a reverse proxy that
-terminates HTTPS, and if that proxy is trusted, set `TRUST_FORWARDED_FOR=true` so rate
-limits key on the real client IP.
+each self-contained below. For HTTPS, either **import a certificate** so the app serves
+TLS itself (§7.8) or put it behind a **reverse proxy** that terminates HTTPS (optional);
+behind a trusted proxy set `TRUST_FORWARDED_FOR=true` so rate limits key on the real
+client IP.
 
 ### 7.1 Persistent state — `DATA_DIR` (read this first)
 
@@ -1338,12 +1341,30 @@ credentials, SMTP host + from address, public base URL, an admin password, and w
 auth (Basic credentials and/or an IP allowlist). `SECRET_KEY` and `DB_URL` are **not**
 required — they default as described in §7.2–7.3.
 
+### 7.8 Native HTTPS (import a certificate)
+
+The app can serve **HTTPS itself**, so a reverse proxy is **optional** — handy for the
+standalone binary, a single internal host, or Windows where there's no proxy.
+
+- **From the UI:** **Settings → HTTPS / TLS** → import either a **PEM** certificate + key
+  (with an optional key password) or a **PKCS#12 / `.pfx`** bundle (with its password).
+  The material is normalised to PEM and stored `0600` under `DATA_DIR/tls/`.
+- **From the environment:** set `TLS_CERT_FILE` and `TLS_KEY_FILE` (PEM paths), plus
+  `TLS_KEY_PASSWORD` if the key is encrypted.
+- With a cert present the server starts on **`https://`**; otherwise it serves plain HTTP.
+  **Restart to apply**, and set `PUBLIC_BASE_URL` to `https://…`.
+
+A reverse proxy is still worthwhile in production for **automatic certificate renewal**
+(e.g. Let's Encrypt) and HSTS; native TLS is the simpler path when you manage the cert
+yourself.
+
 ## 8. Settings reference (in the UI)
 
 Every field has a **?** help icon — hover (or focus) it for an explanation and whether a
 restart is required. TLS-certificate verification for EX and SMTP is **off by default**
 (appliances/relays commonly use self-signed certs); enable it in production with trusted
-certs.
+certs. Below the settings form, the **HTTPS / TLS** section imports a certificate so the
+app can serve HTTPS itself (§7.8).
 
 Configuration can come from environment variables / a `.env` file or the Settings UI
 (each field there also has a **?** tooltip). Two groups point in **opposite directions**
@@ -1403,6 +1424,9 @@ IP allowlist — at least one, or the webhook refuses to run.
 | `SECRET_KEY` | Signs links/sessions and encrypts stored secrets. Auto-generated if unset; environment-only (not in the UI). | — | `auto-generated` |
 | `DATA_DIR` | Directory for persistent state — `secret.key` and the default SQLite DB (§2). | — | `working dir` |
 | `DB_URL` | Database URL (§4). Environment-only. | — | `sqlite:///trellix_decrypt.sqlite3` |
+| `TLS_CERT_FILE` | PEM certificate (chain OK) to serve **HTTPS natively**; blank uses a cert imported in Settings → HTTPS/TLS, else plain HTTP. *Restart to apply.* | — | `—` |
+| `TLS_KEY_FILE` | PEM private key paired with `TLS_CERT_FILE`. *Restart to apply.* | — | `—` |
+| `TLS_KEY_PASSWORD` | Password if `TLS_KEY_FILE` is encrypted. | — | `—` |
 
 ### What triggers the flow
 

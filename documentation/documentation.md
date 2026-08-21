@@ -1386,6 +1386,24 @@ A reverse proxy is still worthwhile in production for **automatic certificate re
 (e.g. Let's Encrypt) and HSTS; native TLS is the simpler path when you manage the cert
 yourself.
 
+### 7.9 Recovery after downtime (reconcile)
+
+If the service is down when EX posts an alert (and EX doesn't redeliver it), that email
+would be missed. To cover this, the app **reconciles** with EX:
+
+- **On startup** it queries EX for recent trigger alerts and creates any case it's
+  missing — **idempotent** (dedup by queue id; skips `_RA` re-detections), so it never
+  duplicates or re-emails, and is safe alongside EX's own notification retries.
+- **Periodically** too, if `RECONCILE_INTERVAL` > 0 (default **1800s** = 30 min;
+  set `0` for startup-only).
+- **On demand** via the **Reconcile** button on the dashboard.
+
+The look-back window is **`RECONCILE_LOOKBACK`** — an EX alerts-query duration, default
+**`48_hours`** (e.g. `1_hour`, `24_hours`, `48_hours`). Both `RECONCILE_LOOKBACK` and
+`RECONCILE_INTERVAL` are **configurable** via the environment or the Settings UI. (This
+covers first-time alerts missed while down; in-flight cases are recovered separately by
+the recheck poll on restart.)
+
 ## 8. Settings reference (in the UI)
 
 Every field has a **?** help icon — hover (or focus) it for an explanation and whether a
@@ -1492,9 +1510,9 @@ IP allowlist — at least one, or the webhook refuses to run.
 | Setting | What it is / what it's for | Req. | Default |
 |---------|--------------------------|:----:|---------|
 | `MAX_PASSWORD_ATTEMPTS` | Wrong-password rounds allowed before giving up. | — | `3` |
-| `RECHECK_DELAY` | Seconds before the first recheck poll after a resubmission. | — | `10` |
-| `RECHECK_INTERVAL` | Steady-state seconds between later recheck polls. | — | `30` |
-| `RECHECK_MAX_ATTEMPTS` | Number of recheck polls before concluding from the list. | — | `12` |
+| `RECHECK_DELAY` | Seconds before the first recheck poll after a resubmission. | — | `5` |
+| `RECHECK_INTERVAL` | Steady-state seconds between later recheck polls (after an eager early ramp). | — | `20` |
+| `RECHECK_MAX_ATTEMPTS` | Number of recheck polls before concluding from the list. | — | `15` |
 | `NOTIFY_MAX_RETRIES` | How many times to retry a failed recipient email. | — | `5` |
 | `NOTIFY_RETRY_INTERVAL` | Seconds between email retry sweeps. | — | `300` |
 | `RESUBMIT_MAX_RETRIES` | How many times to retry a failed EX rescan. | — | `5` |
@@ -1545,7 +1563,7 @@ Sign in at `/`:
 | Webhook returns **401** | Missing/bad Basic auth, or webhook auth not configured. |
 | Webhook returns **403** | Source IP not in `WEBHOOK_IP_ALLOWLIST`. |
 | Everything reads **Released** / **Quarantined** wrongly, or rescan says "queue id not found" | Check the **EX appliance clock**. Per-case lookups use a clock-independent window, but a badly wrong EX clock has caused rescans to fail; fixing the clock resolves it. |
-| A clean email sits in **Re-checking** for a while | The verdict for a released/clean email comes only from the poll (no push). It concludes once the original queue id leaves EX quarantine; the poll is eager (first check ~`RECHECK_DELAY`, default 10s). Lower `RECHECK_DELAY` / `RECHECK_INTERVAL` if you set them high. |
+| A clean email sits in **Re-checking** for a while | The verdict for a released/clean email comes only from the poll (no push). It concludes once the original queue id leaves EX quarantine; the poll is eager — a rapid early ramp (first check ~`RECHECK_DELAY`, default 5s, then every few seconds). Lower `RECHECK_DELAY` / `RECHECK_INTERVAL` if you set them high. |
 | Recipient link says expired | Links TTL-expire (`TOKEN_TTL`); opening one auto-reissues a fresh link if still awaiting a password. |
 | Emails not sending | Check SMTP settings; failed sends go to `Email failed` and are auto-retried and resendable. Check `SMTP_TLS_MODE` and `SMTP_HELO_HOSTNAME` (some servers demand an FQDN). |
 | Rescan keeps failing | Check the EX account's rescan permission and the appliance clock (see above); the rescan is keyed on the **queue id**. Failures retry under `RESUBMIT_MAX_RETRIES`. |

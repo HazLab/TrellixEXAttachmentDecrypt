@@ -96,13 +96,12 @@ class RecheckScheduler:
 
     async def _poll(self, case_id: str) -> None:
         s = self._engine.settings  # read live so settings changes apply
-        interval = max(5, s.recheck_interval)
-        # Eager backoff: a released/clean email sends no push, so poll quickly at first to
-        # catch the release (the original queue id leaving quarantine), then settle to
-        # recheck_interval. Held emails usually resolve even sooner via the _RA push.
-        delays = [max(1, s.recheck_delay), 10, 20]
-        delays += [interval] * s.recheck_max_attempts
-        delays = delays[: max(1, s.recheck_max_attempts)]
+        interval = max(3, s.recheck_interval)
+        # Eager backoff: a released/clean email sends no push, so poll rapidly at first to
+        # catch the release (the original queue id leaving quarantine) within seconds, then
+        # settle to recheck_interval. Held emails usually resolve even sooner via the _RA push.
+        ramp = [max(1, s.recheck_delay), 3, 3, 5, 5, 8, 10, 15]
+        delays = ramp + [interval] * max(0, s.recheck_max_attempts - len(ramp))
         for i, delay in enumerate(delays):
             await asyncio.sleep(delay)
             final = i == len(delays) - 1

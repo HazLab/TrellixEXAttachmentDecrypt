@@ -145,6 +145,25 @@ td.subject, td.attach, td.recipient, td.sender { max-width: 230px; overflow: hid
   color: var(--text); font-size: 14px; }
 .form input:focus { outline: 2px solid var(--brand); border-color: var(--brand); }
 
+/* Themed number steppers — replace the browser's default (ugly, inconsistent) spinner. */
+.form input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+.form input[type=number]::-webkit-outer-spin-button,
+.form input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.num-wrap { position: relative; display: flex; }
+.num-wrap > input { flex: 1 1 auto; min-width: 0; padding-right: 34px; }
+.num-steppers { position: absolute; top: 4px; right: 4px; bottom: 4px; width: 22px;
+  display: flex; flex-direction: column; gap: 2px; }
+.num-steppers button { flex: 1 1 0; display: flex; align-items: center; justify-content: center;
+  padding: 0; border: 1px solid var(--border); border-radius: 6px; background: var(--surface);
+  color: var(--muted); cursor: pointer; transition: background .12s, color .12s, border-color .12s; }
+.num-steppers button:hover { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+.num-steppers button:active { transform: translateY(0.5px); }
+.num-steppers button:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+.num-steppers button::before { content: ""; width: 0; height: 0; border-left: 4px solid transparent;
+  border-right: 4px solid transparent; }
+.num-steppers .up::before { border-bottom: 5px solid currentColor; }
+.num-steppers .down::before { border-top: 5px solid currentColor; }
+
 /* Custom checkboxes — themed, no native chrome (used by .check toggles and .rm) */
 .form input[type=checkbox] {
   appearance: none; -webkit-appearance: none;

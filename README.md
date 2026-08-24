@@ -75,6 +75,12 @@ python -m trellix_decrypt --check
 
 ## Configuration
 
+> **`.env` is optional.** The app boots with no config into **setup mode** —
+> **every setting can be entered and changed from the Settings UI** (`/settings`),
+> stored in the DB (secrets encrypted) and applied live, no restart. Use `.env`
+> (or real environment variables) only if you prefer file-based config; the UI
+> always overrides it.
+
 Read from environment variables or a `.env` you create (**never committed**).
 The full annotated list is in `env.example`; the essentials:
 

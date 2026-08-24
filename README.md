@@ -25,10 +25,23 @@ Deployment details: `DEPLOY.md`. Tech stack: `docs/STACK.md`.
 
 ## Prerequisites
 
-- **Python 3.11+** (only for the source/pip installs — the prebuilt binary needs
-  nothing). SQLite ships with Python; no separate database to install.
-- Network access to your **EX appliance** and an **SMTP** relay.
-- **Docker** — only if you run the container.
+**On the Trellix EX appliance:**
+
+- **EX 11.0.0+** with an **MVX engine** available and the **MTA in block mode**.
+- **Riskware policy 65066** (`PassExtractFailed`) enabled and set to **quarantine**.
+- An **EX API account** with the **Admin** role (not API Analyst).
+- This service registered as an **HTTP notification server** pointing at the webhook.
+
+**On the app host:**
+
+- A runtime for your chosen install: **Python 3.11+** (from source) · **Docker**
+  (container) · **nothing** (prebuilt binary). Linux/macOS/Windows; SQLite is
+  built in — no separate DB.
+- Network reach to the **EX WSAPI** and an **SMTP** relay.
+- A public **HTTPS** hostname (`PUBLIC_BASE_URL`) that EX can POST to at
+  `/webhook/ex-alert` — via a reverse proxy or the built-in TLS.
+
+See `DEPLOY.md` §1 for the full checklist.
 
 ## Quick start
 

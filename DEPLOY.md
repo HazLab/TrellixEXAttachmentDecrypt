@@ -34,6 +34,9 @@ at a **reverse proxy** (now optional). Behind a trusted proxy, set
 
 ### On the app host
 
+- A runtime, depending on how you deploy (see §5–7): **Python ≥ 3.11 + pip** for
+  *from source*, **Docker** for the container, or **nothing** for the prebuilt
+  binary. Runs on Linux, macOS, and Windows. SQLite is built in — no separate DB.
 - A host that can reach the **EX WSAPI** and an **SMTP** relay.
 - A public hostname for the recipient links (`PUBLIC_BASE_URL`), reachable over **HTTPS** —
   either by **importing a certificate** (native TLS; Settings → HTTPS/TLS or

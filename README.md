@@ -1,153 +1,110 @@
 # Trellix EX Attachment Decrypt
 
-A small, modular Python service that automates recovery of **password-protected
-attachments** quarantined by **Trellix Email Security (EX)**.
+A small, modular Python service that recovers **password-protected attachments**
+quarantined by **Trellix Email Security (EX)**.
 
-When EX cannot extract an encrypted attachment (PDF, MS Office document, or
-archive) it raises a *riskware* alert and quarantines the email. This service
-asks the recipient for the password over a one-time link, resubmits the email to
-EX for re-analysis, and tracks the outcome — retrying on wrong passwords and
-stopping on malicious or clean results.
+When EX can't extract an encrypted attachment (PDF, Office doc, or archive) it
+raises a *riskware* alert and quarantines the mail. This service asks the
+recipient for the password over a one-time link, resubmits the mail to EX for
+re-analysis, and tracks the outcome — retrying on wrong passwords, concluding on
+clean or malicious results.
 
 ## Flow
 
-1. EX posts a riskware alert to the webhook (`POST /webhook/ex-alert`).
-2. If the alert's rule ID is a configured *trigger* (failed decryption), the
+1. EX posts an alert to the webhook (`POST /webhook/ex-alert`).
+2. If it matches the configured trigger (encrypted-attachment rule), the
    recipient is emailed a randomized one-time link.
-3. The recipient submits the attachment password.
-4. The service calls the EX resubmission API (passwords accepted) to re-analyze.
-5. A background job rechecks quarantine for the resubmitted message (same queue
-   ID + `_RA` suffix):
-   - failed extraction again → ask the recipient again (up to a retry cap);
-   - malicious, or not quarantined → done.
+3. The recipient submits the password.
+4. The service resubmits to EX with the password (rescan API).
+5. A background poll checks the re-detection (`<queue_id>_RA`): wrong password →
+   ask again (up to the retry cap); quarantined → held; not quarantined → clean,
+   delivered.
 
-See `documentation/documentation.md` for the full architecture, flow, and module
-layout, `DEPLOY.md` for deployment, and `docs/STACK.md` for the tech stack.
+Full architecture and module layout: `documentation/documentation.md`.
+Deployment details: `DEPLOY.md`. Tech stack: `docs/STACK.md`.
 
-## Install
+## Quick start
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
+pip install -e ".[dev]"          # or: pip install -r requirements.txt
+
+cp env.example .env              # edit, OR skip and configure in the UI later
+python -m trellix_decrypt        # start (also available as: trellix-decrypt)
 ```
 
-Dependencies are declared in `pyproject.toml`; a pinned `requirements.txt`
-(runtime) and `requirements-dev.txt` (tests) are also provided for the common
-`pip install -r requirements.txt` workflow. See **Deployment** below for Docker and
-prebuilt executables.
-
-## Configure
-
-Configuration is read from environment variables (or a `.env` file you create —
-**not committed**). Copy the template and fill it in:
-
-```bash
-cp env.example .env   # then edit .env
-```
-
-Full variable list is in `env.example`. Key ones:
-
-```bash
-# Trellix EX appliance
-EX_BASE_URL=https://ex.example.com
-EX_USERNAME=admin              # an EX account with the Admin role
-EX_PASSWORD=...
-EX_VERIFY_TLS=true
-EX_CLIENT_TOKEN=               # optional X-FeClient-Token from Trellix
-
-# Trigger: alert "name" == TRIGGER_ALERT_NAME AND a malware name exactly equals
-# one of TRIGGER_MALWARE_NAMES. The encrypted-attachment policy emits
-# CustomPolicy.MVX.<ext>. (Empty TRIGGER_MALWARE_NAMES disables triggering.)
-TRIGGER_ALERT_NAME=RISKWARE_OBJECT
-TRIGGER_MALWARE_NAMES=CustomPolicy.MVX.pdf,CustomPolicy.MVX.zip,CustomPolicy.MVX.docx,CustomPolicy.MVX.65066.PassExtractFailed
-
-# Outbound mail
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_USERNAME=...
-SMTP_PASSWORD=...
-SMTP_FROM=attachment-help@example.com
-SMTP_TLS_MODE=opportunistic    # opportunistic | starttls | none | ssl(implicit/465)
-
-# Web / links
-PUBLIC_BASE_URL=https://decrypt.example.com   # used to build the one-time link
-SECRET_KEY=change-me                          # signs tokens
-TOKEN_TTL=86400                               # seconds
-
-# Webhook auth — EX posts alerts via HTTP Basic auth; set the same creds on the
-# EX HTTP notification consumer. Optionally also restrict by source IP.
-WEBHOOK_USERNAME=ex-webhook
-WEBHOOK_PASSWORD=change-me
-WEBHOOK_IP_ALLOWLIST=                          # optional, comma-separated
-
-# Flow tuning
-MAX_PASSWORD_ATTEMPTS=3                         # cap 5
-RECHECK_DELAY=120                               # seconds before first recheck
-RECHECK_INTERVAL=60
-RECHECK_MAX_ATTEMPTS=10
-
-# Storage
-DB_URL=sqlite:///trellix_decrypt.sqlite3
-```
-
-## Run
-
-```bash
-python -m trellix_decrypt
-# or
-trellix-decrypt
-```
-
-Before wiring the webhook, validate EX connectivity (logs in + sample
-alerts/quarantine query, exit code 0 = OK):
+The app boots even with no config — it starts in **setup mode**, so you can fill
+everything in from the **Settings** UI instead of `.env`. To sanity-check EX
+connectivity without starting the server (exit 0 = OK):
 
 ```bash
 python -m trellix_decrypt --check
 ```
 
-## Deployment
+## Configuration
 
-Three ways to run it. All persist two things you must keep across restarts — the
-`secret.key` (auto-generated if `SECRET_KEY` is unset) and the database — under
-`DATA_DIR` (default: the working directory).
-
-**Docker (recommended):**
+Read from environment variables or a `.env` you create (**never committed**).
+The full annotated list is in `env.example`; the essentials:
 
 ```bash
-docker compose up -d --build      # data (secret.key + SQLite) lives in the `data` volume
+# Trellix EX appliance
+EX_BASE_URL=https://ex.example.com
+EX_USERNAME=admin                # account with the Admin role
+EX_PASSWORD=...
+EX_VERIFY_TLS=false              # off by default (EX often uses self-signed certs)
+
+# Trigger: alert name == TRIGGER_ALERT_NAME AND a malware name exactly matches
+# one of TRIGGER_MALWARE_NAMES (the encrypted-attachment policy emits
+# CustomPolicy.MVX.<ext>). Empty TRIGGER_MALWARE_NAMES disables triggering.
+TRIGGER_ALERT_NAME=RISKWARE_OBJECT
+TRIGGER_MALWARE_NAMES=CustomPolicy.MVX.pdf,CustomPolicy.MVX.zip,CustomPolicy.MVX.docx
+
+# Outbound mail (the recipient link)
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USERNAME=...
+SMTP_PASSWORD=...
+SMTP_FROM=attachment-help@example.com
+
+# Web + admin UI
+PUBLIC_BASE_URL=https://decrypt.example.com   # builds the one-time link
+UI_PASSWORD=...                               # gates the dashboard/settings
+SECRET_KEY=                                   # blank → auto-generated secret.key
+
+# Webhook auth — set the SAME creds on EX's HTTP notification consumer
+WEBHOOK_USERNAME=ex-webhook
+WEBHOOK_PASSWORD=...
 ```
 
-`docker-compose.yml` sets `DATA_DIR=/data` and mounts a named volume there. Supply
-config via a local `.env` (all optional — the app boots into setup mode and can be
-configured from the UI) or set everything in **Settings**. Pass `SECRET_KEY` as an
-env/secret to manage it yourself; otherwise it is generated once and persisted to the
-volume.
+Retry/recheck cadence (`RECHECK_DELAY`, `RECHECK_RAMP`, `RECHECK_INTERVAL`,
+`RECHECK_MAX_ATTEMPTS`) and `MAX_PASSWORD_ATTEMPTS` have sensible defaults — see
+`env.example`. Anything set here is just the default; **Settings** overrides it
+live (secrets encrypted at rest, no restart).
 
-**Prebuilt executable (no Python needed):** download the Windows/Linux/macOS binary
-from the project's GitHub **Releases** (built by the *Build binaries* workflow on each
-version tag), then:
+## Run in production
 
-```bash
-DATA_DIR=/var/lib/trellix-decrypt ./trellix-decrypt      # Linux/macOS
-```
+All three modes persist two things across restarts — `secret.key` and the
+database — under **`DATA_DIR`** (default: the working directory).
 
-The executable needs a writable `DATA_DIR` for `secret.key` and the SQLite DB.
+- **Docker (recommended):** `docker compose up -d --build` — mounts a `data`
+  volume at `DATA_DIR=/data`. Configure via `.env` or the Settings UI.
+- **Prebuilt binary (no Python):** download the Linux/macOS/Windows executable
+  from GitHub **Releases**, then
+  `DATA_DIR=/var/lib/trellix-decrypt ./trellix-decrypt`.
+- **From source:** `pip install -r requirements.txt && python -m trellix_decrypt`.
 
-**From source:** `pip install -r requirements.txt` then `python -m trellix_decrypt`.
+HTTPS is expected to be terminated by a reverse proxy (or set the built-in TLS
+vars in `env.example`).
 
 ## Admin UI
 
-Once running, open the host root in a browser and sign in with `UI_PASSWORD`:
+Open the host root and sign in with `UI_PASSWORD`:
 
-- **Dashboard** (`/`) — live, searchable list of cases with status badges and the
-  password-failure counter. Click a row for a detail drawer (lifecycle stepper +
-  event timeline). Auto-refreshes every few seconds; dark/light toggle.
-- **Settings** (`/settings`) — edit EX appliance creds, SMTP gateway, trigger,
-  and retry/recheck tuning. Saved settings are stored in the DB (secrets
-  encrypted at rest) and **applied live** — no restart. Env vars are the defaults.
+- **Dashboard** (`/`) — live searchable case list with status badges and a detail
+  drawer (lifecycle stepper + event timeline). Auto-refreshes; dark/light.
+- **Settings** (`/settings`) — EX/SMTP/trigger/retry config, applied live.
 
-The recipient password links (`/p/<token>`), the webhook, and `/healthz` are
-public; everything else requires sign-in.
+Public (no login): `/p/<token>`, `/webhook/ex-alert`, `/healthz`.
 
 ## Test
 
@@ -157,11 +114,12 @@ pytest
 
 ## Notes
 
-- Endpoints/auth/rescan are based on the Trellix API Reference Release 2025.1
-  (PDFs in `docs/`) and centralized in `trellix_decrypt/ex_client.py`. The rescan
-  call is `POST /emailmgmt/quarantine/rescan/<queue_id>` with
+- EX endpoints/auth/rescan follow the Trellix API Reference 2025.1 (PDFs in
+  `docs/`) and live in `trellix_decrypt/ex_client.py`. Rescan is
+  `POST /emailmgmt/quarantine/rescan/<queue_id>` with
   `{"rescan_properties": {"pwd_list": [...]}}`.
-- Passwords are used immediately and never stored in plaintext.
+- Attachment passwords are encrypted at rest, used for the rescan, then purged —
+  never stored in plaintext.
 
 ## License
 

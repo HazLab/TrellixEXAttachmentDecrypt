@@ -29,7 +29,7 @@ Deployment details: `DEPLOY.md`. Tech stack: `docs/STACK.md`.
 
 - **EX 11.0.0+** with an **MVX engine** available and the **MTA in block mode**.
 - **Riskware policy 65066** (`PassExtractFailed`) enabled and set to **quarantine**.
-- An **EX API account** with the **Admin** role (not API Analyst).
+- An **EX API account** with the **Admin** role.
 - This service registered as an **HTTP notification server** pointing at the webhook.
 
 **On the app host:**

@@ -30,7 +30,7 @@ at a **reverse proxy** (now optional). Behind a trusted proxy, set
 - **Riskware policy 65066** (`PassExtractFailed`) **enabled and set to quarantine**.
 - This service registered as an **HTTP notification server** on EX, pointing at the
   webhook (see the "Point EX at the webhook" section of the main guide).
-- An **EX API account** that is an **Admin** user (not API Analyst).
+- An **EX API account** that is an **Admin** user.
 
 ### On the app host
 

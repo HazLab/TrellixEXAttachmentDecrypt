@@ -23,13 +23,32 @@ clean or malicious results.
 Full architecture and module layout: `documentation/documentation.md`.
 Deployment details: `DEPLOY.md`. Tech stack: `docs/STACK.md`.
 
+## Prerequisites
+
+- **Python 3.11+** (only for the source/pip installs — the prebuilt binary needs
+  nothing). SQLite ships with Python; no separate database to install.
+- Network access to your **EX appliance** and an **SMTP** relay.
+- **Docker** — only if you run the container.
+
 ## Quick start
 
+**Linux / macOS:**
+
 ```bash
-python -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"          # or: pip install -r requirements.txt
 
 cp env.example .env              # edit, OR skip and configure in the UI later
+python -m trellix_decrypt        # start (also available as: trellix-decrypt)
+```
+
+**Windows (PowerShell):**
+
+```powershell
+py -m venv .venv; .\.venv\Scripts\Activate.ps1
+pip install -e ".[dev]"          # or: pip install -r requirements.txt
+
+copy env.example .env            # edit, OR skip and configure in the UI later
 python -m trellix_decrypt        # start (also available as: trellix-decrypt)
 ```
 
@@ -89,8 +108,9 @@ database — under **`DATA_DIR`** (default: the working directory).
 - **Docker (recommended):** `docker compose up -d --build` — mounts a `data`
   volume at `DATA_DIR=/data`. Configure via `.env` or the Settings UI.
 - **Prebuilt binary (no Python):** download the Linux/macOS/Windows executable
-  from GitHub **Releases**, then
-  `DATA_DIR=/var/lib/trellix-decrypt ./trellix-decrypt`.
+  from GitHub **Releases**, then run it with a writable `DATA_DIR`:
+  - Linux/macOS: `DATA_DIR=/var/lib/trellix-decrypt ./trellix-decrypt`
+  - Windows (PowerShell): `$env:DATA_DIR="C:\ProgramData\trellix-decrypt"; .\trellix-decrypt.exe`
 - **From source:** `pip install -r requirements.txt && python -m trellix_decrypt`.
 
 HTTPS is expected to be terminated by a reverse proxy (or set the built-in TLS

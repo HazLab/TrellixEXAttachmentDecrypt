@@ -288,7 +288,7 @@ IP allowlist — at least one, or the webhook refuses to run.
 | Setting | What it is / what it's for | Req. | Default |
 |---------|--------------------------|:----:|---------|
 | `EX_BASE_URL` | HTTPS address of your EX appliance. This service calls the EX API here to list quarantine, rescan an email with a password, and fetch alert detail. | Yes | `—` |
-| `EX_USERNAME` | Username of an EX **API account** that is an **Admin** user (not API Analyst); this service logs in with it. | Yes | `—` |
+| `EX_USERNAME` | Username of an EX **API account** that is an **Admin** user; this service logs in with it. | Yes | `—` |
 | `EX_PASSWORD` | Password for the EX API account. | Yes | `—` |
 | `EX_VERIFY_TLS` | Validate the appliance's TLS certificate. Off by default (EX boxes usually present a self-signed cert). | — | `false` |
 | `EX_CLIENT_TOKEN` | Optional extra `X-FeClient-Token` some appliances require alongside the login token. | — | `—` |

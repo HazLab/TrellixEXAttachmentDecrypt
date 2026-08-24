@@ -547,7 +547,7 @@ class FlowEngine:
 
 # --- Alert parsing ----------------------------------------------------------
 # The single place that knows the wire shape of an EX alert. Verified against
-# docs/sample_alert.json (webhook push) and docs/sample_alerts_query.json (API).
+# tests/fixtures/sample_alert.json (webhook push) and sample_alerts_query.json (API).
 # Pure functions — reused by the webhook (ingest) and the EX client (recheck).
 
 

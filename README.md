@@ -21,7 +21,7 @@ clean or malicious results.
    delivered.
 
 Full architecture and module layout: `documentation/documentation.md`.
-Deployment details: `DEPLOY.md`. Tech stack: `docs/STACK.md`.
+Deployment details: `DEPLOY.md`. Tech stack: `STACK.md`.
 
 ## Prerequisites
 

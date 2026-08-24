@@ -1,4 +1,4 @@
-"""Alert parsing tests, including the real sample fixtures under docs/."""
+"""Alert parsing tests, including the real sample fixtures under tests/fixtures/."""
 
 from __future__ import annotations
 
@@ -9,9 +9,9 @@ from trellix_decrypt.domain import RiskwareRules, iter_alerts, parse_alert
 
 from .conftest import TRIGGER_MALWARE_NAME
 
-DOCS = Path(__file__).resolve().parents[1] / "docs"
-WEBHOOK_SAMPLE = json.loads((DOCS / "sample_alert.json").read_text())        # "Alerts" envelope
-QUERY_SAMPLE = json.loads((DOCS / "sample_alerts_query.json").read_text())   # "alert" envelope
+FIXTURES = Path(__file__).resolve().parent / "fixtures"
+WEBHOOK_SAMPLE = json.loads((FIXTURES / "sample_alert.json").read_text())        # "Alerts" envelope
+QUERY_SAMPLE = json.loads((FIXTURES / "sample_alerts_query.json").read_text())   # "alert" envelope
 
 
 def test_parse_flat_alert():

@@ -32,8 +32,10 @@ htmlcov/
 
 locale/*/LC_MESSAGES/django.mo
 
-# Proprietary Trellix API reference PDFs (vendor copyright) — keep local only
-docs/*.pdf
+# Local-only working docs (vendor PDFs, logs, screenshots, scratch notes) — not
+# on GitHub. Real content that belongs in the repo lives elsewhere: test fixtures
+# under tests/fixtures/, the tech-stack note at STACK.md.
+docs/
 
 # Windows/WSL alternate-data-stream cruft
 *:Zone.Identifier

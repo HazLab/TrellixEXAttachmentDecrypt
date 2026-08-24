@@ -54,7 +54,7 @@ def test_parse_alert_detail_extracts_display_fields():
     from pathlib import Path
 
     from trellix_decrypt.domain import parse_alert_detail
-    raw = json.loads(Path("docs/sample alert response by uuid.json").read_text())["alert"][0]
+    raw = json.loads((Path(__file__).resolve().parent / "fixtures" / "sample alert response by uuid.json").read_text())["alert"][0]
     d = parse_alert_detail(raw)
     assert d["name"] == "MALWARE_OBJECT"
     assert d["malicious"] is True

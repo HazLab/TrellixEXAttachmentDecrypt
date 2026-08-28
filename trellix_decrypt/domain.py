@@ -1,5 +1,5 @@
 # Trellix EX Attachment Decrypt
-# Developed by Hazem Aljawhari. Copyright (c) 2026 Hazem Aljawhari. MIT License.
+# Developed by Hazem Aljawhari
 
 """Pure business logic: models, riskware rules, one-time tokens, and the flow engine.
 

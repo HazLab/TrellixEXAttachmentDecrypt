@@ -1,5 +1,5 @@
 # Trellix EX Attachment Decrypt
-# Developed by Hazem Aljawhari. Copyright (c) 2026 Hazem Aljawhari. MIT License.
+# Developed by Hazem Aljawhari
 
 """Background recheck scheduling using lightweight asyncio tasks.
 

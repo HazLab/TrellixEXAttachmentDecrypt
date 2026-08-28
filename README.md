@@ -160,6 +160,6 @@ pytest
 - Attachment passwords are encrypted at rest, used for the rescan, then purged —
   never stored in plaintext.
 
-## License
+## Author
 
-MIT
+Developed by Hazem Aljawhari.

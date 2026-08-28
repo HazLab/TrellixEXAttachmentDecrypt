@@ -1,5 +1,5 @@
 # Trellix EX Attachment Decrypt
-# Developed by Hazem Aljawhari. Copyright (c) 2026 Hazem Aljawhari. MIT License.
+# Developed by Hazem Aljawhari
 
 """Bounce monitoring: poll the sender mailbox over IMAP for delivery-status
 notifications (DSNs) and flip the corresponding case to BOUNCED.

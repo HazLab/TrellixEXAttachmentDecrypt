@@ -1,5 +1,5 @@
 # Trellix EX Attachment Decrypt
-# Developed by Hazem Aljawhari. Copyright (c) 2026 Hazem Aljawhari. MIT License.
+# Developed by Hazem Aljawhari
 
 """Entrypoint: ``python -m trellix_decrypt`` / ``trellix-decrypt`` [--check]."""
 

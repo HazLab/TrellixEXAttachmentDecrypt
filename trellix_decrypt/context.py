@@ -1,5 +1,5 @@
 # Trellix EX Attachment Decrypt
-# Developed by Hazem Aljawhari. Copyright (c) 2026 Hazem Aljawhari. MIT License.
+# Developed by Hazem Aljawhari
 
 """Application context: owns the live FlowEngine and rebuilds its transport
 collaborators (EX client, mailer, rules, tokens) when settings change, so the

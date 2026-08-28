@@ -1,3 +1,6 @@
+# Trellix EX Attachment Decrypt
+# Developed by Hazem Aljawhari. Copyright (c) 2026 Hazem Aljawhari. MIT License.
+
 """Application settings, loaded from environment variables (or a `.env` the operator creates)."""
 
 from __future__ import annotations

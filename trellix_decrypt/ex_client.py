@@ -1,3 +1,6 @@
+# Trellix EX Attachment Decrypt
+# Developed by Hazem Aljawhari. Copyright (c) 2026 Hazem Aljawhari. MIT License.
+
 """Trellix EX (FireEye-lineage) Web Services API client.
 
 Verified against the Trellix API Reference Release 2025.1 PDFs in docs/

@@ -1,3 +1,6 @@
+# Trellix EX Attachment Decrypt
+# Developed by Hazem Aljawhari. Copyright (c) 2026 Hazem Aljawhari. MIT License.
+
 """Background recheck scheduling using lightweight asyncio tasks.
 
 After a resubmission we poll EX quarantine for the ``_RA`` re-quarantine. Absence

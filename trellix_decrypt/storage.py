@@ -1,3 +1,6 @@
+# Trellix EX Attachment Decrypt
+# Developed by Hazem Aljawhari. Copyright (c) 2026 Hazem Aljawhari. MIT License.
+
 """SQLAlchemy persistence: ORM models + repository.
 
 The repository returns detached ORM instances (``expire_on_commit=False``) whose

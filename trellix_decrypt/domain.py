@@ -1,3 +1,6 @@
+# Trellix EX Attachment Decrypt
+# Developed by Hazem Aljawhari. Copyright (c) 2026 Hazem Aljawhari. MIT License.
+
 """Pure business logic: models, riskware rules, one-time tokens, and the flow engine.
 
 This module performs **no I/O of its own** — the FlowEngine drives the flow by

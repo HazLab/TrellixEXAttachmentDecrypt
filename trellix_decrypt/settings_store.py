@@ -1,3 +1,6 @@
+# Trellix EX Attachment Decrypt
+# Developed by Hazem Aljawhari. Copyright (c) 2026 Hazem Aljawhari. MIT License.
+
 """UI-editable settings: env defaults overlaid with DB overrides.
 
 Secrets are encrypted at rest with Fernet, keyed by the deployment SECRET_KEY.

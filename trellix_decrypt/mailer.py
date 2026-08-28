@@ -1,3 +1,6 @@
+# Trellix EX Attachment Decrypt
+# Developed by Hazem Aljawhari. Copyright (c) 2026 Hazem Aljawhari. MIT License.
+
 """SMTP delivery of the password-request email, rendered from Jinja2 templates."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# Trellix EX Attachment Decrypt
+# Developed by Hazem Aljawhari. Copyright (c) 2026 Hazem Aljawhari. MIT License.
+
 """FastAPI app factory: wires public + admin routers, static files, lifespan."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# Trellix EX Attachment Decrypt
+# Developed by Hazem Aljawhari. Copyright (c) 2026 Hazem Aljawhari. MIT License.
+
 """Optional native HTTPS: manage the TLS certificate/key the app serves with.
 
 If a cert + key are present — via ``TLS_CERT_FILE`` / ``TLS_KEY_FILE``, or imported

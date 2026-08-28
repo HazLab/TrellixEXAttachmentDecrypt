@@ -1,3 +1,6 @@
+# Trellix EX Attachment Decrypt
+# Developed by Hazem Aljawhari. Copyright (c) 2026 Hazem Aljawhari. MIT License.
+
 """Fernet helper keyed by the deployment SECRET_KEY (used for settings secrets
 and the transiently-stored attachment password)."""
 

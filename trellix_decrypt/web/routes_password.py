@@ -1,3 +1,6 @@
+# Trellix EX Attachment Decrypt
+# Developed by Hazem Aljawhari. Copyright (c) 2026 Hazem Aljawhari. MIT License.
+
 """Public recipient-facing password form (no auth — recipients aren't admins).
 
 Rate-limited per (client IP + token) so the form can't be hammered; the real

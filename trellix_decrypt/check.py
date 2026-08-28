@@ -1,3 +1,6 @@
+# Trellix EX Attachment Decrypt
+# Developed by Hazem Aljawhari. Copyright (c) 2026 Hazem Aljawhari. MIT License.
+
 """`trellix-decrypt --check`: validate EX connectivity before wiring the webhook.
 
 Logs in and runs a small alerts + quarantine query against the appliance, using

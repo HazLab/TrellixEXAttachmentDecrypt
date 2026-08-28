@@ -1,3 +1,6 @@
+# Trellix EX Attachment Decrypt
+# Developed by Hazem Aljawhari. Copyright (c) 2026 Hazem Aljawhari. MIT License.
+
 """Alert ingestion: a pluggable source interface and the HTTP webhook router.
 
 The pure alert parser lives in ``domain`` (parse_alert / iter_alerts) so it can

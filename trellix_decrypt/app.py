@@ -1,3 +1,6 @@
+# Trellix EX Attachment Decrypt
+# Developed by Hazem Aljawhari. Copyright (c) 2026 Hazem Aljawhari. MIT License.
+
 """Composition root: build settings, wire every layer, return the FastAPI app."""
 
 from __future__ import annotations

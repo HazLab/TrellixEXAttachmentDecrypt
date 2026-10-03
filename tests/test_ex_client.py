@@ -214,3 +214,19 @@ async def test_reauth_on_401():
     assert await client.get_alerts() == {"alert": []}
     assert route.call_count == 2
     await client.aclose()
+
+
+@respx.mock
+async def test_ids_are_quoted_into_a_single_path_segment():
+    router = respx.mock
+    _mock_login(router)
+    route = router.route(url__regex=rf"{BASE}/.*").mock(return_value=httpx.Response(200, json={}))
+    client = _client()
+    await client.rescan("Q1/../../auth/logout?x=1#y", ["pw"])
+    await client.get_alert_by_uuid("../quarantine?all=1")
+    await client.rescan("4hRNLp6Mxmz68Byb_RA", ["pw"])            # a normal id is untouched
+    paths = [c.request.url.raw_path.decode() for c in route.calls]
+    assert paths[0] == ex.EP_QUARANTINE_RESCAN + "/Q1%2F..%2F..%2Fauth%2Flogout%3Fx%3D1%23y"
+    assert paths[1] == ex.EP_ALERT_DETAILS + "/..%2Fquarantine%3Fall%3D1"
+    assert paths[2] == ex.EP_QUARANTINE_RESCAN + "/4hRNLp6Mxmz68Byb_RA"
+    await client.aclose()

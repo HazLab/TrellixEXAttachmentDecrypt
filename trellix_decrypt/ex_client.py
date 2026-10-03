@@ -12,12 +12,20 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta, timezone
+from urllib.parse import quote
 
 import httpx
 
 from .domain import ResubmissionOutcome
 
 log = logging.getLogger(__name__)
+
+
+def _segment(value) -> str:
+    """Percent-encode an id for use as ONE URL path segment. Ids arrive in alert /
+    quarantine data; a ``/``, ``?`` or ``#`` in one must not redirect the call to a
+    different EX endpoint."""
+    return quote(str(value), safe="")
 
 #: The quarantine-list default window is only now()-24h, but a full decrypt cycle
 #: (notify -> recipient submits -> rescan -> re-analysis) can outlast that. A caller can
@@ -134,7 +142,7 @@ class EXClient:
         array), or None if EX has no such alert. Used only for display, never for flow
         decisions."""
         try:
-            resp = await self._request("GET", f"{EP_ALERT_DETAILS}/{uuid}")
+            resp = await self._request("GET", f"{EP_ALERT_DETAILS}/{_segment(uuid)}")
         except EXApiError as exc:
             if exc.status_code == 404 or exc.not_found:  # no such alert
                 return None
@@ -189,7 +197,7 @@ class EXClient:
 
     async def rescan(self, target_id: str, passwords: list[str]) -> dict:
         """Rescan a quarantined email (by queue id or email_uuid), supplying password(s)."""
-        url = f"{EP_QUARANTINE_RESCAN}/{target_id}"
+        url = f"{EP_QUARANTINE_RESCAN}/{_segment(target_id)}"
         payload = {"rescan_properties": {"pwd_list": passwords}}
         resp = await self._request("POST", url, json=payload, headers={"Content-Type": "application/json"})
         return resp.json() if resp.content else {}

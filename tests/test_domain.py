@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 
 from trellix_decrypt.domain import AlertEvent, FlowState, RiskwareRules, TokenService
 
@@ -504,3 +506,27 @@ async def test_reconcile_noop_when_ex_not_configured(engine):
     engine.settings.ex_base_url = ""                      # e.g. setup mode
     res = await engine.reconcile()
     assert res["created"] == 0 and res.get("note") == "EX not configured"
+
+
+@pytest.mark.parametrize("url", ["javascript:alert(1)", "http://ex.test/detection", "data:text/html,x", ""])
+def test_alert_detail_drops_non_https_console_link(url):
+    from trellix_decrypt.domain import parse_alert_detail
+    assert parse_alert_detail({"name": "MALWARE_OBJECT", "alertUrl": url})["alert_url"] is None
+
+
+def test_alert_detail_keeps_https_console_link():
+    from trellix_decrypt.domain import parse_alert_detail
+    url = "https://ex.test/detection/objects?uuid=1"
+    assert parse_alert_detail({"alertUrl": url})["alert_url"] == url
+
+
+def test_plain_text_email_is_not_html_escaped():
+    from types import SimpleNamespace
+
+    from trellix_decrypt.mailer import SMTPMailer
+    env = SMTPMailer(SimpleNamespace())._env
+    ctx = {"link": "https://d.test/p/t", "retry": False,
+           "case": SimpleNamespace(subject="Q3 R&D <draft> report")}
+    assert "Q3 R&D <draft> report" in env.get_template("password_request.txt.j2").render(**ctx)
+    html = env.get_template("password_request.html.j2").render(**ctx)
+    assert "R&amp;D &lt;draft&gt;" in html and "<draft>" not in html   # HTML part still escaped

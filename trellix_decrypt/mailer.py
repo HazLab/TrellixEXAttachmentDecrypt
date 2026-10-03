@@ -11,7 +11,7 @@ from pathlib import Path
 
 import aiosmtplib
 from aiosmtplib.errors import SMTPException, SMTPRecipientsRefused
-from jinja2 import Environment, FileSystemLoader, select_autoescape
+from jinja2 import Environment, FileSystemLoader
 
 log = logging.getLogger(__name__)
 TEMPLATES_DIR = Path(__file__).parent / "templates"
@@ -44,12 +44,18 @@ def _format_smtp_error(exc: Exception) -> str:
     return text
 
 
+def _is_html_template(name: str | None) -> bool:
+    """Autoescape the HTML email only. The plain-text part must not be HTML-escaped
+    (a subject containing ``&`` would otherwise read ``&amp;``)."""
+    return bool(name) and name.endswith((".html", ".html.j2"))
+
+
 class SMTPMailer:
     def __init__(self, settings, templates_dir: Path = TEMPLATES_DIR):
         self._s = settings
         self._env = Environment(
             loader=FileSystemLoader(str(templates_dir)),
-            autoescape=select_autoescape(["html", "j2"]),
+            autoescape=_is_html_template,
         )
 
     async def send_password_request(self, recipients, link: str, case, retry: bool = False) -> None:

@@ -170,6 +170,13 @@ def is_pre_extraction_alert(detail: dict) -> bool:
     return any(marker in n for n in names for marker in _ENCRYPTED_MARKERS)
 
 
+def _https_url(value: str | None) -> str | None:
+    """Keep a console link only if it is an ``https://`` URL. The value comes from alert
+    data and ends up in an ``href``, so any other scheme (``javascript:``, ``data:``,
+    plain ``http:``) is dropped rather than rendered."""
+    return value if value and value.strip().lower().startswith("https://") else None
+
+
 def parse_alert_detail(alert: dict) -> dict:
     """Compact, display-only view of one raw EX alert (from GET /alerts/alert/<uuid>).
 
@@ -183,7 +190,7 @@ def parse_alert_detail(alert: dict) -> dict:
         "severity": _text(alert.get("severity")),
         "action": _text(alert.get("action")),
         "occurred": _text(_first(alert.get("occurred"), alert.get("attackTime"), alert.get("attack-time"))),
-        "alert_url": _text(_first(alert.get("alertUrl"), alert.get("alert-url"))),
+        "alert_url": _https_url(_text(_first(alert.get("alertUrl"), alert.get("alert-url")))),
         "queue_id": _text(_first(
             _dig(alert, "smtpMessage", "queueId"), _dig(alert, "smtp-message", "queue-id"),
             alert.get("queueId"), alert.get("queue-id"))),

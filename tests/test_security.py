@@ -202,3 +202,22 @@ def test_security_headers_on_every_response():
 def test_api_explorer_is_not_exposed(path):
     client, _ = _client()
     assert client.get(path).status_code == 404
+
+
+def test_webhook_chunked_body_over_cap_rejected():
+    # No Content-Length to check up front: the cap must hold while streaming.
+    client, _ = _client(max_request_bytes=50)
+
+    def chunks():
+        for _ in range(20):
+            yield b'{"pad": "' + b"z" * 20 + b'"}'
+
+    r = client.post("/webhook/ex-alert", content=chunks(), auth=("exuser", "expass"),
+                    headers={"Content-Type": "application/json"})
+    assert r.status_code == 413
+
+
+def test_webhook_body_under_cap_still_accepted():
+    client, _ = _client()
+    r = client.post("/webhook/ex-alert", json={"Alerts": []}, auth=("exuser", "expass"))
+    assert r.status_code == 200 and r.json()["received"] is True

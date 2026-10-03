@@ -80,10 +80,7 @@ def build_webhook_router(ctx) -> APIRouter:
             if client_ip not in s.webhook_ip_allowlist:
                 raise HTTPException(status_code=403, detail="ip not allowed")
 
-        # Cap the body before parsing (cheap DoS guard against an over-large POST).
-        body = await request.body()
-        if len(body) > s.max_request_bytes:
-            raise HTTPException(status_code=413, detail="request body too large")
+        body = await _read_capped(request, s.max_request_bytes)
         try:
             payload = json.loads(body)
         except (ValueError, UnicodeDecodeError):
@@ -112,6 +109,23 @@ def build_webhook_router(ctx) -> APIRouter:
         return {"received": True, "handled": handled}
 
     return router
+
+
+async def _read_capped(request: Request, limit: int) -> bytes:
+    """Read the request body, refusing anything over ``limit`` bytes WITHOUT buffering
+    it first: reject on a declared Content-Length, then stop mid-stream the moment the
+    cap is passed (covers chunked uploads and a lying Content-Length)."""
+    too_large = HTTPException(status_code=413, detail="request body too large")
+    declared = request.headers.get("content-length", "")
+    if declared.isdigit() and int(declared) > limit:
+        raise too_large
+    chunks, size = [], 0
+    async for chunk in request.stream():
+        size += len(chunk)
+        if size > limit:
+            raise too_large
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 
 def _dump(obj, limit: int = 4000) -> str:

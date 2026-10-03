@@ -200,7 +200,7 @@ function renderAlertDetails(r) {
         ${a.uuid ? `<dt>Alert UUID</dt><dd class="mono">${esc(a.uuid)}</dd>` : ""}
       </dl>
       ${mal ? `<div class="ax-mals">${mal}</div>` : ""}
-      ${a.alert_url ? `<a class="ax-link" href="${esc(a.alert_url)}" target="_blank" rel="noopener">Open in EX console ↗</a>` : ""}
+      ${/^https:\/\//i.test(a.alert_url || "") ? `<a class="ax-link" href="${esc(a.alert_url)}" target="_blank" rel="noopener">Open in EX console ↗</a>` : ""}
     </div>`;
   }).join("");
 }

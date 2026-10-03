@@ -11,14 +11,22 @@ is fully unit-testable with fakes.
 from __future__ import annotations
 
 import asyncio
-import dataclasses
 import enum
 import hashlib
 import logging
 
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
+from .alerts import (  # noqa: F401 — AlertEvent/iter_alerts/parse_alert re-exported for callers
+    AlertEvent,
+    is_pre_extraction_alert,
+    iter_alerts,
+    parse_alert,
+    parse_alert_detail,
+    split_addrs,
+)
 from .crypto import fernet
+from .reconcile import run_reconcile
 
 log = logging.getLogger(__name__)
 
@@ -36,6 +44,21 @@ class FlowState(str, enum.Enum):
     NOTIFY_FAILED = "notify_failed"   # couldn't hand the email to the mail server (SMTP error)
     BOUNCED = "bounced"               # accepted by the server then bounced (DSN)
     RESUBMIT_FAILED = "resubmit_failed"  # password captured, but EX rescan failed (retryable)
+
+
+class SubmitStatus(str, enum.Enum):
+    """Result of a recipient's password submission (``FlowEngine.handle_password``)."""
+    OK = "ok"
+    INVALID_OR_EXPIRED = "invalid_or_expired"
+    NOT_FOUND = "not_found"
+    NOT_AWAITING = "not_awaiting"
+
+
+class ResubmissionOutcome(str, enum.Enum):
+    """What the quarantine list says about a resubmitted email (the recheck poll)."""
+    HELD = "held"          # the ``_RA`` re-quarantine is present
+    PENDING = "pending"    # original still quarantined, no ``_RA`` yet — keep polling
+    RELEASED = "released"  # neither remains: delivered
 
 
 #: States from which a recheck poll may still run.
@@ -73,25 +96,6 @@ def _detection_summary(event: "AlertEvent | None") -> str:
     return " ".join(parts)
 
 
-@dataclasses.dataclass
-class AlertEvent:
-    """Normalized EX alert. One quarantined email can list several recipients."""
-
-    queue_id: str
-    recipients: list[str] = dataclasses.field(default_factory=list)
-    alert_name: str | None = None   # top-level alert "name", e.g. "RISKWARE_OBJECT"
-    malicious: bool = False          # alert "malicious" == "yes"
-    sender: str | None = None
-    subject: str | None = None
-    malware_names: list[str] = dataclasses.field(default_factory=list)
-    raw: dict = dataclasses.field(default_factory=dict)
-
-    @property
-    def recipient(self) -> str:
-        """Primary recipient (first To); the full set is ``recipients``."""
-        return self.recipients[0] if self.recipients else ""
-
-
 class RiskwareRules:
     """Decides whether an alert should trigger the recovery flow.
 
@@ -110,6 +114,16 @@ class RiskwareRules:
     def _canon(value) -> str:
         """Canonicalize an alert name so RISKWARE_OBJECT == riskware-object."""
         return _canon_name(value)
+
+    @property
+    def alert_name(self) -> str:
+        """Canonical alert name an alert must carry to trigger ('' = any)."""
+        return self._alert_name
+
+    @property
+    def malware_names(self) -> list[str]:
+        """Lower-cased malware names that trigger the flow, sorted."""
+        return sorted(self._names)
 
     def name_matches(self, name) -> bool:
         """Exact (case-insensitive) match of one malware name against the triggers."""
@@ -263,17 +277,17 @@ class FlowEngine:
         return case
 
     async def handle_password(self, token: str, password: str):
-        """Handle a password submission. Returns (case_or_None, status_string)."""
+        """Handle a password submission. Returns (case_or_None, SubmitStatus)."""
         # Accept a just-expired but validly-signed token (the recipient is actively
         # submitting); single use is still enforced by the case state below.
         case_id = self.tokens.peek(token)
         if not case_id:
-            return None, "invalid_or_expired"
+            return None, SubmitStatus.INVALID_OR_EXPIRED
         case = self.repo.get_case(case_id)
         if case is None:
-            return None, "not_found"
+            return None, SubmitStatus.NOT_FOUND
         if case.state != FlowState.AWAITING_PASSWORD:
-            return case, "not_awaiting"
+            return case, SubmitStatus.NOT_AWAITING
 
         # The recipient's part is done the moment we have the password. Store it
         # (encrypted), acknowledge immediately, and do the EX rescan in the
@@ -281,7 +295,7 @@ class FlowEngine:
         self.repo.store_password(case, self._fernet.encrypt(password.encode()).decode())
         self.repo.set_state(case, FlowState.PASSWORD_SUBMITTED, "password received")
         self.scheduler.schedule_resubmit(case.id)
-        return case, "ok"
+        return case, SubmitStatus.OK
 
     async def resubmit_case(self, case_id: str):
         """Background step: rescan the quarantined email in EX with the held password.
@@ -306,9 +320,11 @@ class FlowEngine:
         # Diagnostic (no plaintext): lets us verify the exact bytes we hand EX match the
         # password that works typed into the appliance. A len != stripped_len means a
         # stray space/newline slipped in; compare sha8 with `printf %s 'pw' | sha256sum`.
-        fp = hashlib.sha256(password.encode()).hexdigest()[:8]
-        log.info("rescan case %s target=%s pwd(len=%d stripped_len=%d sha8=%s)",
-                 case.id, target, len(password), len(password.strip()), fp)
+        # DEBUG only: even a truncated hash helps confirm guesses, so it stays out of normal logs.
+        if log.isEnabledFor(logging.DEBUG):
+            fp = hashlib.sha256(password.encode()).hexdigest()[:8]
+            log.debug("rescan case %s target=%s pwd(len=%d stripped_len=%d sha8=%s)",
+                      case.id, target, len(password), len(password.strip()), fp)
         try:
             await self.ex.rescan(target, [password])
         except Exception as exc:  # noqa: BLE001 — record + count for the retry cap, don't crash
@@ -364,11 +380,11 @@ class FlowEngine:
         if case.state == FlowState.RESUBMITTED:
             self.repo.set_state(case, FlowState.RECHECKING, "awaiting re-detection")
         outcome = await self.ex.resubmission_outcome(case.queue_id, case.sender, case.subject)
-        if outcome == "held":
+        if outcome == ResubmissionOutcome.HELD:
             log.info("recheck case %s: concluded HELD (early _RA present)", case.id)
             self._finish(case, True)
             return True
-        if outcome == "released":
+        if outcome == ResubmissionOutcome.RELEASED:
             log.info("recheck case %s: concluded RELEASED (original left quarantine)", case.id)
             self._finish(case, False)
             return True
@@ -386,100 +402,10 @@ class FlowEngine:
         for case_id in self.repo.list_resubmit_pending_ids(self.settings.resubmit_max_retries):
             self.scheduler.schedule_resubmit(case_id)
 
-    async def _quarantine_trigger_event(self, entry: dict) -> "AlertEvent | None":
-        """For a held quarantine entry, fetch its referenced alerts (full detail by UUID)
-        and return the first one that matches the trigger rule — the event we'd have gotten
-        from the webhook. None if the entry references no matching trigger alert (e.g. a
-        malware-object quarantine, or an entry with no ``alert_uuids`` linkage)."""
-        for uuid in _entry_alert_uuids(entry):
-            detail = await self.ex.get_alert_by_uuid(uuid)
-            if not detail:
-                continue
-            ev = parse_alert(detail)
-            if self.rules.matches(ev):
-                return ev
-        return None
-
     async def reconcile(self, duration: str | None = None) -> dict:
-        """Backfill trigger cases missed while the app was down — **quarantine-first**.
-
-        The authoritative set of emails that need recovery is what EX is *actually holding*,
-        so we start from the quarantine list (a riskware rule can alert without quarantining,
-        so an alerts-only scan risks emailing about already-delivered mail). For each held,
-        non-``_RA`` entry we have no case for, we confirm the trigger from the entry's own
-        alerts (fetched by UUID → full malware detail) and start the flow.
-
-        A **secondary alerts sweep** then covers the rare held entry whose quarantine record
-        carries no ``alert_uuids`` linkage: it matches trigger alerts by queue id but only
-        for emails that are *also in the held set*, so it never fires on alert-but-allow mail.
-
-        **Idempotent**: dedups by queue id and skips ``_RA`` re-detections (owned by the
-        recheck poll), so it is safe to run repeatedly and alongside EX's own notification
-        retries — never duplicating or re-emailing. The quarantine window is clock-independent
-        (see ``list_held``); ``duration`` bounds only the fallback alerts query."""
-        if not self.settings.ex_base_url:
-            return {"held": 0, "created": 0, "already_known": 0, "skipped": 0,
-                    "note": "EX not configured"}
-        duration = duration or self.settings.reconcile_lookback
-        created = already = 0
-        handled: set[str] = set()  # candidate queue ids created or confirmed-known this run
-
-        # --- Primary: quarantine-first ---
-        try:
-            held = await self.ex.list_held()
-        except Exception:
-            log.warning("reconcile: quarantine list failed", exc_info=True)
-            held = []
-        held_qids = {q for e in held if (q := _entry_queue_id(e)) and not q.endswith("_RA")}
-        log.info("reconcile: %d held entr(y/ies), %d candidate queue id(s)",
-                 len(held), len(held_qids))
-        for entry in held:
-            qid = _entry_queue_id(entry)
-            if not qid or qid.endswith("_RA") or qid in handled:
-                continue
-            if self.repo.find_case_by_queue_id(qid) is not None:
-                already += 1
-                handled.add(qid)
-                continue
-            ev = await self._quarantine_trigger_event(entry)
-            if ev is None or not ev.recipient:
-                log.debug("reconcile skip held queue=%r (no matching trigger alert / recipient)", qid)
-                continue  # left unhandled → counted as skipped below (fallback may still catch it)
-            handled.add(qid)
-            if await self.handle_alert(ev) is not None:  # creates the case + emails
-                created += 1
-
-        # --- Fallback: alerts sweep, constrained to still-uncreated held emails ---
-        remaining = held_qids - handled
-        if remaining:
-            try:
-                raw = await self.ex.get_alerts(duration=duration, info_level="extended")
-            except Exception:
-                log.warning("reconcile: extended alerts query failed, retrying at default level",
-                            exc_info=True)
-                raw = await self.ex.get_alerts(duration=duration)
-            for a in iter_alerts(raw):
-                ev = parse_alert(a)
-                if ev.queue_id in handled or ev.queue_id not in remaining:
-                    continue
-                if not ev.malware_names:  # some info_levels trim malware from the list row
-                    uuid = _text(a.get("uuid"))
-                    detail = await self.ex.get_alert_by_uuid(uuid) if uuid else None
-                    if detail:
-                        ev = parse_alert(detail)
-                if not ev.recipient or not self.rules.matches(ev):
-                    continue
-                handled.add(ev.queue_id)
-                if await self.handle_alert(ev) is not None:
-                    created += 1
-
-        # Held candidates we neither created nor already had a case for (no confirmable
-        # trigger, or missing recipient) — reported for visibility.
-        skipped = len(held_qids - handled)
-        summary = {"held": len(held), "created": created,
-                   "already_known": already, "skipped": skipped}
-        log.info("reconcile: %s", summary)
-        return summary
+        """Backfill trigger cases missed while the app was down (quarantine-first,
+        idempotent). See ``reconcile.run_reconcile`` for the algorithm."""
+        return await run_reconcile(self, duration)
 
     async def resend(self, case_id: str):
         """Operator-triggered re-send. Returns the send result, or None if the
@@ -505,7 +431,7 @@ class FlowEngine:
         # Hide the pre-password-extraction trigger alert on the ORIGINAL record — it's the
         # encrypted-attachment detection that landed the email in the app, so it's redundant
         # in the drawer. Keep any _RA re-detection (a wrong-password re-encryption is useful).
-        return [d for d in details if not _is_pre_extraction_alert(d)]
+        return [d for d in details if not is_pre_extraction_alert(d)]
 
     async def retry_failed_notifications(self):
         """Background sweep: re-attempt emails for NOTIFY_FAILED cases under the cap."""
@@ -546,173 +472,3 @@ class FlowEngine:
         detail = "password link sent" + (" (retry)" if retry else "")
         self.repo.set_state(case, FlowState.AWAITING_PASSWORD, f"{detail} — {note}" if note else detail)
         return True
-
-
-# --- Alert parsing ----------------------------------------------------------
-# The single place that knows the wire shape of an EX alert. Verified against
-# tests/fixtures/sample_alert.json (webhook push) and sample_alerts_query.json (API).
-# Pure functions — reused by the webhook (ingest) and the EX client (recheck).
-
-
-def _dig(obj, *path):
-    """Walk dict keys / list indices, returning None if any step is missing."""
-    cur = obj
-    for key in path:
-        if isinstance(cur, dict):
-            cur = cur.get(key)
-        elif isinstance(cur, list) and isinstance(key, int) and -len(cur) <= key < len(cur):
-            cur = cur[key]
-        else:
-            return None
-    return cur
-
-
-def _first(*values):
-    for value in values:
-        if value not in (None, ""):
-            return value
-    return None
-
-
-def _text(value):
-    """Resolve a field that may be a scalar, a {"value": ...} wrapper, or a list of either.
-
-    The HTTP notification push wraps element text in {"value": ...}; the alerts
-    query returns plain scalars. This normalizes both.
-    """
-    if isinstance(value, list):
-        value = value[0] if value else None
-    if isinstance(value, dict):
-        value = value.get("value")
-    return None if value in (None, "") else str(value)
-
-
-def split_addrs(value) -> list[str]:
-    """Split a recipients string ('a@x, b@x; c@x') into a de-duplicated list,
-    order preserved. Used to unpack the stored, comma-joined recipient column."""
-    out, seen = [], set()
-    for part in str(value or "").replace(";", ",").split(","):
-        addr = part.strip()
-        if addr and addr not in seen:
-            seen.add(addr)
-            out.append(addr)
-    return out
-
-
-def _text_list(value) -> list[str]:
-    """Normalize an EX recipient field to a list of addresses. Handles a scalar, a
-    {"value": ...} wrapper, a list of either, and a single string carrying several
-    comma/semicolon-separated addresses — covering both wire formats."""
-    items = value if isinstance(value, list) else [value]
-    out, seen = [], set()
-    for item in items:
-        if isinstance(item, dict):
-            item = item.get("value")
-        for addr in split_addrs(item):
-            if addr not in seen:
-                seen.add(addr)
-                out.append(addr)
-    return out
-
-
-def _is_yes(value) -> bool:
-    return str(value or "").strip().lower() in ("yes", "true", "1")
-
-
-def _malware_entries(alert: dict) -> list[dict]:
-    entries = _first(
-        _dig(alert, "explanation", "malware-detected", "malware"),   # push (hyphenated)
-        _dig(alert, "explanation", "malwareDetected", "malware"),     # query (camelCase)
-        alert.get("malware"),
-    ) or []
-    if isinstance(entries, dict):
-        entries = [entries]
-    return [e for e in entries if isinstance(e, dict)]
-
-
-def _entry_queue_id(entry: dict) -> str:
-    """Queue id of a raw EX quarantine list entry (camelCase or snake_case)."""
-    return _text(_first(entry.get("queue_id"), entry.get("queueId"))) or ""
-
-
-def _entry_alert_uuids(entry: dict) -> list[str]:
-    """Alert UUIDs a quarantine entry references (may be several; may be absent)."""
-    return [str(u) for u in (entry.get("alert_uuids") or entry.get("alertUuids") or []) if u]
-
-
-def iter_alerts(payload: dict) -> list[dict]:
-    """EX wraps alerts under ``Alerts``/``alerts``/``alert`` (or a bare alert); accept all."""
-    alerts = payload.get("Alerts") or payload.get("alerts") or payload.get("alert") or payload
-    return alerts if isinstance(alerts, list) else [alerts]
-
-
-def parse_alert(alert: dict) -> AlertEvent:
-    """Map one raw EX alert dict to an AlertEvent.
-
-    Handles both wire formats: the alerts-query JSON (camelCase scalars, e.g.
-    ``queueId``, ``dst.smtpTo``) and the HTTP notification push (hyphenated keys
-    with ``{"value": ...}`` wrappers, e.g. ``queue-id``, ``dst.smtp-to.value``).
-    """
-    return AlertEvent(
-        queue_id=_text(_first(
-            alert.get("queue-id"), alert.get("queueId"), alert.get("queue_id"),
-            _dig(alert, "smtp-message", "queue-id"), _dig(alert, "smtpMessage", "queueId"),
-        )) or "",
-        recipients=_text_list(_first(
-            _dig(alert, "dst", "smtp-to"), _dig(alert, "dst", "smtpTo"),
-            _dig(alert, "smtpMessage", "rcptTo"), alert.get("recipient"), alert.get("rcpt_to"),
-        )),
-        alert_name=_text(_first(alert.get("name"), alert.get("alert_name"))),
-        malicious=_is_yes(_text(alert.get("malicious"))),
-        sender=_text(_first(
-            _dig(alert, "src", "smtp-mail-from"), _dig(alert, "src", "smtpMailFrom"),
-            _dig(alert, "smtpMessage", "mailFrom"), alert.get("sender"),
-        )),
-        subject=_text(_first(
-            _dig(alert, "smtp-message", "subject"), _dig(alert, "smtpMessage", "subject"),
-            alert.get("subject"),
-        )),
-        malware_names=[name for m in _malware_entries(alert)
-                       if (name := _text(m.get("name")) or _text(m.get("malware_name"))) is not None],
-        raw=alert,
-    )
-
-
-#: Marker substrings for the encrypted-attachment (pre-password-extraction) detection.
-_ENCRYPTED_MARKERS = ("custompolicy.mvx", "passextractfailed", "password_extraction_failed")
-
-
-def _is_pre_extraction_alert(detail: dict) -> bool:
-    """True for the ORIGINAL encrypted-attachment trigger alert (why the email landed in
-    the app) — hidden from the drawer as redundant. An ``_RA`` re-detection is NOT hidden."""
-    qid = detail.get("queue_id") or ""
-    if qid.endswith("_RA"):
-        return False
-    names = [(m.get("name") or "").lower() for m in detail.get("malware") or []]
-    return any(marker in n for n in names for marker in _ENCRYPTED_MARKERS)
-
-
-def parse_alert_detail(alert: dict) -> dict:
-    """Compact, display-only view of one raw EX alert (from GET /alerts/alert/<uuid>).
-
-    Pure. Surfaces the fields worth showing in the case drawer — alert type/verdict,
-    severity/action, when it occurred, the console link, and the detected malware
-    (name + hashes). Tolerates both the camelCase query shape and the hyphenated push."""
-    return {
-        "uuid": _text(alert.get("uuid")),
-        "name": _text(_first(alert.get("name"), alert.get("alert_name"))),
-        "malicious": _is_yes(_text(alert.get("malicious"))),
-        "severity": _text(alert.get("severity")),
-        "action": _text(alert.get("action")),
-        "occurred": _text(_first(alert.get("occurred"), alert.get("attackTime"), alert.get("attack-time"))),
-        "alert_url": _text(_first(alert.get("alertUrl"), alert.get("alert-url"))),
-        "queue_id": _text(_first(
-            _dig(alert, "smtpMessage", "queueId"), _dig(alert, "smtp-message", "queue-id"),
-            alert.get("queueId"), alert.get("queue-id"))),
-        "malware": [
-            {"name": _text(m.get("name")),
-             "sha256": _text(_first(m.get("sha256"), m.get("sha-256"))),
-             "md5": _text(_first(m.get("md5Sum"), m.get("md5sum"), m.get("md5")))}
-            for m in _malware_entries(alert)
-        ],
-    }

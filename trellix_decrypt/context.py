@@ -8,6 +8,8 @@ settings UI can apply changes without a restart.
 
 from __future__ import annotations
 
+import secrets
+
 from .bounce import BounceMonitor
 from .domain import FlowEngine, RiskwareRules, TokenService
 from .ex_client import EXClient
@@ -35,6 +37,9 @@ class AppContext:
             s = store.effective_settings()
             ex, mailer, tokens, rules = _build_components(s)
             self.engine = FlowEngine(repo, ex, mailer, tokens, rules, s, scheduler)
+        #: One-time token gating first-run setup mode (no admin password yet). Logged at
+        #: startup; regenerated on every start.
+        self.setup_token = secrets.token_urlsafe(24)
         scheduler.bind(self.engine)
         self.bounce_monitor = BounceMonitor(self.engine)
 

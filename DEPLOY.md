@@ -231,7 +231,10 @@ bootstrap; once the admin password is saved, normal sign-in is enforced.
 ## 9. First-run flow
 
 1. Start the service (any method) with `DATA_DIR` set.
-2. Open `http://<host>:8080/` — you are redirected to **Settings** (setup mode).
+2. Open the **one-time setup link** printed in the startup log
+   (`SETUP MODE … http://<this-host>:8080/settings?setup=<token>`; with Docker:
+   `docker compose logs`). While no admin password exists, Settings is reachable only
+   through that link — a new token is issued on every start.
 3. Fill in the **admin password** plus the required fields above; **Save**.
 4. Sign in with the admin password. Register this service as an EX **HTTP
    notification** destination (main guide, "Point EX at the webhook").

@@ -126,7 +126,12 @@ const LABELS = {
 async function api(path, opts) {
   const r = await fetch(path, opts);
   if (r.status === 401) { window.location = "/login"; throw new Error("unauth"); }
-  if (!r.ok) throw new Error("HTTP " + r.status);
+  if (!r.ok) {
+    // Surface the server's reason (e.g. which setting failed validation), not just a code.
+    let detail = "";
+    try { detail = (await r.json()).detail || ""; } catch (e) { /* non-JSON error body */ }
+    throw new Error(typeof detail === "string" && detail ? detail : "HTTP " + r.status);
+  }
   return r.json();
 }
 

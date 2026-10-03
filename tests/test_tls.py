@@ -75,8 +75,9 @@ def test_tls_import_endpoint(tmp_path):
     from trellix_decrypt.web import create_app
 
     from .conftest import make_context
-    ctx = make_context(ui_password="", data_dir=str(tmp_path))   # setup mode → TLS API open
+    ctx = make_context(ui_password="", data_dir=str(tmp_path))   # setup mode → TLS API open…
     client = TestClient(create_app(ctx))
+    client.get(f"/settings?setup={ctx.setup_token}")             # …to the holder of the setup token
     assert client.get("/api/tls").json()["active"] is False
     cert_pem, key_pem, _, _ = _self_signed()
     r = client.post("/api/tls", data={"mode": "pem"},
@@ -139,7 +140,8 @@ def test_env_paths_take_precedence(tmp_path):
     # explicit TLS_CERT_FILE/TLS_KEY_FILE win over the DATA_DIR/tls upload location
     cert_pem, key_pem, _, _ = _self_signed()
     cf, kf = tmp_path / "c.pem", tmp_path / "k.pem"
-    cf.write_bytes(cert_pem); kf.write_bytes(key_pem)
+    cf.write_bytes(cert_pem)
+    kf.write_bytes(key_pem)
     s = _Settings(tmp_path)
     s.tls_cert_file, s.tls_key_file = str(cf), str(kf)
     assert tls.active_paths(s) == (str(cf), str(kf))

@@ -66,7 +66,10 @@ python -m trellix_decrypt        # start (also available as: trellix-decrypt)
 ```
 
 The app boots even with no config — it starts in **setup mode**, so you can fill
-everything in from the **Settings** UI instead of `.env`. To sanity-check EX
+everything in from the **Settings** UI instead of `.env`. Until an admin password
+exists, Settings opens only through the **one-time setup link** printed in the
+startup log (`…/settings?setup=<token>`), so nobody else on the network can claim
+the install first. To sanity-check EX
 connectivity without starting the server (exit 0 = OK):
 
 ```bash

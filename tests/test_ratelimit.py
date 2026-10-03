@@ -46,8 +46,29 @@ def test_client_ip_uses_socket_peer_by_default():
 
 
 def test_client_ip_honors_forwarded_when_trusted():
-    assert client_ip(_req(host="9.9.9.9", xff="1.1.1.1, 2.2.2.2"), trust_forwarded_for=True) == "1.1.1.1"
+    # The right-most entry is the one our proxy appended; entries to its left are
+    # client-supplied and spoofable, so they must not key a rate limit.
+    assert client_ip(_req(host="9.9.9.9", xff="1.1.1.1, 2.2.2.2"), trust_forwarded_for=True) == "2.2.2.2"
+    assert client_ip(_req(host="9.9.9.9", xff="2.2.2.2"), trust_forwarded_for=True) == "2.2.2.2"
 
 
 def test_client_ip_falls_back_when_no_forwarded_header():
     assert client_ip(_req(host="9.9.9.9"), trust_forwarded_for=True) == "9.9.9.9"
+
+
+def test_idle_keys_are_evicted():
+    from trellix_decrypt.web import ratelimit
+    rl = RateLimiter(limit=5, window_seconds=10)
+    for i in range(ratelimit._SWEEP_EVERY - 1):
+        rl.allow(f"k{i}", now=0)                 # a flood of one-shot keys (e.g. random tokens)
+    rl.allow("fresh", now=100)                   # the sweep runs; every old key has aged out
+    assert set(rl._hits) == {"fresh"}
+
+
+def test_key_count_is_capped(monkeypatch):
+    from trellix_decrypt.web import ratelimit
+    monkeypatch.setattr(ratelimit, "_MAX_KEYS", 100)
+    rl = RateLimiter(limit=5, window_seconds=10_000)
+    for i in range(1000):
+        rl.allow(f"k{i}", now=i)                 # all still in-window: only the cap can bound it
+    assert len(rl._hits) <= 100

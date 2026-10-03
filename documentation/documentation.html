@@ -476,14 +476,14 @@ td code,th code{font-size:12.5px}
 <p>A <strong>successful</strong> login also resets that IP&#x27;s counter immediately, so a legitimate admin who simply mistyped is not penalised once they get it right.</p>
 <blockquote>Because there is no durable lockout state, there is no &quot;unlock&quot; button and no risk of bricking the admin account. The admin password itself is set via config/GUI, not recoverable-by-email; if it is <em>forgotten</em> (not locked out), reset it by setting <code>UI_PASSWORD</code> in the environment and restarting.</blockquote>
 <h3 id="06_security-reverse-proxies-and-the-client-ip">Reverse proxies and the client IP</h3>
-<p>Behind a proxy the socket peer is the proxy, so all requests would share one IP. Set <code>TRUST_FORWARDED_FOR=true</code> <strong>only</strong> when actually behind a trusted proxy that sets <code>X-Forwarded-For</code>; the service then keys limits on the left-most forwarded address. Leaving it off is safe (the header is otherwise spoofable and would defeat the limit).</p>
+<p>Behind a proxy the socket peer is the proxy, so all requests would share one IP. Set <code>TRUST_FORWARDED_FOR=true</code> <strong>only</strong> when actually behind a trusted proxy that sets <code>X-Forwarded-For</code>; the service then keys limits on the <strong>right-most</strong> forwarded address (the one your proxy appended — entries to its left are client-supplied and spoofable). Leaving it off is safe (the header is otherwise spoofable and would defeat the limit).</p>
 <h2 id="06_security-first-run-setup-mode">First-run setup mode</h2>
 <p>Until the service <code>is_configured()</code> (EX creds, SMTP, public URL, admin password, and webhook auth all present) it runs in <strong>setup mode</strong>:</p>
 <ul>
 <li>The webhook returns <strong>503</strong> — EX is told to retry rather than have alerts silently dropped.</li>
-<li>While <strong>no admin password exists</strong>, <code>/settings</code> and the settings API are reachable <strong>without auth</strong> — the only way to bootstrap the first password. The instant a password is set, setup mode ends and normal auth is enforced (the UI redirects to sign-in).</li>
+<li>While <strong>no admin password exists</strong>, <code>/settings</code> and the settings API are reachable without a sign-in — the only way to bootstrap the first password — but <strong>only through the one-time setup link</strong> printed in the startup log (<code>…/settings?setup=&lt;token&gt;</code>). The token is regenerated on every start; without it those pages answer <code>403</code>. The instant a password is set, setup mode ends and normal auth is enforced (the UI redirects to sign-in). The admin password can be changed later but not removed.</li>
 </ul>
-<blockquote><strong>Operational note:</strong> perform first-run setup on a trusted network or behind the reverse proxy, because the bootstrap window intentionally opens the settings page. It closes as soon as an admin password is saved.</blockquote>
+
 <h2 id="06_security-denial-of-service-hardening">Denial-of-service hardening</h2>
 <ul>
 <li>Request bodies (webhook and form) are capped at <code>MAX_REQUEST_BYTES</code> (1 MiB) before parsing.</li>
@@ -536,12 +536,12 @@ pip install -e &quot;.[dev]&quot;</code></pre>
 <pre class="code"><code>   python -m trellix_decrypt</code></pre>
 <p>The log shows <code>SETUP MODE — configuration incomplete, missing: …</code>.</p>
 <ol>
-<li>Open <code>http://&lt;host&gt;:8080/</code> in a browser. You are redirected to <strong>Settings</strong> (no password required yet — this is the bootstrap window).</li>
+<li>Open the <strong>one-time setup link</strong> from the startup log (<code>SETUP MODE … http://&lt;this-host&gt;:8080/settings?setup=&lt;token&gt;</code>) in a browser. It takes you to <strong>Settings</strong> (no password yet — the link is what authorises you).</li>
 <li>Fill in <strong>Admin password</strong> first, plus the EX, SMTP, public URL, and webhook fields. Click <strong>Save changes</strong>.</li>
 <li>Setting the admin password ends setup mode; the UI redirects you to <strong>sign in</strong>. Log in with the password you just set.</li>
 <li>The dashboard&#x27;s &quot;configuration incomplete&quot; banner should be gone. The webhook is now live.</li>
 </ol>
-<blockquote>Do first-run setup on a trusted network or behind your proxy — the bootstrap window intentionally opens the settings page until the admin password is set.</blockquote>
+<blockquote>The setup link is the only way in until the admin password is set; a new one is issued on each start, so restart the service if you lose it.</blockquote>
 <h3 id="07_user_guide-option-b-environment-env">Option B — environment / <code>.env</code></h3>
 <pre class="code"><code>cp env.example .env   # then edit .env (never committed)
 python -m trellix_decrypt</code></pre>

@@ -7,7 +7,6 @@ from pathlib import Path
 
 from trellix_decrypt.domain import RiskwareRules, iter_alerts, parse_alert
 
-from .conftest import TRIGGER_MALWARE_NAME
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 WEBHOOK_SAMPLE = json.loads((FIXTURES / "sample_alert.json").read_text())        # "Alerts" envelope

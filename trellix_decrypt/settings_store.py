@@ -10,11 +10,16 @@ the app uses; the AppContext rebuilds the EX client/mailer from it on save.
 
 from __future__ import annotations
 
+import logging
+
+from pydantic import ValidationError
 from sqlalchemy import select
 
 from .config import Settings
 from .crypto import fernet
 from .storage import Setting
+
+log = logging.getLogger(__name__)
 
 # Fields the settings UI may change. SECRET_KEY is the ONLY setting never editable
 # here (it must be set/rotated out-of-band; see resolve_secret_key). Fields in
@@ -55,28 +60,58 @@ RESTART_REQUIRED = frozenset({
 })
 
 
+class SettingsValidationError(ValueError):
+    """A submitted settings change would not load; nothing was saved."""
+
+
+def _invalid_keys(exc: ValidationError) -> set[str]:
+    return {str(err["loc"][0]) for err in exc.errors() if err.get("loc")}
+
+
+def _describe(exc: ValidationError) -> str:
+    parts = [f"{'.'.join(str(p) for p in err.get('loc', ()))}: {err.get('msg', 'invalid value')}"
+             for err in exc.errors()]
+    return "invalid setting(s) — " + "; ".join(parts)
+
+
 class SettingsStore:
     def __init__(self, env: Settings, session_factory):
         self._env = env
         self._sf = session_factory
         self._fernet = fernet(env.secret_key)
 
-    def _overrides(self) -> dict:
+    def _read_overrides(self, s) -> dict:
         out: dict = {}
-        with self._sf() as s:
-            for row in s.scalars(select(Setting)).all():
-                value = row.value
-                if row.is_secret and value:
-                    value = self._fernet.decrypt(value.encode()).decode()
-                if row.key in LIST_KEYS and isinstance(value, str):
-                    value = [p.strip() for p in value.split(",") if p.strip()]
-                out[row.key] = value
+        for row in s.scalars(select(Setting)).all():
+            value = row.value
+            if row.is_secret and value:
+                value = self._fernet.decrypt(value.encode()).decode()
+            if row.key in LIST_KEYS and isinstance(value, str):
+                value = [p.strip() for p in value.split(",") if p.strip()]
+            out[row.key] = value
         return out
 
-    def effective_settings(self) -> Settings:
+    def _overrides(self) -> dict:
+        with self._sf() as s:
+            return self._read_overrides(s)
+
+    def _build(self, overrides: dict) -> Settings:
         data = self._env.model_dump()
-        data.update(self._overrides())
+        data.update(overrides)
         return Settings(**data)
+
+    def effective_settings(self) -> Settings:
+        """Env defaults overlaid with the DB overrides. An override that no longer
+        validates (hand-edited DB, or saved by an older version) is ignored with a
+        warning rather than taking the whole app down."""
+        overrides = self._overrides()
+        try:
+            return self._build(overrides)
+        except ValidationError as exc:
+            bad = _invalid_keys(exc)
+            log.warning("ignoring invalid stored setting(s) %s — falling back to the "
+                        "environment/default value; fix them in Settings", sorted(bad))
+            return self._build({k: v for k, v in overrides.items() if k not in bad})
 
     def masked(self) -> dict:
         """Current editable values for the settings form; secrets shown only as set/unset."""
@@ -144,4 +179,13 @@ class SettingsStore:
                     s.add(Setting(key=key, value=stored, is_secret=is_secret))
                 else:
                     row.value, row.is_secret = stored, is_secret
+            # Validate the would-be result BEFORE committing: a value that can't be
+            # loaded (e.g. text in a numeric field) must never reach the database, or
+            # every later settings load would fail.
+            s.flush()
+            try:
+                self._build(self._read_overrides(s))
+            except ValidationError as exc:
+                s.rollback()
+                raise SettingsValidationError(_describe(exc)) from exc
             s.commit()

@@ -12,14 +12,14 @@ from __future__ import annotations
 
 import base64
 import binascii
-import hmac
 import json
 import logging
 from abc import ABC, abstractmethod
 
 from fastapi import APIRouter, HTTPException, Request
 
-from .domain import iter_alerts, parse_alert
+from .alerts import iter_alerts, parse_alert
+from .crypto import constant_time_equals
 
 log = logging.getLogger(__name__)
 
@@ -70,8 +70,8 @@ def build_webhook_router(ctx) -> APIRouter:
             raise HTTPException(status_code=401, detail="webhook auth not configured")
         if has_creds:
             creds = _basic_credentials(request)
-            ok = creds and hmac.compare_digest(creds[0], s.webhook_username) \
-                and hmac.compare_digest(creds[1], s.webhook_password)
+            ok = creds and constant_time_equals(creds[0], s.webhook_username) \
+                and constant_time_equals(creds[1], s.webhook_password)
             if not ok:
                 raise HTTPException(status_code=401, detail="bad webhook credentials",
                                     headers={"WWW-Authenticate": "Basic"})
@@ -108,7 +108,7 @@ def build_webhook_router(ctx) -> APIRouter:
             else:
                 log.info("webhook: IGNORED (no trigger match / uncorrelated _RA) — need alert "
                          "name==%r AND a malware name in %r. raw alert: %s",
-                         rules._alert_name, sorted(rules._names), _dump(event.raw))
+                         rules.alert_name, rules.malware_names, _dump(event.raw))
         return {"received": True, "handled": handled}
 
     return router

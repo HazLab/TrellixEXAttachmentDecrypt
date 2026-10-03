@@ -94,6 +94,10 @@ def build(settings: Settings | None = None):
         log.info("HTTPS enabled (cert: %s)", tls.active_paths(eff)[0])
     else:
         log.info("serving plain HTTP — enable HTTPS in Settings, or terminate TLS at a reverse proxy")
+    if not eff.ui_password:
+        log.warning("SETUP MODE — no admin password is set. Setup is locked to this one-time link "
+                    "(valid until restart): %s://<this-host>:%s/settings?setup=%s",
+                    scheme, port, ctx.setup_token)
     log.info("serving on %s://%s:%s — password links built from PUBLIC_BASE_URL=%s "
              "(scheme/host/port must match how recipients reach this server)",
              scheme, eff.web_host, port, eff.public_base_url)

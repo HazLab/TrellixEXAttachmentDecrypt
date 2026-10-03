@@ -15,15 +15,16 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from ..domain import SubmitStatus
 from .ratelimit import RateLimiter, client_ip
 
 _RESULTS = {
-    "ok": "Thanks — we've received your password and are processing your attachment.",
-    "invalid_or_expired": "This link is invalid or has expired.",
-    "not_found": "We couldn't find a matching request.",
-    "not_awaiting": "This request has already been processed.",
-    "rate_limited": "Too many attempts. Please wait a few minutes and try again.",
+    SubmitStatus.OK: "Thanks — we've received your password and are processing your attachment.",
+    SubmitStatus.INVALID_OR_EXPIRED: "This link is invalid or has expired.",
+    SubmitStatus.NOT_FOUND: "We couldn't find a matching request.",
+    SubmitStatus.NOT_AWAITING: "This request has already been processed.",
 }
+_RATE_LIMITED = "Too many attempts. Please wait a few minutes and try again."
 _REISSUED = "Your previous link had expired, so we've emailed you a fresh one. Please use the new link."
 
 
@@ -48,9 +49,9 @@ def build_password_router(ctx, templates: Jinja2Templates) -> APIRouter:
         ip = client_ip(request, env.trust_forwarded_for)
         if not limiter.allow(f"{ip}:{token}", time.monotonic()):
             return templates.TemplateResponse(request, "error.html",
-                                              {"reason": _RESULTS["rate_limited"]}, status_code=429)
+                                              {"reason": _RATE_LIMITED}, status_code=429)
         _, status = await ctx.engine.handle_password(token, password)
-        ok = status == "ok"
+        ok = status == SubmitStatus.OK
         template = "result.html" if ok else "error.html"
         key = "message" if ok else "reason"
         return templates.TemplateResponse(request, template,

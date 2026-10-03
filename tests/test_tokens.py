@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-import pytest
 
 from trellix_decrypt.domain import AlertEvent, FlowState, TokenService
 
-from .conftest import make_settings
 from .conftest import FakeEX, FakeMailer, FakeScheduler  # noqa: F401  (fixtures use engine)
 
 

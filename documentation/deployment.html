@@ -166,7 +166,7 @@ DATA_DIR=/var/lib/trellix-decrypt ./trellix-decrypt        # add --check first t
 <h2 id="9-first-run-flow">9. First-run flow</h2>
 <ol>
 <li>Start the service (any method) with <code>DATA_DIR</code> set.</li>
-<li>Open <code>http://&lt;host&gt;:8080/</code> — you are redirected to <strong>Settings</strong> (setup mode).</li>
+<li>Open the <strong>one-time setup link</strong> printed in the startup log (<code>SETUP MODE … http://&lt;this-host&gt;:8080/settings?setup=&lt;token&gt;</code>; with Docker: <code>docker compose logs</code>). While no admin password exists, Settings is reachable only through that link — a new token is issued on every start.</li>
 <li>Fill in the <strong>admin password</strong> plus the required fields above; <strong>Save</strong>.</li>
 <li>Sign in with the admin password. Register this service as an EX <strong>HTTP notification</strong> destination (main guide, &quot;Point EX at the webhook&quot;).</li>
 <li>Confirm a <code>POST /webhook/ex-alert</code> reaches the log and a case appears.</li>

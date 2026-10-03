@@ -22,6 +22,21 @@ TEMPLATES_DIR = _PKG / "templates"
 STATIC_DIR = _PKG / "static"
 
 
+#: Sent on every response. The CSP still allows inline script/style because the pages
+#: use them (theme bootstrap, the reveal button, a few style attributes); it does stop
+#: framing, foreign script/style/form targets, plugins and <base> hijacking.
+_SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",  # one-time links must not leak via the Referer header
+    "Content-Security-Policy": (
+        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; "
+        "frame-ancestors 'none'"
+    ),
+}
+
+
 def create_app(ctx) -> FastAPI:
     templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
@@ -36,7 +51,18 @@ def create_app(ctx) -> FastAPI:
         await ctx.scheduler.shutdown()
         await ctx.engine.aclose()
 
-    app = FastAPI(title="Trellix EX Attachment Decrypt", lifespan=lifespan)
+    # No public API explorer: /docs, /redoc and /openapi.json would map the admin API
+    # for anyone who can reach the port.
+    app = FastAPI(title="Trellix EX Attachment Decrypt", lifespan=lifespan,
+                  docs_url=None, redoc_url=None, openapi_url=None)
+
+    @app.middleware("http")
+    async def security_headers(request, call_next):
+        response = await call_next(request)
+        for name, value in _SECURITY_HEADERS.items():
+            response.headers.setdefault(name, value)
+        return response
+
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
     app.include_router(build_webhook_router(ctx))                 # public

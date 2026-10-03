@@ -176,7 +176,9 @@ flowchart TB
 | Context | `context.py` | `AppContext` owns the live `FlowEngine`; `reload()` re-wires transports from current settings without a restart. |
 | Config | `config.py` | `Settings` (env/`.env`), `resolve_secret_key`, `missing_required`/`is_configured`. |
 | Config store | `settings_store.py` | UI-editable overrides layered over env defaults; secrets encrypted at rest. |
-| **Core** | `domain.py` | `FlowEngine`, `FlowState`, `RiskwareRules`, `TokenService`, and the pure alert parsers. **No I/O.** |
+| **Core** | `domain.py` | `FlowEngine`, `FlowState`, `RiskwareRules`, `TokenService`. **No I/O.** |
+| Core | `alerts.py` | `AlertEvent` and the pure EX alert / quarantine-entry parsers (the one place that knows the wire format). |
+| Core | `reconcile.py` | The quarantine-first reconcile pass (`run_reconcile`), driven through the engine's collaborators. |
 | EX transport | `ex_client.py` | `EXClient`: auth, alerts, quarantine list/rescan/release/delete, alert-by-uuid. |
 | Ingest | `ingest.py` | Webhook router: auth, body cap, parse, dispatch to the engine. |
 | Mail | `mailer.py` | `SMTPMailer` + Jinja2 email rendering. |
@@ -657,11 +659,11 @@ for other callers/tests.
 | File | Contents |
 |------|----------|
 | `server.py` | `create_app(ctx)`: mount static, include routers, lifespan (resume pending + start sweeps + bounce loop), `/healthz`. |
-| `auth.py` | Shared-password admin session: `check_password` (constant-time), `issue_session`, `is_authenticated`, cookie `ui_session` (12h TTL). |
+| `auth.py` | Shared-password admin session: `check_password` (constant-time), `issue_session`, `is_authenticated`, cookie `ui_session` (12h TTL, `Secure` over HTTPS). A session is bound to the admin password it was issued under (changing the password invalidates it) and is revoked on logout. Also checks the first-run setup token. |
 | `routes_password.py` | Public `/p/<token>`: GET renders/reissues, POST rate-limits then `handle_password`. |
-| `routes_dashboard.py` | `/login`, `/logout`, `/`, `/settings`; login rate-limit; **setup mode** (`in_setup_mode`) opens `/settings` before an admin password exists. |
-| `routes_api.py` | Auth JSON API: `/api/status`, `/api/cases`, `/api/cases/<id>`, `…/alerts`, `…/resend`, `…/rescan`, `/api/settings` (GET/POST). Settings endpoints use `_guard_settings` (open in setup mode). |
-| `ratelimit.py` | `RateLimiter` (sliding window) + `client_ip` (honors `X-Forwarded-For` only when `trust_forwarded_for`). |
+| `routes_dashboard.py` | `/login`, `/logout`, `/`, `/settings`; login rate-limit; **setup mode** (`in_setup_mode`) opens `/settings` before an admin password exists, to the holder of the one-time setup token only. |
+| `routes_api.py` | Auth JSON API: `/api/status`, `/api/cases`, `/api/cases/<id>`, `…/alerts`, `…/resend`, `…/rescan`, `/api/settings` (GET/POST). Settings endpoints use `guard_settings` (setup-token-gated in setup mode); a settings change is validated before it is saved (`400` on an invalid value). |
+| `ratelimit.py` | `RateLimiter` (sliding window, idle keys evicted and key count capped) + `client_ip` (honors `X-Forwarded-For` only when `trust_forwarded_for`). |
 
 ---
 
@@ -952,7 +954,8 @@ admin who simply mistyped is not penalised once they get it right.
 
 Behind a proxy the socket peer is the proxy, so all requests would share one IP. Set
 `TRUST_FORWARDED_FOR=true` **only** when actually behind a trusted proxy that sets
-`X-Forwarded-For`; the service then keys limits on the left-most forwarded address.
+`X-Forwarded-For`; the service then keys limits on the **right-most** forwarded address
+(the one your proxy appended — entries to its left are client-supplied and spoofable).
 Leaving it off is safe (the header is otherwise spoofable and would defeat the
 limit).
 
@@ -964,13 +967,12 @@ webhook auth all present) it runs in **setup mode**:
 - The webhook returns **503** — EX is told to retry rather than have alerts silently
   dropped.
 - While **no admin password exists**, `/settings` and the settings API are reachable
-  **without auth** — the only way to bootstrap the first password. The instant a
-  password is set, setup mode ends and normal auth is enforced (the UI redirects to
-  sign-in).
-
-> **Operational note:** perform first-run setup on a trusted network or behind the
-> reverse proxy, because the bootstrap window intentionally opens the settings page.
-> It closes as soon as an admin password is saved.
+  without a sign-in — the only way to bootstrap the first password — but **only through
+  the one-time setup link** printed in the startup log
+  (`…/settings?setup=<token>`). The token is regenerated on every start; without it
+  those pages answer `403`. The instant a password is set, setup mode ends and normal
+  auth is enforced (the UI redirects to sign-in). The admin password can be changed
+  later but not removed.
 
 ## Denial-of-service hardening
 
@@ -1073,8 +1075,9 @@ of these are set:
    python -m trellix_decrypt
    ```
    The log shows `SETUP MODE — configuration incomplete, missing: …`.
-2. Open `http://<host>:8080/` in a browser. You are redirected to **Settings**
-   (no password required yet — this is the bootstrap window).
+2. Open the **one-time setup link** from the startup log
+   (`SETUP MODE … http://<this-host>:8080/settings?setup=<token>`) in a browser. It
+   takes you to **Settings** (no password yet — the link is what authorises you).
 3. Fill in **Admin password** first, plus the EX, SMTP, public URL, and webhook
    fields. Click **Save changes**.
 4. Setting the admin password ends setup mode; the UI redirects you to **sign in**.
@@ -1082,8 +1085,8 @@ of these are set:
 5. The dashboard's "configuration incomplete" banner should be gone. The webhook is
    now live.
 
-> Do first-run setup on a trusted network or behind your proxy — the bootstrap
-> window intentionally opens the settings page until the admin password is set.
+> The setup link is the only way in until the admin password is set; a new one is
+> issued on each start, so restart the service if you lose it.
 
 ### Option B — environment / `.env`
 

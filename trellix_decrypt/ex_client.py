@@ -15,6 +15,8 @@ from datetime import datetime, timedelta, timezone
 
 import httpx
 
+from .domain import ResubmissionOutcome
+
 log = logging.getLogger(__name__)
 
 #: The quarantine-list default window is only now()-24h, but a full decrypt cycle
@@ -224,7 +226,7 @@ class EXClient:
         return any(_qid(e).endswith("_RA") and _strip_ra(_qid(e)) == queue_id for e in entries)
 
     async def resubmission_outcome(self, queue_id: str, sender: str | None = None,
-                                   subject: str | None = None) -> str:
+                                   subject: str | None = None) -> ResubmissionOutcome:
         """Three-state resubmission verdict from the quarantine list, for the recheck poll.
 
         Lets a clean email conclude promptly instead of waiting the whole recheck window
@@ -243,13 +245,13 @@ class EXClient:
                    if _strip_ra(_qid(e)) == queue_id]
         qids = [_qid(e) for e in entries]
         if any(q.endswith("_RA") and _strip_ra(q) == queue_id for q in qids):
-            outcome = "held"
+            outcome = ResubmissionOutcome.HELD
         elif any(q == queue_id for q in qids):
-            outcome = "pending"
+            outcome = ResubmissionOutcome.PENDING
         else:
-            outcome = "released"
+            outcome = ResubmissionOutcome.RELEASED
         log.info("resubmission_outcome(base=%s) -> %s; related entries (qid, completed_at): %s",
-                 queue_id, outcome, related)
+                 queue_id, outcome.value, related)
         return outcome
 
     async def alert_uuids_for(self, queue_id: str, sender: str | None = None,

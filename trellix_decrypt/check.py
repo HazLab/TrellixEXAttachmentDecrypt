@@ -13,7 +13,7 @@ from __future__ import annotations
 import asyncio
 
 from .config import Settings
-from .domain import iter_alerts
+from .alerts import iter_alerts
 from .ex_client import EXClient
 from .settings_store import SettingsStore
 from .storage import build_session_factory

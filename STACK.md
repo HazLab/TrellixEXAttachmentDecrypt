@@ -40,8 +40,11 @@ See `documentation/documentation.md` for architecture and module layout, and
   password at rest and stored settings secrets, keyed by `SECRET_KEY`.
 - **itsdangerous** (≥ 2.1) — signed, TTL-expiring one-time links and the signed
   session cookie.
-- Webhook auth: **HTTP Basic** + source-IP allowlist. Password form is
-  rate-limited. HTTPS is expected to be terminated by a reverse proxy.
+- Webhook auth: **HTTP Basic** + source-IP allowlist; request body capped. Admin
+  sign-in and the password form are rate-limited. Sessions are bound to the admin
+  password and revoked on logout; security headers on every response.
+- HTTPS: served natively from an imported certificate, or terminated at a
+  reverse proxy.
 
 ## Email
 
@@ -59,6 +62,14 @@ See `documentation/documentation.md` for architecture and module layout, and
 - **pytest** (≥ 8.0) + **pytest-asyncio** (auto mode).
 - **respx** (≥ 0.21) — mocks the EX HTTP API in tests.
 - **Ruff** (≥ 0.4) — linter.
+
+## Packaging & release
+
+- **Docker** — multi-stage image, non-root user, `/healthz` healthcheck;
+  `docker-compose.yml` with a persistent `data` volume.
+- **PyInstaller** — one-file executables for Windows, Linux and macOS, built by
+  the **Build binaries** GitHub Actions workflow on each `v*` tag. Every build is
+  started and must serve a page and its static files before it is released.
 
 ## External system integrated
 

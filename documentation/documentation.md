@@ -1146,7 +1146,8 @@ Settings** page. It has two parts — the shared **HTTP Settings** (defaults) an
 per-server entry — both under **Settings → Notifications → HTTP**.
 
 > **Source:** *Trellix Email Security – Server User Guide, Release 11.x — "Configuring
-> HTTP notifications using the Web UI"* (PDF in `docs/`; also online:
+> HTTP notifications using the Web UI"* (vendor document, not included in this
+> repository; online:
 > [Notification settings](https://docs.trellix.com/bundle/ex_11.x_ug/page/UUID-48d03d0d-9e19-447e-1e07-775b91a5b021.html)
 > ·
 > [HTTP notifications](https://docs.trellix.com/bundle/ex_11.x_ug/page/UUID-25f43f87-0950-3685-63a3-9152b2ec2df8.html)).
@@ -1381,13 +1382,18 @@ Standalone **Windows / Linux / macOS** binaries come from the **Build binaries**
 Actions workflow — built when a version tag (`v*`) is pushed (attached to the GitHub
 **Release**) or on demand via the workflow's **Run workflow** button (downloadable as
 run artifacts). It does **not** build on ordinary commits. The binary bundles Python,
-all dependencies, and the templates/static assets; it only needs a writable `DATA_DIR`.
+all dependencies, and the templates/static assets; it only needs a writable `DATA_DIR`
+and takes **no arguments** (`--check` is the only option: test EX connectivity and exit).
+Each release build is started on all three platforms and must serve a page and its
+static files before it is published. **Use v0.1.2 or newer** — the v0.1.0 and v0.1.1
+executables were built without the templates/static files and fail at startup; they
+have been withdrawn.
 
 **Linux / macOS:**
 
 ```bash
-chmod +x ./trellix-decrypt
-DATA_DIR=/var/lib/trellix-decrypt ./trellix-decrypt        # add --check first to test EX
+chmod +x ./trellix-decrypt-linux                                 # macOS: trellix-decrypt-macos
+DATA_DIR=/var/lib/trellix-decrypt ./trellix-decrypt-linux        # add --check first to test EX
 ```
 
 **Windows (PowerShell):**
@@ -1617,8 +1623,12 @@ Sign in at `/`:
 | Webhook returns **405** | EX is POSTing to the wrong path — usually the base host was set as the Server URL, so EX hits `/`. Set it to `https://<host>/webhook/ex-alert`. A GET to that URL returns `200 {"status":"ready"}` when correct. |
 | Webhook returns **413** | Payload larger than `MAX_REQUEST_BYTES` (default 1 MiB) — usually **Extended** format or a **Daily Digest**. Switch EX to **Normal** + **Per Event**, or raise `MAX_REQUEST_BYTES`. |
 | No alerts arrive / flow never starts (nothing in the log for these emails) | In EX Notification settings the HTTP server's **Notification** is set to **Malware Object** — that excludes `RISKWARE_OBJECT`, which is the encrypted-attachment trigger. Set it to **All Events** (or include **riskware object**). |
-| Alerts were sent while the app was down / after a connection loss | The app auto-**reconciles** on startup — it queries EX for recent trigger alerts and backfills any case it's missing (idempotent, so no duplicates or re-emails). Force it any time with the **Reconcile** button on the dashboard; tune `RECONCILE_LOOKBACK` / `RECONCILE_INTERVAL`. |
+| Alerts were sent while the app was down / after a connection loss | The app auto-**reconciles** on startup — it reads what EX is actually holding in quarantine and opens any case it's missing (idempotent, so no duplicates or re-emails). Force it any time with the **Reconcile** button on the dashboard; tune `RECONCILE_LOOKBACK` / `RECONCILE_INTERVAL`. |
 | Webhook returns **503** | Service in setup mode — finish required config (see the dashboard banner). |
+| Settings says **"Setup is locked"** (403) | No admin password exists yet, so Settings needs the one-time setup link from the startup log (`…/settings?setup=<token>`). Restart the service to get a new link. |
+| Saving settings fails with **"invalid setting(s)"** | A value didn't validate (e.g. text in a numeric field). Nothing was saved — correct the named field and save again. |
+| Signed out unexpectedly | Sessions end on logout, when the admin password changes, and after 12 hours. Sign in again. |
+| Executable exits with **"Directory …\\static does not exist"** | You have a v0.1.0/v0.1.1 executable. Download v0.1.2 or newer. |
 | Webhook returns **401** | Missing/bad Basic auth, or webhook auth not configured. |
 | Webhook returns **403** | Source IP not in `WEBHOOK_IP_ALLOWLIST`. |
 | Everything reads **Released** / **Quarantined** wrongly, or rescan says "queue id not found" | Check the **EX appliance clock**. Per-case lookups use a clock-independent window, but a badly wrong EX clock has caused rescans to fail; fixing the clock resolves it. |
@@ -1680,6 +1690,7 @@ flowchart TB
 |-------|------------|------|
 | Language / runtime | **Python ≥ 3.11** | Async throughout (`asyncio`). |
 | Packaging | **setuptools** (`pyproject.toml`) | Console entry point `trellix-decrypt`. |
+| Executables | **PyInstaller** + GitHub Actions | One-file Windows/Linux/macOS builds on each `v*` tag; every build is start-tested before release. |
 | Web framework | **FastAPI** (≥ 0.110) | Webhook, password form, dashboard, JSON API. |
 | ASGI server | **Uvicorn** (`[standard]`, ≥ 0.29) | Serves the app. |
 | Routing / test client | **Starlette** (via FastAPI) | Routing; `TestClient` in tests. |

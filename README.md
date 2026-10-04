@@ -20,6 +20,10 @@ clean or malicious results.
    ask again (up to the retry cap); quarantined → held; not quarantined → clean,
    delivered.
 
+Alerts missed while the service was down are picked up automatically: on startup
+(and on demand from the dashboard) it **reconciles** against what EX is actually
+holding in quarantine and opens any case it is missing, without duplicates.
+
 Full architecture and module layout: `documentation/documentation.md`.
 Deployment details: `DEPLOY.md`. Tech stack: `STACK.md`.
 
@@ -98,7 +102,7 @@ EX_VERIFY_TLS=false              # off by default (EX often uses self-signed cer
 # one of TRIGGER_MALWARE_NAMES (the encrypted-attachment policy emits
 # CustomPolicy.MVX.<ext>). Empty TRIGGER_MALWARE_NAMES disables triggering.
 TRIGGER_ALERT_NAME=RISKWARE_OBJECT
-TRIGGER_MALWARE_NAMES=CustomPolicy.MVX.pdf,CustomPolicy.MVX.zip,CustomPolicy.MVX.docx
+TRIGGER_MALWARE_NAMES=CustomPolicy.MVX.pdf,CustomPolicy.MVX.zip,CustomPolicy.MVX.docx,CustomPolicy.MVX.65066.PassExtractFailed
 
 # Outbound mail (the recipient link)
 SMTP_HOST=smtp.example.com
@@ -120,7 +124,8 @@ WEBHOOK_PASSWORD=...
 Retry/recheck cadence (`RECHECK_DELAY`, `RECHECK_RAMP`, `RECHECK_INTERVAL`,
 `RECHECK_MAX_ATTEMPTS`) and `MAX_PASSWORD_ATTEMPTS` have sensible defaults — see
 `env.example`. Anything set here is just the default; **Settings** overrides it
-live (secrets encrypted at rest, no restart).
+live (secrets encrypted at rest, no restart). A value that doesn't validate (for
+example text in a numeric field) is rejected and nothing is saved.
 
 ## Run in production
 
@@ -128,9 +133,11 @@ All three modes persist two things across restarts — `secret.key` and the
 database — under **`DATA_DIR`** (default: the working directory).
 
 - **Docker (recommended):** `docker compose up -d --build` — mounts a `data`
-  volume at `DATA_DIR=/data`. Configure via `.env` or the Settings UI.
+  volume at `DATA_DIR=/data`. Configure via `.env` or the Settings UI. The image
+  is built locally from this folder, so rebuild after pulling an update. First-run
+  setup link: `docker compose logs attachment-decrypt | grep "SETUP MODE"`.
 - **Prebuilt binary (no Python):** download the Linux/macOS/Windows executable
-  from GitHub **Releases** and run it — see below.
+  from the latest GitHub **Release** (v0.1.2 or newer) and run it — see below.
 - **From source:** `pip install -r requirements.txt && python -m trellix_decrypt`.
 
 ### Running the executable
@@ -155,18 +162,36 @@ chmod +x trellix-decrypt-linux && ./trellix-decrypt-linux     # Linux (macOS: tr
   holds `trellix_decrypt.sqlite3` and `secret.key` (or run the executable from
   it). Stop any other copy first — two can't share one database.
 
-HTTPS is expected to be terminated by a reverse proxy (or set the built-in TLS
-vars in `env.example`).
+**HTTPS:** either import a certificate so the app serves TLS itself (Settings →
+HTTPS/TLS, or the `TLS_*` variables in `env.example`), or terminate TLS at a
+reverse proxy. Behind a proxy, set `TRUST_FORWARDED_FOR=true` so rate limits see
+the real client address.
 
 ## Admin UI
 
 Open the host root and sign in with `UI_PASSWORD`:
 
 - **Dashboard** (`/`) — live searchable case list with status badges and a detail
-  drawer (lifecycle stepper + event timeline). Auto-refreshes; dark/light.
-- **Settings** (`/settings`) — EX/SMTP/trigger/retry config, applied live.
+  drawer (lifecycle stepper, event timeline, EX alert details). Resend an email,
+  retry a rescan, or run **Reconcile** from here. Auto-refreshes; dark/light.
+- **Settings** (`/settings`) — EX/SMTP/trigger/retry/HTTPS config, applied live.
 
 Public (no login): `/p/<token>`, `/webhook/ex-alert`, `/healthz`.
+
+## Security
+
+- **First run:** with no admin password, Settings opens only through the one-time
+  setup link in the startup log. The admin password can be changed, not removed.
+- **Sessions:** signed cookie (`Secure` over HTTPS); logging out revokes it, and
+  changing the admin password signs everyone out.
+- **Webhook:** requires HTTP Basic auth and/or a source-IP allowlist; request size
+  is capped.
+- **Rate limits** on admin sign-in and on the recipient password form.
+- **Secrets:** stored settings secrets and the held attachment password are
+  encrypted at rest; the password is purged once the rescan succeeds.
+- **Hardening:** security headers on every response; no public API explorer.
+- TLS verification towards EX and SMTP is **off by default** (self-signed
+  appliances are common) — turn it on in Settings when they have trusted certs.
 
 ## Test
 
@@ -176,13 +201,10 @@ pytest
 
 ## Notes
 
-- EX endpoints/auth/rescan follow the Trellix API Reference 2025.1 (PDFs in
-  `docs/`) and live in `trellix_decrypt/ex_client.py`. Rescan is
+- EX endpoints/auth/rescan follow the Trellix API Reference 2025.1 (vendor
+  document, not included in this repository) and live in
+  `trellix_decrypt/ex_client.py`. Rescan is
   `POST /emailmgmt/quarantine/rescan/<queue_id>` with
   `{"rescan_properties": {"pwd_list": [...]}}`.
 - Attachment passwords are encrypted at rest, used for the rescan, then purged —
   never stored in plaintext.
-
-## Author
-
-Developed by Hazem Aljawhari.

@@ -195,13 +195,18 @@ Standalone **Windows / Linux / macOS** binaries come from the **Build binaries**
 Actions workflow — built when a version tag (`v*`) is pushed (attached to the GitHub
 **Release**) or on demand via the workflow's **Run workflow** button (downloadable as
 run artifacts). It does **not** build on ordinary commits. The binary bundles Python,
-all dependencies, and the templates/static assets; it only needs a writable `DATA_DIR`.
+all dependencies, and the templates/static assets; it only needs a writable `DATA_DIR`
+and takes **no arguments** (`--check` is the only option: test EX connectivity and exit).
+Each release build is started on all three platforms and must serve a page and its
+static files before it is published. **Use v0.1.2 or newer** — the v0.1.0 and v0.1.1
+executables were built without the templates/static files and fail at startup; they
+have been withdrawn.
 
 **Linux / macOS:**
 
 ```bash
-chmod +x ./trellix-decrypt
-DATA_DIR=/var/lib/trellix-decrypt ./trellix-decrypt        # add --check first to test EX
+chmod +x ./trellix-decrypt-linux                                 # macOS: trellix-decrypt-macos
+DATA_DIR=/var/lib/trellix-decrypt ./trellix-decrypt-linux        # add --check first to test EX
 ```
 
 **Windows (PowerShell):**
@@ -265,8 +270,12 @@ via the environment, back that value up too (separately and securely).
 | Webhook returns **405** | The EX Server URL is the base host (EX POSTs to `/`). Set it to `https://<host>/webhook/ex-alert`; a GET to that URL returns `200 {"status":"ready"}` when correct. |
 | Webhook returns **413** | Payload over `MAX_REQUEST_BYTES` (default 1 MiB) — usually EX **Extended** format or a **Daily Digest**. Use **Normal** + **Per Event**, or raise `MAX_REQUEST_BYTES`. |
 | No alerts arrive / flow never starts | EX HTTP-notification **Notification** set to **Malware Object** excludes `RISKWARE_OBJECT` (the encrypted-attachment trigger). Set it to **All Events** (or include **riskware object**). |
-| Missed alerts after downtime | The app auto-**reconciles** on startup — queries EX for recent trigger alerts and backfills any missing case (idempotent). Trigger it on demand with the **Reconcile** button; tune `RECONCILE_LOOKBACK` / `RECONCILE_INTERVAL`. |
+| Missed alerts after downtime | The app auto-**reconciles** on startup — it reads what EX is actually holding in quarantine and opens any missing case (idempotent). Trigger it on demand with the **Reconcile** button; tune `RECONCILE_LOOKBACK` / `RECONCILE_INTERVAL`. |
 | Webhook returns **503** | Setup mode — finish the required config (§8). |
+| Settings says **"Setup is locked"** (403) | No admin password exists yet, so Settings needs the one-time setup link from the startup log (`…/settings?setup=<token>`). Restart the service to get a new link. |
+| Saving settings fails with **"invalid setting(s)"** | A value didn't validate (e.g. text in a numeric field). Nothing was saved — correct the named field and save again. |
+| Signed out unexpectedly | Sessions end on logout, when the admin password changes, and after 12 hours. Sign in again. |
+| Executable exits with **"Directory …\\static does not exist"** | You have a v0.1.0/v0.1.1 executable. Download v0.1.2 or newer. |
 | **Missing dependencies** at start (source) | You skipped install — `pip install -r requirements.txt` (or use Docker/exe). |
 | Sessions drop / stored secrets unreadable after redeploy | `DATA_DIR` (or `SECRET_KEY`) wasn't persisted — mount a volume / set a stable folder. |
 | Rescan says "queue id not found" | Check the **EX appliance clock**; fix it and retry. |

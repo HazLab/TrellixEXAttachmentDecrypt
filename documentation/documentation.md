@@ -529,6 +529,10 @@ contracts. Signatures are illustrative; the source is the authority.
 
 ### Enums & constants
 - `FlowState(str, Enum)` — every case state (see [Flow & States](03_flow_and_states.md)).
+- `SubmitStatus(str, Enum)` — result of a password submission: `ok`, `invalid_or_expired`,
+  `not_found`, `not_awaiting`.
+- `ResubmissionOutcome(str, Enum)` — what the quarantine list says about a resubmitted
+  email: `held`, `pending`, `released`.
 - `RECHECKABLE` — `{RESUBMITTED, RECHECKING}`.
 - `TERMINAL` — settled states a late bounce must not overwrite.
 - `PASSWORD_FAILED_MARKERS` — `{"password_extraction_failed"}`; the authoritative
@@ -541,7 +545,7 @@ contracts. Signatures are illustrative; the source is the authority.
 - `_detection_summary(event) -> str` — compact detection string (alert name +
   malware names + `(malicious)`) folded into the timeline; empty when there's no push.
 
-### `AlertEvent` (dataclass)
+### `AlertEvent` (dataclass, defined in `alerts.py`)
 Normalized EX alert: `queue_id`, `recipients`, `alert_name`, `malicious`, `sender`,
 `subject`, `malware_names`, `raw`. `.recipient` returns the first recipient.
 
@@ -551,6 +555,7 @@ Decides whether an alert triggers the flow.
   trigger name **and** one malware name exactly equals a configured trigger malware
   name (case-insensitive). Empty trigger-name list → nothing matches (disabled).
 - `name_matches` / `alert_name_matches` — the two halves of that test.
+- `alert_name` / `malware_names` — read-only view of the trigger config (for logging).
 
 ### `TokenService`
 Mint/verify signed, TTL-expiring one-time links carrying a case id.
@@ -570,7 +575,7 @@ scheduler`. Key methods:
 | Method | Contract |
 |--------|----------|
 | `handle_alert(event)` | Entry point for an incoming alert. Correlates `_RA` re-detections to the parent (classifies, never creates a case); otherwise gates on the trigger rules and starts the flow. Returns the case or `None`. |
-| `handle_password(token, password)` | Store the password encrypted, ack immediately, schedule the background rescan. Returns `(case_or_None, status)`. |
+| `handle_password(token, password)` | Store the password encrypted, ack immediately, schedule the background rescan. Returns `(case_or_None, SubmitStatus)`. |
 | `resubmit_case(case_id)` | Background: decrypt the held password, find the rescannable entry, call EX rescan; on success record the hash, purge the password, schedule recheck; on failure count + `RESUBMIT_FAILED`. |
 | `recheck(case_id, final)` | Poll toward a verdict: reads `resubmission_outcome` and concludes as soon as decisive — `held` → DONE_QUARANTINED, `released` (original gone) → DONE_PASSED — else keeps polling; the final poll concludes from the list. Returns `True` to stop polling. |
 | `reissue_expired_link(token)` | Re-email a fresh link if an expired-but-valid link is opened while still `AWAITING_PASSWORD`. |
@@ -578,19 +583,39 @@ scheduler`. Key methods:
 | `handle_bounce(bounce)` | Mark a case `BOUNCED` (correlate by `X-Case-Id`, else recipient); never overrides a terminal state. |
 | `alert_details_for_case(case_id)` | **Display-only**: fetch every alert UUID for the case's quarantine records and return parsed detail. Best-effort; never a flow decision. |
 | `resume_pending()` | On startup, reschedule mid-flight rechecks and resubmissions. |
-| `reconcile(duration)` | Backfill **first-time** trigger alerts missed while down: query EX (`get_alerts`) over a window and start the flow for any matching email with no case. Idempotent — dedups by queue id, skips `_RA` re-detections, only emails brand-new cases. |
+| `reconcile(duration)` | Backfill trigger cases missed while down — **quarantine-first**: delegates to `reconcile.run_reconcile` (see below). Idempotent. |
 | `retry_failed_notifications()` / `retry_failed_resubmissions()` | Background sweep bodies. |
 
 Private decision helpers: `_still_encrypted`, `_confirm_outcome`,
 `_classify_resubmission`, `_fail_extraction`, `_send_password_request`.
 
-### Pure alert parsers
+---
+
+## `alerts.py` — EX wire format (no I/O)
+
+`AlertEvent` plus the pure parsers — the one place that knows the shape of an EX alert
+and of a quarantine-list entry. `domain.py` re-exports `AlertEvent`, `iter_alerts` and
+`parse_alert` for existing callers.
+
 - `iter_alerts(payload) -> list[dict]` — unwrap `Alerts`/`alerts`/`alert`/bare.
 - `parse_alert(alert) -> AlertEvent` — map a raw alert (either wire format:
   camelCase query JSON or hyphenated `{"value": …}` push) to an `AlertEvent`.
-- `parse_alert_detail(alert) -> dict` — compact display view for the drawer.
+- `parse_alert_detail(alert) -> dict` — compact display view for the drawer. The console
+  link (`alert_url`) is kept only if it is an `https://` URL.
+- `entry_queue_id`, `entry_alert_uuids`, `alert_uuid`, `is_pre_extraction_alert` — helpers
+  for quarantine entries and the drawer.
 - `split_addrs`, `_text`, `_text_list`, `_dig`, `_first`, `_is_yes`,
   `_malware_entries` — tolerant field extractors covering both wire formats.
+
+---
+
+## `reconcile.py` — quarantine-first backfill (no I/O of its own)
+
+`run_reconcile(engine, duration) -> dict` — one reconcile pass, driven entirely through
+the engine's collaborators. Starts from the held quarantine entries (`ex.list_held`),
+confirms the trigger from each entry's own alerts (`_from_quarantine`), then runs an
+alerts sweep only for held entries with no `alert_uuids` linkage (`_from_alerts`).
+Returns `{"held", "created", "already_known", "skipped"}`.
 
 ---
 
@@ -614,11 +639,12 @@ for another appliance): `EP_LOGIN`, `EP_ALERTS`, `EP_ALERT_DETAILS`,
   path and can't be rescanned). The rescan is always keyed on the returned **queue id**
   (the API doc mislabels the path param `email_uuid`).
 - `rescan(target_id, passwords)` — `POST …/rescan/<id>` with
-  `{"rescan_properties": {"pwd_list": [...]}}`.
+  `{"rescan_properties": {"pwd_list": [...]}}`. Ids placed in a URL path (here and in
+  `get_alert_by_uuid`) are percent-encoded into a single segment.
 - `has_resubmission_quarantine(queue_id, sender, subject) -> bool` — **authoritative
   verdict**: is there a record whose queue id is exactly `<queue_id>_RA`? Exact
   suffix match (via `_strip_ra`), never a loose prefix.
-- `resubmission_outcome(queue_id, sender, subject) -> str` — three-state verdict for the
+- `resubmission_outcome(queue_id, sender, subject) -> ResubmissionOutcome` — three-state verdict for the
   recheck poll: `"held"` (the `<queue_id>_RA` is present), `"released"` (neither the
   `_RA` nor the original `<queue_id>` remains — delivered), or `"pending"` (original
   still quarantined, no `_RA` yet). Lets a clean email conclude without a push.
@@ -648,7 +674,8 @@ for other callers/tests.
 
 - `build_webhook_router(ctx)` → `POST /webhook/ex-alert`. In order: **503 if not
   configured** (setup mode); require Basic auth and/or IP allowlist; **cap the body**
-  at `max_request_bytes`; parse; dispatch each alert to `engine.handle_alert`.
+  at `max_request_bytes` (checked on `Content-Length` and while streaming, never after
+  buffering); parse; dispatch each alert to `engine.handle_alert`.
 - `_basic_credentials(request)` — decode the `Authorization: Basic` header.
 - `AlertSource(ABC)` — pluggable transport interface (syslog etc. later).
 
@@ -885,9 +912,19 @@ sessions (and any DB-stored secrets).
 
 ## Admin authentication
 
-- Shared password `UI_PASSWORD`, compared **constant-time** (`hmac.compare_digest`).
+- Shared password `UI_PASSWORD`, compared **constant-time** on UTF-8 bytes
+  (`crypto.constant_time_equals`), so non-ASCII input is a clean mismatch.
 - On success, a signed session cookie `ui_session` (`httponly`, `samesite=lax`,
-  12h TTL) is issued. All `/api/*` and admin pages require it.
+  `Secure` when the request is HTTPS, 12h TTL) is issued. All `/api/*` and admin pages
+  require it.
+- A session is bound to the admin password it was issued under — **changing the
+  password signs everyone out** — and **logout revokes it** server-side (the revocation
+  list is in memory, so a restart forgets it; the 12h TTL still applies).
+- Every response carries `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+  `Referrer-Policy: no-referrer` and a `Content-Security-Policy`. The FastAPI explorer
+  (`/docs`, `/redoc`, `/openapi.json`) is disabled.
+- A settings change is **validated before it is saved**; an invalid value is rejected
+  (`400`) and nothing is written.
 - `SECRET_KEY` signs the cookie, so cookies are unforgeable without it.
 
 ## Webhook authentication
@@ -987,8 +1024,9 @@ webhook auth all present) it runs in **setup mode**:
 - `.gitignore` excludes `.env*`, `secret.key`, `*.sqlite3`, the Word exports of these
   docs (`documentation/*.docx`), log files, and the vendor PDFs — secrets and local
   state never reach the repository.
-- The attachment password is never logged in plaintext; a truncated SHA-8 fingerprint
-  is logged at rescan time only to diagnose whitespace mismatches.
+- The attachment password is never logged in plaintext. A truncated SHA-256 fingerprint
+  (to diagnose whitespace mismatches) is written at rescan time **only at `DEBUG`** log
+  level — keep production at `INFO`.
 
 ## Threat notes / residual risks
 

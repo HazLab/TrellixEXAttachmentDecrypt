@@ -130,10 +130,30 @@ database — under **`DATA_DIR`** (default: the working directory).
 - **Docker (recommended):** `docker compose up -d --build` — mounts a `data`
   volume at `DATA_DIR=/data`. Configure via `.env` or the Settings UI.
 - **Prebuilt binary (no Python):** download the Linux/macOS/Windows executable
-  from GitHub **Releases**, then run it with a writable `DATA_DIR`:
-  - Linux/macOS: `DATA_DIR=/var/lib/trellix-decrypt ./trellix-decrypt`
-  - Windows (PowerShell): `$env:DATA_DIR="C:\ProgramData\trellix-decrypt"; .\trellix-decrypt.exe`
+  from GitHub **Releases** and run it — see below.
 - **From source:** `pip install -r requirements.txt && python -m trellix_decrypt`.
+
+### Running the executable
+
+It needs **no arguments** — just run it. It serves on port 8080 and keeps its
+database and `secret.key` in the folder you run it from.
+
+```powershell
+.\trellix-decrypt-windows.exe                 # Windows
+```
+```bash
+chmod +x trellix-decrypt-linux && ./trellix-decrypt-linux     # Linux (macOS: trellix-decrypt-macos)
+```
+
+- **`DATA_DIR`** (an environment variable, not an argument) keeps the data in a
+  fixed folder instead of the current one — recommended for a real install:
+  - Windows (PowerShell): `$env:DATA_DIR="C:\ProgramData\trellix-decrypt"; .\trellix-decrypt-windows.exe`
+  - Linux/macOS: `DATA_DIR=/var/lib/trellix-decrypt ./trellix-decrypt-linux`
+- **`--check`** is the only argument it accepts: it tests the connection to EX
+  and exits without starting the server.
+- **Keeping an existing setup:** point `DATA_DIR` at the folder that already
+  holds `trellix_decrypt.sqlite3` and `secret.key` (or run the executable from
+  it). Stop any other copy first — two can't share one database.
 
 HTTPS is expected to be terminated by a reverse proxy (or set the built-in TLS
 vars in `env.example`).

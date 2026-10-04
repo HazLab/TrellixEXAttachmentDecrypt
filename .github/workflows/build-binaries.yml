@@ -49,11 +49,31 @@ jobs:
         if: runner.os == 'Windows'
         run: Move-Item dist/trellix-decrypt.exe "dist/${{ matrix.asset }}"
 
-      - name: Smoke test (non-Windows)
-        if: runner.os != 'Windows'
+      # Really start the executable (all three OSes) and load a template-rendered page
+      # and a static file. `--check` alone never builds the web app, so it could not
+      # catch an executable shipped without its templates/static files.
+      - name: Smoke test (start the server, load a page + a static file)
+        shell: bash
         run: |
-          chmod +x "dist/${{ matrix.asset }}"
-          "./dist/${{ matrix.asset }}" --check || true   # exits non-zero without EX; just prove it launches
+          BIN="dist/${{ matrix.asset }}"
+          chmod +x "$BIN" || true
+          export DATA_DIR="$RUNNER_TEMP/smoke-data" WEB_HOST=127.0.0.1 WEB_PORT=18080
+          mkdir -p "$DATA_DIR"
+          "$BIN" > smoke.log 2>&1 &
+          PID=$!
+          URL=http://127.0.0.1:18080
+          up=""
+          for i in $(seq 1 60); do
+            if curl -fsS "$URL/healthz" > /dev/null 2>&1; then up=1; break; fi
+            sleep 1
+          done
+          if [ -z "$up" ]; then echo "server did not start:"; cat smoke.log; exit 1; fi
+          curl -fsS "$URL/static/app.js" > /dev/null
+          curl -fsS "$URL/static/style.css" > /dev/null
+          TOKEN=$(grep -o 'setup=[A-Za-z0-9_-]*' smoke.log | head -1 | cut -d= -f2)
+          curl -fsS -L -c jar.txt -b jar.txt "$URL/settings?setup=$TOKEN" | grep -q 'ex_base_url'
+          echo "smoke test passed"
+          kill "$PID" 2>/dev/null || true
 
       - uses: actions/upload-artifact@v4
         with:

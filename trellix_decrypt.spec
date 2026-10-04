@@ -5,9 +5,25 @@
 # submodules. At runtime the executable still needs a writable DATA_DIR for the
 # secret.key and SQLite DB (default: the working directory).
 
-from PyInstaller.utils.hooks import collect_data_files, collect_submodules
+import os
+import sys
 
-datas = collect_data_files("trellix_decrypt")  # templates/*, static/*
+from PyInstaller.utils.hooks import collect_submodules
+
+# The package is NOT pip-installed in the build environment (CI installs only the
+# requirements), so it must be made importable for collect_submodules, and its data
+# files are listed by PATH rather than discovered by import: collect_data_files()
+# silently returns nothing for a package it cannot import, which shipped executables
+# with no templates/static and crashed them at startup.
+sys.path.insert(0, SPECPATH)
+_PKG = os.path.join(SPECPATH, "trellix_decrypt")
+datas = [
+    (os.path.join(_PKG, "templates"), "trellix_decrypt/templates"),
+    (os.path.join(_PKG, "static"), "trellix_decrypt/static"),
+]
+for _src, _ in datas:
+    if not os.path.isdir(_src):
+        raise SystemExit(f"build aborted: data directory missing: {_src}")
 hiddenimports = (
     collect_submodules("uvicorn")       # loops, protocols, lifespan (dynamic imports)
     + collect_submodules("trellix_decrypt")
@@ -16,7 +32,7 @@ hiddenimports = (
 
 a = Analysis(
     ["pyinstaller_entry.py"],
-    pathex=[],
+    pathex=[SPECPATH],
     binaries=[],
     datas=datas,
     hiddenimports=hiddenimports,
